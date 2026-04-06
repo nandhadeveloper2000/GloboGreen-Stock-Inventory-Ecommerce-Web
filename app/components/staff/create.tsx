@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
 import {
   BadgeCheck,
   CheckCircle2,
@@ -48,6 +47,7 @@ type FormState = {
 };
 
 type StepKey = "basic" | "address" | "profile";
+
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 /* =========================
@@ -277,7 +277,7 @@ function FloatingInput({
   id: string;
   label: string;
   value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   maxLength?: number;
   disabled?: boolean;
@@ -296,8 +296,8 @@ function FloatingInput({
           disabled={disabled}
           placeholder=" "
           className={classNames(
-            "peer h-[48px] w-full rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition shadow-sm",
-            "placeholder-transparent",
+            "peer h-[48px] w-full rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition",
+            "placeholder-transparent shadow-sm",
             error
               ? "border-rose-300 focus:border-rose-500"
               : "border-slate-200 focus:border-violet-600",
@@ -335,7 +335,7 @@ function FloatingSelect({
   id: string;
   label: string;
   value: string;
-  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: Option[];
   disabled?: boolean;
   error?: string;
@@ -393,10 +393,10 @@ function ReviewItem({
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900 break-words">
+      <p className="mt-1 text-sm font-semibold text-slate-900">
         {value || "-"}
       </p>
     </div>
@@ -409,6 +409,7 @@ function ReviewItem({
 
 export default function CreateStaffPage() {
   const { accessToken, role } = useAuth();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentUserRole = useMemo(
@@ -469,7 +470,12 @@ export default function CreateStaffPage() {
       });
 
       const data = await response.json();
-      return Array.isArray(data?.data) ? data.data : [];
+
+      if (Array.isArray(data?.data)) {
+        return data.data;
+      }
+
+      return [];
     } catch (error) {
       console.error("Location API error:", error);
       return [];
@@ -477,7 +483,7 @@ export default function CreateStaffPage() {
   };
 
   /* =========================
-     ROLE SYNC
+     LOCATION LOAD
   ========================= */
 
   useEffect(() => {
@@ -487,16 +493,13 @@ export default function CreateStaffPage() {
     }));
   }, [allowedRoles]);
 
-  /* =========================
-     LOCATION LOAD
-  ========================= */
-
   useEffect(() => {
     let active = true;
 
     const loadStates = async () => {
       setLoadingStates(true);
       const data = await fetchApi(SummaryApi.locations_states.url);
+
       if (!active) return;
 
       setStates(toOptions(data));
@@ -660,6 +663,7 @@ export default function CreateStaffPage() {
     setAvatarFile(null);
     setAvatarPreview("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.success("Avatar removed");
   };
 
   /* =========================
@@ -672,12 +676,12 @@ export default function CreateStaffPage() {
     if (!form.role) nextErrors.role = "Role is required";
 
     if (!form.name.trim()) nextErrors.name = "Full name is required";
-    else if (form.name.trim().length < 3) {
+    if (form.name.trim() && form.name.trim().length < 3) {
       nextErrors.name = "Enter at least 3 characters";
     }
 
     if (!form.username.trim()) nextErrors.username = "Username is required";
-    else if (form.username.trim().length < 4) {
+    if (form.username.trim() && form.username.trim().length < 4) {
       nextErrors.username = "Username must be at least 4 characters";
     }
 
@@ -744,14 +748,18 @@ export default function CreateStaffPage() {
   ========================= */
 
   const handleNext = () => {
-    if (stepIndex === 0 && !validateBasic()) {
-      toast.error("Please fix the basic information fields");
-      return;
+    if (stepIndex === 0) {
+      if (!validateBasic()) {
+        toast.error("Please fix the basic information fields");
+        return;
+      }
     }
 
-    if (stepIndex === 1 && !validateAddress()) {
-      toast.error("Please complete the address details");
-      return;
+    if (stepIndex === 1) {
+      if (!validateAddress()) {
+        toast.error("Please complete the address details");
+        return;
+      }
     }
 
     setStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
@@ -765,7 +773,7 @@ export default function CreateStaffPage() {
      SUBMIT
   ========================= */
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validateAll()) {
@@ -1132,7 +1140,10 @@ export default function CreateStaffPage() {
                 Profile Avatar
               </h4>
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                          <input
+                JPG, PNG, WEBP up to 2MB
+              </p>
+
+              <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -1199,145 +1210,3 @@ export default function CreateStaffPage() {
       </section>
     );
   };
-
-  /* =========================
-     MAIN UI
-  ========================= */
-
-  return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <div className="relative overflow-hidden rounded-[20px] border border-white/20 p-5 text-white shadow-[0_25px_80px_rgba(46,49,146,0.22)] md:p-6 [background:var(--gradient-hero)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.18),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.10),_transparent_20%)]" />
-
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-sm">
-                <ShieldCheck className="h-4 w-4 opacity-90" />
-                Admin Workspace
-              </div>
-
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Create Staff Account
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">
-                Create manager, supervisor, or staff accounts with premium step
-                flow, location mapping, avatar preview, and toast-only feedback.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <InfoPill
-                label="Logged In As"
-                value={getRoleBadgeText(currentUserRole)}
-              />
-              <InfoPill
-                label="Allowed Roles"
-                value={allowedRoles.length ? allowedRoles.join(", ") : "No Access"}
-              />
-              <InfoPill
-                label="Form Status"
-                value={submitting ? "Submitting" : "Ready"}
-              />
-            </div>
-          </div>
-        </div>
-
-        <Stepper steps={STEPS} current={stepIndex} />
-
-        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200/80 bg-slate-50/80 px-5 py-4 md:px-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">
-                  Staff Creation Form
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Complete each step to create a new staff account.
-                </p>
-              </div>
-
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                <BadgeCheck className="h-4 w-4" />
-                Access verified for {getRoleBadgeText(currentUserRole)}
-              </div>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5 p-5 md:p-6">
-            {renderCurrentStep()}
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-500">
-                Step {stepIndex + 1} of {STEPS.length}
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {stepIndex > 0 ? (
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Back
-                  </button>
-                ) : null}
-
-                {stepIndex < STEPS.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-violet-700 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-800"
-                  >
-                    Continue
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Create Account
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-/* =========================
-   REVIEW ITEM
-========================= */
-
-function ReviewItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value || "-"}</p>
-    </div>
-  );
-}
