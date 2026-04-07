@@ -11,11 +11,10 @@ import {
   Trash2,
   Loader2,
   Search,
-  Users,
   ShieldCheck,
   CircleOff,
+  Power,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 
 type TeamMember = {
@@ -25,13 +24,26 @@ type TeamMember = {
   email?: string;
   role: string;
   avatarUrl?: string;
+  avatar?: string;
   isActive?: boolean;
 };
 
 type AppRole = "MASTER_ADMIN" | "MANAGER" | "SUPERVISOR" | "STAFF";
 
+type ApiListResponse = {
+  success?: boolean;
+  message?: string;
+  data?: TeamMember[];
+};
+
+type ApiActionResponse = {
+  success?: boolean;
+  message?: string;
+  data?: TeamMember;
+};
+
 function normalizeRole(role?: string | null): AppRole {
-  const value = String(role || "").toUpperCase();
+  const value = String(role || "").trim().toUpperCase();
 
   if (value === "MASTER_ADMIN") return "MASTER_ADMIN";
   if (value === "MANAGER") return "MANAGER";
@@ -40,7 +52,7 @@ function normalizeRole(role?: string | null): AppRole {
 }
 
 function normalizeItemRole(role?: string | null) {
-  return String(role || "").toUpperCase();
+  return String(role || "").trim().toUpperCase();
 }
 
 function getRoleBadgeClass(role: string) {
@@ -62,8 +74,10 @@ function getRoleBadgeClass(role: string) {
 }
 
 function getAvatarSrc(item: TeamMember) {
-  if (item.avatarUrl && item.avatarUrl.trim() !== "") {
-    return item.avatarUrl;
+  const uploadedAvatar = String(item.avatarUrl || item.avatar || "").trim();
+
+  if (uploadedAvatar) {
+    return uploadedAvatar;
   }
 
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -72,54 +86,51 @@ function getAvatarSrc(item: TeamMember) {
 }
 
 function getPanelBasePath(role: AppRole) {
-  if (role === "MASTER_ADMIN") return "/master";
-  if (role === "MANAGER") return "/subadmin";
-  if (role === "SUPERVISOR") return "/supervisor";
+  if (role === "MASTER_ADMIN") return "/master/staff";
+  if (role === "MANAGER") return "/manager/staff";
+  if (role === "SUPERVISOR") return "/supervisor/staff";
   return "/staff";
 }
 
 function getPageTitle(role: AppRole) {
-  if (role === "MASTER_ADMIN") return "Team List";
-  if (role === "MANAGER") return "Supervisor & Staff List";
+  if (role === "MASTER_ADMIN") return "Staff List";
+  if (role === "MANAGER") return "Staff List";
   if (role === "SUPERVISOR") return "Staff List";
-  return "My Team";
+  return "My Profile";
 }
 
 function getPageDescription(role: AppRole) {
   if (role === "MASTER_ADMIN") {
-    return "Manage managers, supervisors, and staff from one clean dashboard.";
+    return "Manage all staff records from one clean dashboard.";
   }
 
   if (role === "MANAGER") {
-    return "Manage supervisors and staff created under your account.";
+    return "Manage staff records available under your access.";
   }
 
   if (role === "SUPERVISOR") {
-    return "Manage staff created under your supervision.";
+    return "Manage staff records created under your supervision.";
   }
 
-  return "View your accessible team records.";
+  return "View your accessible staff details.";
 }
 
 function getAllowedVisibleRoles(role: AppRole) {
   if (role === "MASTER_ADMIN") return ["MANAGER", "SUPERVISOR", "STAFF"];
-  if (role === "MANAGER") return ["SUPERVISOR", "STAFF"];
+  if (role === "MANAGER") return ["MANAGER", "SUPERVISOR", "STAFF"];
   if (role === "SUPERVISOR") return ["STAFF"];
   return ["STAFF"];
 }
 
 function buildRoleAwareEditHref(panelBasePath: string, item: TeamMember) {
-  const itemRole = normalizeItemRole(item.role);
+  return `${panelBasePath}/edit/${item._id}`;
+}
 
-  if (itemRole === "MANAGER") {
-    return `${panelBasePath}/subadmin/edit/${item._id}`;
-  }
-
-  if (itemRole === "SUPERVISOR") {
-    return `${panelBasePath}/supervisor/edit/${item._id}`;
-  }
-
-  return `${panelBasePath}/staff/edit/${item._id}`;
+function normalizeList(items?: TeamMember[]) {
+  return (Array.isArray(items) ? items : []).map((item) => ({
+    ...item,
+    role: normalizeItemRole(item.role),
+  }));
 }
 
 export default function StaffListPage() {
@@ -136,192 +147,149 @@ export default function StaffListPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const panelBasePath = useMemo(() => getPanelBasePath(currentRole), [currentRole]);
+  const panelBasePath = useMemo(
+    () => getPanelBasePath(currentRole),
+    [currentRole]
+  );
+
   const allowedRoles = useMemo(
     () => getAllowedVisibleRoles(currentRole),
     [currentRole]
   );
 
-  const fetchJson = useCallback(
-    async (url: string) => {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      });
-
-      return res.json();
-    },
-    [accessToken]
-  );
-
   const fetchTeam = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setLoading(false);
+      setData([]);
+      return;
+    }
 
     try {
       setLoading(true);
 
-      let combined: TeamMember[] = [];
+      const res = await fetch(`${baseURL}${SummaryApi.staff_list.url}`, {
+        method: SummaryApi.staff_list.method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
 
-      if (currentRole === "MASTER_ADMIN") {
-        const [subadminsRes, supervisorsRes, staffRes] = await Promise.all([
-          fetchJson(`${baseURL}${SummaryApi.master_all_subadmin.url}`),
-          fetchJson(`${baseURL}${SummaryApi.supervisor_list.url}`),
-          fetchJson(`${baseURL}${SummaryApi.staff_list.url}`),
-        ]);
+      const result: ApiListResponse = await res.json();
 
-        combined = [
-          ...(Array.isArray(subadminsRes?.data) ? subadminsRes.data : []).map(
-            (item: TeamMember) => ({
-              ...item,
-              role: normalizeItemRole(item.role || "MANAGER"),
-            })
-          ),
-          ...(Array.isArray(supervisorsRes?.data) ? supervisorsRes.data : []).map(
-            (item: TeamMember) => ({
-              ...item,
-              role: normalizeItemRole(item.role || "SUPERVISOR"),
-            })
-          ),
-          ...(Array.isArray(staffRes?.data) ? staffRes.data : []).map(
-            (item: TeamMember) => ({
-              ...item,
-              role: normalizeItemRole(item.role || "STAFF"),
-            })
-          ),
-        ];
-      } else if (currentRole === "MANAGER") {
-        const [supervisorsRes, staffRes] = await Promise.all([
-          fetchJson(`${baseURL}${SummaryApi.supervisor_list.url}`),
-          fetchJson(`${baseURL}${SummaryApi.staff_list.url}`),
-        ]);
-
-        combined = [
-          ...(Array.isArray(supervisorsRes?.data) ? supervisorsRes.data : []).map(
-            (item: TeamMember) => ({
-              ...item,
-              role: normalizeItemRole(item.role || "SUPERVISOR"),
-            })
-          ),
-          ...(Array.isArray(staffRes?.data) ? staffRes.data : []).map(
-            (item: TeamMember) => ({
-              ...item,
-              role: normalizeItemRole(item.role || "STAFF"),
-            })
-          ),
-        ];
-      } else if (currentRole === "SUPERVISOR") {
-        const staffRes = await fetchJson(`${baseURL}${SummaryApi.staff_list.url}`);
-
-        combined = (Array.isArray(staffRes?.data) ? staffRes.data : []).map(
-          (item: TeamMember) => ({
-            ...item,
-            role: normalizeItemRole(item.role || "STAFF"),
-          })
-        );
-      } else {
-        const selfRes = await fetchJson(`${baseURL}${SummaryApi.staff_me.url}`);
-
-        combined = selfRes?.data
-          ? [
-              {
-                ...selfRes.data,
-                role: normalizeItemRole(selfRes.data.role || "STAFF"),
-              },
-            ]
-          : [];
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to load staff records");
       }
 
-      setData(combined);
-    } catch {
-      toast.error("Failed to load records");
+      setData(normalizeList(result?.data));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Failed to load records");
+      setData([]);
     } finally {
       setLoading(false);
     }
-  }, [accessToken, currentRole, fetchJson]);
+  }, [accessToken]);
 
   useEffect(() => {
-    if (accessToken) {
-      fetchTeam();
-    }
-  }, [accessToken, fetchTeam]);
+    fetchTeam();
+  }, [fetchTeam]);
 
-  const handleDelete = async (item: TeamMember) => {
-    const confirmed = window.confirm(`Delete this ${item.role.toLowerCase()}?`);
+  const handleToggleStatus = async (item: TeamMember) => {
+    if (!accessToken) {
+      toast.error("Unauthorized");
+      return;
+    }
+
+    const currentStatus = item.isActive ?? true;
+    const actionText = currentStatus ? "deactivate" : "activate";
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${actionText} this ${normalizeItemRole(
+        item.role
+      ).toLowerCase()}?`
+    );
+
     if (!confirmed) return;
 
     try {
       setActionLoading(item._id);
 
-      const itemRole = normalizeItemRole(item.role);
+      const endpoint = SummaryApi.staff_toggle_active.url(item._id);
 
-      let url = "";
-      if (itemRole === "MANAGER") {
-        url = `${baseURL}${SummaryApi.master_delete_subadmin.url(item._id)}`;
-      } else if (itemRole === "SUPERVISOR") {
-        url = `${baseURL}${SummaryApi.supervisor_delete.url(item._id)}`;
-      } else {
-        url = `${baseURL}${SummaryApi.staff_delete.url(item._id)}`;
-      }
-
-      const res = await fetch(url, {
-        method: "DELETE",
+      const res = await fetch(`${baseURL}${endpoint}`, {
+        method: SummaryApi.staff_toggle_active.method,
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
         },
       });
 
-      const result = await res.json();
+      const result: ApiActionResponse = await res.json();
 
-      if (result.success) {
-        toast.success("Deleted successfully");
-        fetchTeam();
-      } else {
-        toast.error(result.message || "Delete failed");
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.message || "Status update failed");
       }
-    } catch {
-      toast.error("Delete failed");
+
+      const nextIsActive = result?.data?.isActive ?? !currentStatus;
+
+      setData((prev) =>
+        prev.map((row) =>
+          row._id === item._id ? { ...row, isActive: nextIsActive } : row
+        )
+      );
+
+      toast.success(
+        nextIsActive
+          ? "Staff activated successfully"
+          : "Staff deactivated successfully"
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Status update failed");
     } finally {
       setActionLoading(null);
     }
   };
 
-  const toggleStatus = async (item: TeamMember) => {
+  const handleDelete = async (item: TeamMember) => {
+    if (!accessToken) {
+      toast.error("Unauthorized");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete this ${normalizeItemRole(item.role).toLowerCase()}?`
+    );
+    if (!confirmed) return;
+
     try {
       setActionLoading(item._id);
 
-      const itemRole = normalizeItemRole(item.role);
-      const current = item.isActive ?? true;
+      const endpoint = SummaryApi.staff_delete.url(item._id);
 
-      let url = "";
-      if (itemRole === "MANAGER") {
-        url = `${baseURL}/api/subadmins/${item._id}/activate`;
-      } else if (itemRole === "SUPERVISOR") {
-        url = `${baseURL}/api/supervisors/${item._id}/activate`;
-      } else {
-        url = `${baseURL}/api/staff/${item._id}/activate`;
-      }
-
-      const res = await fetch(url, {
-        method: "PUT",
+      const res = await fetch(`${baseURL}${endpoint}`, {
+        method: SummaryApi.staff_delete.method,
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ isActive: !current }),
       });
 
       const result = await res.json();
 
-      if (result.success) {
-        toast.success("Status updated");
-        fetchTeam();
-      } else {
-        toast.error(result.message || "Status update failed");
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.message || "Delete failed");
       }
-    } catch {
-      toast.error("Status update failed");
+
+      toast.success("Deleted successfully");
+      await fetchTeam();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Delete failed");
     } finally {
       setActionLoading(null);
     }
@@ -367,7 +335,7 @@ export default function StaffListPage() {
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
                 <ShieldCheck className="h-4 w-4" />
-                Team Management
+                Staff Management
               </div>
 
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
@@ -460,8 +428,8 @@ export default function StaffListPage() {
 
                     return (
                       <tr
-                        key={`${item.role}-${item._id}`}
-                        className="border-b border-slate-100 transition hover:bg-slate-50/70"
+                        key={item._id}
+                        className="border-b border-slate-100 last:border-b-0"
                       >
                         <td className="px-5 py-4 font-medium text-slate-700">
                           {index + 1}
@@ -469,7 +437,7 @@ export default function StaffListPage() {
 
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="relative h-11 w-11 overflow-hidden rounded-full ring-2 ring-slate-100">
+                            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                               <Image
                                 src={getAvatarSrc(item)}
                                 alt={item.name || "Avatar"}
@@ -487,6 +455,11 @@ export default function StaffListPage() {
                               <p className="truncate text-xs text-slate-500">
                                 @{item.username}
                               </p>
+                              {item.email ? (
+                                <p className="truncate text-xs text-slate-400">
+                                  {item.email}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                         </td>
@@ -502,35 +475,22 @@ export default function StaffListPage() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => toggleStatus(item)}
-                              disabled={isBusy}
-                              className={`relative h-7 w-12 rounded-full transition ${
-                                isActive ? "bg-emerald-500" : "bg-slate-300"
-                              } ${isBusy ? "cursor-not-allowed opacity-60" : ""}`}
-                            >
-                              <span
-                                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${
-                                  isActive ? "left-6" : "left-1"
-                                }`}
-                              />
-                            </button>
-
-                            <span
-                              className={`text-xs font-semibold ${
-                                isActive ? "text-emerald-600" : "text-slate-500"
-                              }`}
-                            >
-                              {isActive ? "Active" : "Inactive"}
-                            </span>
-                          </div>
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            {isActive ? "Active" : "Inactive"}
+                          </span>
                         </td>
 
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
-                            <Link href={buildRoleAwareEditHref(panelBasePath, item)}>
+                            <Link
+                              href={buildRoleAwareEditHref(panelBasePath, item)}
+                            >
                               <Button
                                 type="button"
                                 size="sm"
@@ -540,6 +500,26 @@ export default function StaffListPage() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </Link>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleStatus(item)}
+                              disabled={isBusy}
+                              className={`h-9 rounded-xl px-3 ${
+                                isActive
+                                  ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                                  : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                              }`}
+                              title={isActive ? "Deactivate" : "Activate"}
+                            >
+                              {isBusy ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Power className="h-4 w-4" />
+                              )}
+                            </Button>
 
                             <Button
                               type="button"
@@ -565,40 +545,6 @@ export default function StaffListPage() {
             </div>
           )}
         </section>
-
-        {!loading && filteredData.length > 0 && (
-          <section className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
-                <Users className="h-5 w-5 text-slate-700" />
-              </div>
-              <p className="text-sm text-slate-500">Visible records</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {filteredData.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50">
-                <ShieldCheck className="h-5 w-5 text-emerald-600" />
-              </div>
-              <p className="text-sm text-slate-500">Currently active</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {filteredData.filter((item) => item.isActive ?? true).length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
-                <CircleOff className="h-5 w-5 text-slate-600" />
-              </div>
-              <p className="text-sm text-slate-500">Currently inactive</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {filteredData.filter((item) => !(item.isActive ?? true)).length}
-              </p>
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

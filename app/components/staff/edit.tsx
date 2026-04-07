@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ImagePlus,
@@ -29,7 +29,6 @@ type FormState = {
   name: string;
   username: string;
   email: string;
-  pin: string;
   mobile: string;
   secondaryMobile: string;
   state: string;
@@ -42,13 +41,27 @@ type FormState = {
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
-type CreateStaffApiResponse = {
+type StaffResponse = {
   success?: boolean;
   message?: string;
   data?: {
     _id?: string;
     name?: string;
+    username?: string;
+    email?: string;
     role?: string;
+    mobile?: string;
+    additionalNumber?: string;
+    avatarUrl?: string;
+    idProofUrl?: string;
+    address?: {
+      state?: string;
+      district?: string;
+      taluk?: string;
+      area?: string;
+      street?: string;
+      pincode?: string;
+    };
   };
 };
 
@@ -57,7 +70,6 @@ const INITIAL: FormState = {
   name: "",
   username: "",
   email: "",
-  pin: "",
   mobile: "",
   secondaryMobile: "",
   state: "",
@@ -91,24 +103,8 @@ function toTitleCase(value: string) {
     .join(" ");
 }
 
-function createUsernameFromName(name: string) {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, "");
-
-  if (!base) return "";
-  const suffix = String(Date.now()).slice(-4);
-  return `${base}${suffix}`;
-}
-
 function isValidGmail(email: string) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email.trim());
-}
-
-function isValidPin(pin: string) {
-  return /^\d{4,6}$/.test(pin);
 }
 
 function isValidIndianMobile(mobile: string) {
@@ -366,7 +362,6 @@ function UploadPreviewCard({
   onUpload,
   onRemove,
   inputRef,
-  accept = "image/*",
   buttonLabel,
   emptyIcon,
   previewClassName,
@@ -377,7 +372,6 @@ function UploadPreviewCard({
   onUpload: (file: File | null | undefined) => void;
   onRemove: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  accept?: string;
   buttonLabel: string;
   emptyIcon: ReactNode;
   previewClassName: string;
@@ -389,11 +383,7 @@ function UploadPreviewCard({
 
       <div className="mt-4 flex flex-col items-center">
         {preview ? (
-          <img
-            src={preview}
-            alt={title}
-            className={previewClassName}
-          />
+          <img src={preview} alt={title} className={previewClassName} />
         ) : (
           <div className="flex h-40 w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             {emptyIcon}
@@ -403,7 +393,7 @@ function UploadPreviewCard({
         <input
           ref={inputRef}
           type="file"
-          accept={accept}
+          accept="image/*"
           className="hidden"
           onChange={(e) => onUpload(e.target.files?.[0])}
         />
@@ -433,9 +423,12 @@ function UploadPreviewCard({
   );
 }
 
-export default function CreateStaffPage() {
+export default function EditTeamMemberPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const { accessToken, role } = useAuth();
+
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const idProofInputRef = useRef<HTMLInputElement | null>(null);
@@ -461,12 +454,9 @@ export default function CreateStaffPage() {
     return [];
   }, [currentUserRole]);
 
-  const [form, setForm] = useState<FormState>({
-    ...INITIAL,
-    role: "STAFF",
-  });
-
+  const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [pageLoading, setPageLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [states, setStates] = useState<Option[]>([]);
@@ -544,17 +534,17 @@ export default function CreateStaffPage() {
     }
   };
 
-  const fetchAreas = async () => {
+  const fetchAreas = async (state: string, district: string, taluk: string) => {
     const primaryUrl = `${SummaryApi.location_villages.url}?state=${encodeURIComponent(
-      form.state
-    )}&district=${encodeURIComponent(
-      form.district
-    )}&talukName=${encodeURIComponent(form.taluk)}`;
+      state
+    )}&district=${encodeURIComponent(district)}&talukName=${encodeURIComponent(
+      taluk
+    )}`;
 
     const fallbackUrl = `${SummaryApi.location_villages.url}?state=${encodeURIComponent(
-      form.state
-    )}&district=${encodeURIComponent(form.district)}&taluk=${encodeURIComponent(
-      form.taluk
+      state
+    )}&district=${encodeURIComponent(district)}&taluk=${encodeURIComponent(
+      taluk
     )}`;
 
     let data = await fetchApi(primaryUrl);
@@ -567,11 +557,129 @@ export default function CreateStaffPage() {
   };
 
   useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      role: allowedRoles.includes(prev.role) ? prev.role : allowedRoles[0] ?? "STAFF",
-    }));
-  }, [allowedRoles]);
+    return () => {
+      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+      if (idProofPreview?.startsWith("blob:")) URL.revokeObjectURL(idProofPreview);
+    };
+  }, [avatarPreview, idProofPreview]);
+
+  const handleImageChange = (
+    file: File | null | undefined,
+    type: "avatar" | "idproof"
+  ) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image size must be under 2MB");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    if (type === "avatar") {
+      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+      setAvatarFile(file);
+      setAvatarPreview(previewUrl);
+      return;
+    }
+
+    if (idProofPreview?.startsWith("blob:")) URL.revokeObjectURL(idProofPreview);
+    setIdProofFile(file);
+    setIdProofPreview(previewUrl);
+  };
+
+  const removeImage = (type: "avatar" | "idproof") => {
+    if (type === "avatar") {
+      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+      setAvatarPreview("");
+      setAvatarFile(null);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      return;
+    }
+
+    if (idProofPreview?.startsWith("blob:")) URL.revokeObjectURL(idProofPreview);
+    setIdProofPreview("");
+    setIdProofFile(null);
+    if (idProofInputRef.current) idProofInputRef.current.value = "";
+  };
+
+  const validateForm = () => {
+    const nextErrors: FieldErrors = {};
+
+    if (!form.role) {
+      nextErrors.role = "Role is required";
+    }
+
+    if (!form.name.trim()) {
+      nextErrors.name = "Full name is required";
+    }
+
+    if (!form.username.trim()) {
+      nextErrors.username = "Username is required";
+    }
+
+    if (!form.email.trim()) {
+      nextErrors.email = "Email is required";
+    } else if (!isValidGmail(form.email)) {
+      nextErrors.email = "Enter a valid Gmail address";
+    }
+
+    if (!form.mobile.trim()) {
+      nextErrors.mobile = "Primary mobile is required";
+    } else if (!isValidIndianMobile(form.mobile)) {
+      nextErrors.mobile = "Enter a valid 10-digit Indian mobile number";
+    }
+
+    if (
+      form.secondaryMobile.trim() &&
+      !isValidIndianMobile(form.secondaryMobile)
+    ) {
+      nextErrors.secondaryMobile = "Enter a valid 10-digit secondary mobile";
+    }
+
+    if (
+      form.mobile &&
+      form.secondaryMobile &&
+      form.mobile === form.secondaryMobile
+    ) {
+      nextErrors.secondaryMobile =
+        "Secondary mobile must be different from primary mobile";
+    }
+
+    if (!form.state.trim()) {
+      nextErrors.state = "State is required";
+    }
+
+    if (!form.district.trim()) {
+      nextErrors.district = "District is required";
+    }
+
+    if (!form.taluk.trim()) {
+      nextErrors.taluk = "Taluk is required";
+    }
+
+    if (!form.area.trim()) {
+      nextErrors.area = "Area is required";
+    }
+
+    if (!form.street.trim()) {
+      nextErrors.street = "Street is required";
+    }
+
+    if (!form.pincode.trim()) {
+      nextErrors.pincode = "Pincode is required";
+    } else if (!isValidPincode(form.pincode)) {
+      nextErrors.pincode = "Pincode must be 6 digits";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   useEffect(() => {
     let active = true;
@@ -704,7 +812,7 @@ export default function CreateStaffPage() {
       setLoadingAreas(true);
       setLocationError("");
 
-      const data = await fetchAreas();
+      const data = await fetchAreas(form.state, form.district, form.taluk);
 
       if (!active) return;
 
@@ -725,157 +833,88 @@ export default function CreateStaffPage() {
   }, [form.state, form.district, form.taluk, accessToken]);
 
   useEffect(() => {
+    let active = true;
+
+    async function loadStaff() {
+      if (!accessToken || !id) return;
+
+      try {
+        setPageLoading(true);
+
+        const response = await fetch(`${baseURL}${SummaryApi.staff_get.url(id)}`, {
+          method: SummaryApi.staff_get.method,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        const result =
+          (await response.json().catch(() => ({}))) as StaffResponse;
+
+        if (!active) return;
+
+        if (!response.ok || !result?.data) {
+          toast.error(result?.message || "Failed to load team member");
+          router.replace(getRedirectPath(currentUserRole));
+          return;
+        }
+
+        const staff = result.data;
+        const staffRole = String(staff.role || "STAFF").toUpperCase() as CreateRole;
+
+        setForm({
+          role: allowedRoles.includes(staffRole) ? staffRole : "STAFF",
+          name: staff.name || "",
+          username: staff.username || "",
+          email: staff.email || "",
+          mobile: staff.mobile || "",
+          secondaryMobile: staff.additionalNumber || "",
+          state: staff.address?.state || "",
+          district: staff.address?.district || "",
+          taluk: staff.address?.taluk || "",
+          area: staff.address?.area || "",
+          street: staff.address?.street || "",
+          pincode: staff.address?.pincode || "",
+        });
+
+        setAvatarPreview(staff.avatarUrl || "");
+        setIdProofPreview(staff.idProofUrl || "");
+      } catch (error) {
+        console.error(error);
+        toast.error("Something went wrong while loading staff details");
+      } finally {
+        if (active) {
+          setPageLoading(false);
+        }
+      }
+    }
+
+    loadStaff();
+
     return () => {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-      if (idProofPreview) URL.revokeObjectURL(idProofPreview);
+      active = false;
     };
-  }, [avatarPreview, idProofPreview]);
-
-  const handleImageChange = (
-    file: File | null | undefined,
-    type: "avatar" | "idproof"
-  ) => {
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a valid image file");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image size must be under 2MB");
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-
-    if (type === "avatar") {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-      setAvatarFile(file);
-      setAvatarPreview(previewUrl);
-      return;
-    }
-
-    if (idProofPreview) URL.revokeObjectURL(idProofPreview);
-    setIdProofFile(file);
-    setIdProofPreview(previewUrl);
-  };
-
-  const removeImage = (type: "avatar" | "idproof") => {
-    if (type === "avatar") {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-      setAvatarPreview("");
-      setAvatarFile(null);
-      if (avatarInputRef.current) avatarInputRef.current.value = "";
-      return;
-    }
-
-    if (idProofPreview) URL.revokeObjectURL(idProofPreview);
-    setIdProofPreview("");
-    setIdProofFile(null);
-    if (idProofInputRef.current) idProofInputRef.current.value = "";
-  };
-
-  const validateBasicAndAddress = () => {
-    const nextErrors: FieldErrors = {};
-
-    if (!form.role) {
-      nextErrors.role = "Role is required";
-    }
-
-    if (!form.name.trim()) {
-      nextErrors.name = "Full name is required";
-    }
-
-    if (!form.username.trim()) {
-      nextErrors.username = "Username is required";
-    }
-
-    if (!form.email.trim()) {
-      nextErrors.email = "Email is required";
-    } else if (!isValidGmail(form.email)) {
-      nextErrors.email = "Enter a valid Gmail address";
-    }
-
-    if (!form.pin.trim()) {
-      nextErrors.pin = "PIN is required";
-    } else if (!isValidPin(form.pin)) {
-      nextErrors.pin = "PIN must be 4 to 6 digits";
-    }
-
-    if (!form.mobile.trim()) {
-      nextErrors.mobile = "Primary mobile is required";
-    } else if (!isValidIndianMobile(form.mobile)) {
-      nextErrors.mobile = "Enter a valid 10-digit Indian mobile number";
-    }
-
-    if (
-      form.secondaryMobile.trim() &&
-      !isValidIndianMobile(form.secondaryMobile)
-    ) {
-      nextErrors.secondaryMobile = "Enter a valid 10-digit secondary mobile";
-    }
-
-    if (
-      form.mobile &&
-      form.secondaryMobile &&
-      form.mobile === form.secondaryMobile
-    ) {
-      nextErrors.secondaryMobile =
-        "Secondary mobile must be different from primary mobile";
-    }
-
-    if (!form.state.trim()) {
-      nextErrors.state = "State is required";
-    }
-
-    if (!form.district.trim()) {
-      nextErrors.district = "District is required";
-    }
-
-    if (!form.taluk.trim()) {
-      nextErrors.taluk = "Taluk is required";
-    }
-
-    if (!form.area.trim()) {
-      nextErrors.area = "Area is required";
-    }
-
-    if (!form.street.trim()) {
-      nextErrors.street = "Street is required";
-    }
-
-    if (!form.pincode.trim()) {
-      nextErrors.pincode = "Pincode is required";
-    } else if (!isValidPincode(form.pincode)) {
-      nextErrors.pincode = "Pincode must be 6 digits";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleAutoUsername = () => {
-    if (!form.name.trim()) {
-      toast.error("Enter full name first");
-      return;
-    }
-
-    updateField("username", createUsernameFromName(form.name));
-  };
+  }, [accessToken, id, router, currentUserRole, allowedRoles]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!id) {
+      toast.error("Invalid staff id");
+      return;
+    }
 
     if (isLocationLoading) {
       toast.error("Please wait until location data finishes loading");
       return;
     }
 
-    const valid = validateBasicAndAddress();
+    const valid = validateForm();
 
     if (!valid) {
-      toast.error("Please fix the form errors before submitting");
+      toast.error("Please fix the form errors before updating");
       return;
     }
 
@@ -885,7 +924,7 @@ export default function CreateStaffPage() {
     }
 
     if (!allowedRoles.includes(form.role)) {
-      toast.error("You are not allowed to create this role");
+      toast.error("You are not allowed to update this role");
       return;
     }
 
@@ -903,12 +942,14 @@ export default function CreateStaffPage() {
       payload.append("name", cleanName);
       payload.append("username", cleanUsername);
       payload.append("email", cleanEmail);
-      payload.append("pin", form.pin.trim());
       payload.append("mobile", form.mobile.trim());
 
       if (form.secondaryMobile.trim()) {
         payload.append("secondaryMobile", form.secondaryMobile.trim());
         payload.append("additionalNumber", form.secondaryMobile.trim());
+      } else {
+        payload.append("secondaryMobile", "");
+        payload.append("additionalNumber", "");
       }
 
       payload.append("address", JSON.stringify(addressPayload));
@@ -927,43 +968,45 @@ export default function CreateStaffPage() {
         payload.append("idproof", idProofFile);
       }
 
-      const response = await fetch(`${baseURL}${SummaryApi.staff_create.url}`, {
-        method: SummaryApi.staff_create.method,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: payload,
-      });
+      const response = await fetch(
+        `${baseURL}${SummaryApi.staff_update.url(id)}`,
+        {
+          method: SummaryApi.staff_update.method,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: payload,
+        }
+      );
 
       const result =
-        (await response.json().catch(() => ({}))) as CreateStaffApiResponse;
+        (await response.json().catch(() => ({}))) as StaffResponse;
 
       if (!response.ok || !result?.success) {
-        toast.error(result?.message || "Failed to create team member");
+        toast.error(result?.message || "Failed to update team member");
         return;
       }
 
-      toast.success(
-        `${getRoleBadgeText(form.role)} account created successfully`
-      );
-
-      setForm({
-        ...INITIAL,
-        role: allowedRoles[0] ?? "STAFF",
-      });
-      setErrors({});
-      setLocationError("");
-      removeImage("avatar");
-      removeImage("idproof");
-
+      toast.success("Team member updated successfully");
       router.replace(getRedirectPath(currentUserRole));
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong while creating the account");
+      toast.error("Something went wrong while updating the account");
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-slate-100">
+        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-sm">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading team member details...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -977,26 +1020,26 @@ export default function CreateStaffPage() {
               </div>
 
               <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Create Team Member
+                Edit Team Member
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
-                Add a new team member with basic details, address information,
-                profile avatar, and ID proof in one single form.
+                Update basic details, address information, profile avatar, and
+                ID proof in a single page form.
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
               <InfoPill label="Logged In As" value={getRoleBadgeText(currentUserRole)} />
               <InfoPill
-                label="Can Create"
+                label="Can Manage"
                 value={
                   allowedRoles.length
                     ? allowedRoles.map((item) => getRoleBadgeText(item)).join(", ")
                     : "No access"
                 }
               />
-              <InfoPill label="Form Mode" value="Single Page" />
+              <InfoPill label="Mode" value="Edit Staff" />
             </div>
           </div>
         </div>
@@ -1011,7 +1054,7 @@ export default function CreateStaffPage() {
             <SectionHeader
               icon={<User2 className="h-5 w-5" />}
               title="Basic Information"
-              description="Enter role, identity, login details, and contact information."
+              description="Update role, identity, login details, and contact information."
             />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1039,34 +1082,22 @@ export default function CreateStaffPage() {
                 required
               />
 
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
-                  <FloatingInput
-                    id="username"
-                    label="Username"
-                    value={form.username}
-                    onChange={(e) =>
-                      updateField(
-                        "username",
-                        e.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9_]/g, "")
-                          .slice(0, 30)
-                      )
-                    }
-                    error={errors.username}
-                    required
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleAutoUsername}
-                    className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    Auto Generate
-                  </button>
-                </div>
-              </div>
+              <FloatingInput
+                id="username"
+                label="Username"
+                value={form.username}
+                onChange={(e) =>
+                  updateField(
+                    "username",
+                    e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9_]/g, "")
+                      .slice(0, 30)
+                  )
+                }
+                error={errors.username}
+                required
+              />
 
               <FloatingInput
                 id="email"
@@ -1075,19 +1106,6 @@ export default function CreateStaffPage() {
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
                 error={errors.email}
-                required
-              />
-
-              <FloatingInput
-                id="pin"
-                label="PIN"
-                type="password"
-                maxLength={6}
-                value={form.pin}
-                onChange={(e) =>
-                  updateField("pin", digitsOnly(e.target.value).slice(0, 6))
-                }
-                error={errors.pin}
                 required
               />
 
@@ -1125,7 +1143,7 @@ export default function CreateStaffPage() {
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
-              description="Select mapped location details and enter street address."
+              description="Update mapped location details and street address."
             />
 
             {locationError ? (
@@ -1252,14 +1270,14 @@ export default function CreateStaffPage() {
             <SectionHeader
               icon={<UploadCloud className="h-5 w-5" />}
               title="Profile Uploads"
-              description="Upload avatar and ID proof, then review before final submission."
+              description="Update avatar and ID proof, then review before saving."
             />
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
               <div className="space-y-5">
                 <UploadPreviewCard
                   title="Avatar"
-                  description="Upload profile image for the team member."
+                  description="Upload new profile image if you want to replace the current one."
                   preview={avatarPreview}
                   onUpload={(file) => handleImageChange(file, "avatar")}
                   onRemove={() => removeImage("avatar")}
@@ -1271,7 +1289,7 @@ export default function CreateStaffPage() {
 
                 <UploadPreviewCard
                   title="ID Proof"
-                  description="Upload Aadhaar, PAN, or any valid ID proof image."
+                  description="Upload new Aadhaar, PAN, or any valid ID proof image."
                   preview={idProofPreview}
                   onUpload={(file) => handleImageChange(file, "idproof")}
                   onRemove={() => removeImage("idproof")}
@@ -1287,7 +1305,7 @@ export default function CreateStaffPage() {
                   Review Summary
                 </h4>
                 <p className="mt-1 text-sm text-slate-500">
-                  Confirm entered details before creating the account.
+                  Confirm entered details before updating the account.
                 </p>
 
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1308,11 +1326,11 @@ export default function CreateStaffPage() {
                   <ReviewItem label="Pincode" value={form.pincode} />
                   <ReviewItem
                     label="Avatar"
-                    value={avatarFile ? avatarFile.name : "Not uploaded"}
+                    value={avatarFile ? avatarFile.name : avatarPreview ? "Existing image" : "Not uploaded"}
                   />
                   <ReviewItem
                     label="ID Proof"
-                    value={idProofFile ? idProofFile.name : "Not uploaded"}
+                    value={idProofFile ? idProofFile.name : idProofPreview ? "Existing image" : "Not uploaded"}
                   />
                 </div>
               </div>
@@ -1322,31 +1340,41 @@ export default function CreateStaffPage() {
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="text-sm text-slate-500">
-                Single page create form with basic, address, avatar, and ID proof.
+                Single page edit form with basic, address, avatar, and ID proof.
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting || isLocationLoading}
-                className={classNames(
-                  "inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-6 text-sm font-semibold text-white transition",
-                  submitting || isLocationLoading
-                    ? "cursor-not-allowed bg-slate-400"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                )}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Create Team Member
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submitting || isLocationLoading}
+                  className={classNames(
+                    "inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-6 text-sm font-semibold text-white transition",
+                    submitting || isLocationLoading
+                      ? "cursor-not-allowed bg-slate-400"
+                      : "bg-emerald-600 hover:bg-emerald-700"
+                  )}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Update Team Member
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
