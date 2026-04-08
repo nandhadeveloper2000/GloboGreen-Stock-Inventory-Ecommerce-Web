@@ -157,6 +157,8 @@ export default function CreateBrandsPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    toast.success("Selected image removed");
   };
 
   const validateForm = () => {
