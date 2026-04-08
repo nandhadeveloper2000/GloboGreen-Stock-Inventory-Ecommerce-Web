@@ -3,18 +3,22 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  CheckCircle2,
-  ImagePlus,
   Loader2,
   MapPin,
-  UploadCloud,
   User2,
+  ImagePlus,
+  UploadCloud,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/context/auth/AuthProvider";
 import SummaryApi, { baseURL } from "@/constants/SummaryApi";
+import {
+  removeStaffAvatarById,
+  removeStaffIdProofById,
+  updateStaffWithFiles,
+} from "@/lib/staffApi";
 
 type Role = "MASTER_ADMIN" | "MANAGER" | "SUPERVISOR" | "STAFF";
 type CreateRole = "MANAGER" | "SUPERVISOR" | "STAFF";
@@ -177,17 +181,6 @@ function getRedirectPath(role: Role) {
   return "/staff/list";
 }
 
-function InfoPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
 function SectionHeader({
   icon,
   title,
@@ -325,16 +318,6 @@ function FloatingSelect({
         >
           {label} {required ? "*" : ""}
         </label>
-
-        <svg
-          className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M6 8l4 4 4-4" />
-        </svg>
       </div>
 
       {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
@@ -342,40 +325,25 @@ function FloatingSelect({
   );
 }
 
-function ReviewItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">
-        {value || "-"}
-      </p>
-    </div>
-  );
-}
-
-function UploadPreviewCard({
+function UploadCard({
   title,
   description,
   preview,
-  onUpload,
+  onPick,
   onRemove,
   inputRef,
-  buttonLabel,
-  emptyIcon,
-  previewClassName,
+  fileLabel,
 }: {
   title: string;
   description: string;
   preview: string;
-  onUpload: (file: File | null | undefined) => void;
+  onPick: (file: File | null | undefined) => void;
   onRemove: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  buttonLabel: string;
-  emptyIcon: ReactNode;
-  previewClassName: string;
+  fileLabel: "avatar" | "idproof";
 }) {
+  const isAvatar = fileLabel === "avatar";
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
       <h4 className="text-sm font-bold text-slate-900">{title}</h4>
@@ -383,10 +351,23 @@ function UploadPreviewCard({
 
       <div className="mt-4 flex flex-col items-center">
         {preview ? (
-          <img src={preview} alt={title} className={previewClassName} />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview}
+            alt={title}
+            className={
+              isAvatar
+                ? "h-36 w-36 rounded-full object-cover border border-slate-200 bg-white"
+                : "h-40 w-full max-w-65 rounded-2xl object-cover border border-slate-200 bg-white"
+            }
+          />
         ) : (
-          <div className="flex h-40 w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
-            {emptyIcon}
+          <div className="flex h-40 w-full max-w-65 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
+            {isAvatar ? (
+              <ImagePlus className="h-8 w-8" />
+            ) : (
+              <UploadCloud className="h-8 w-8" />
+            )}
           </div>
         )}
 
@@ -395,7 +376,7 @@ function UploadPreviewCard({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => onUpload(e.target.files?.[0])}
+          onChange={(e) => onPick(e.target.files?.[0])}
         />
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -404,7 +385,7 @@ function UploadPreviewCard({
             onClick={() => inputRef.current?.click()}
             className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            {buttonLabel}
+            {preview ? "Replace" : "Upload"}
           </button>
 
           {preview ? (
@@ -442,15 +423,12 @@ export default function EditTeamMemberPage() {
     if (currentUserRole === "MASTER_ADMIN") {
       return ["MANAGER", "SUPERVISOR", "STAFF"];
     }
-
     if (currentUserRole === "MANAGER") {
       return ["SUPERVISOR", "STAFF"];
     }
-
     if (currentUserRole === "SUPERVISOR") {
       return ["STAFF"];
     }
-
     return [];
   }, [currentUserRole]);
 
@@ -458,6 +436,8 @@ export default function EditTeamMemberPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [pageLoading, setPageLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
+  const [removingIdProof, setRemovingIdProof] = useState(false);
 
   const [states, setStates] = useState<Option[]>([]);
   const [districts, setDistricts] = useState<Option[]>([]);
@@ -472,9 +452,11 @@ export default function EditTeamMemberPage() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [existingAvatarUrl, setExistingAvatarUrl] = useState("");
 
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
   const [idProofPreview, setIdProofPreview] = useState("");
+  const [existingIdProofUrl, setExistingIdProofUrl] = useState("");
 
   const isLocationLoading =
     loadingStates || loadingDistricts || loadingTaluks || loadingAreas;
@@ -515,21 +497,14 @@ export default function EditTeamMemberPage() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        console.error("Location API failed:", {
-          url,
-          status: response.status,
-          data,
-        });
         return [];
       }
 
       if (Array.isArray(data?.data)) return data.data;
       if (Array.isArray(data?.results)) return data.results;
       if (Array.isArray(data)) return data;
-
       return [];
-    } catch (error) {
-      console.error("Location API error:", error);
+    } catch {
       return [];
     }
   };
@@ -593,35 +568,88 @@ export default function EditTeamMemberPage() {
     setIdProofPreview(previewUrl);
   };
 
-  const removeImage = (type: "avatar" | "idproof") => {
-    if (type === "avatar") {
-      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+  const handleRemoveAvatar = async () => {
+    if (!accessToken || !id) {
+      toast.error("Authentication or staff id missing");
+      return;
+    }
+
+    if (avatarFile && avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+      setAvatarFile(null);
+      setAvatarPreview(existingAvatarUrl || "");
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      toast.success("Selected avatar removed");
+      return;
+    }
+
+    if (!existingAvatarUrl) {
       setAvatarPreview("");
       setAvatarFile(null);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
       return;
     }
 
-    if (idProofPreview?.startsWith("blob:")) URL.revokeObjectURL(idProofPreview);
-    setIdProofPreview("");
-    setIdProofFile(null);
-    if (idProofInputRef.current) idProofInputRef.current.value = "";
+    try {
+      setRemovingAvatar(true);
+      await removeStaffAvatarById(accessToken, id);
+      setAvatarFile(null);
+      setAvatarPreview("");
+      setExistingAvatarUrl("");
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      toast.success("Avatar removed successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove avatar");
+    } finally {
+      setRemovingAvatar(false);
+    }
+  };
+
+  const handleRemoveIdProof = async () => {
+    if (!accessToken || !id) {
+      toast.error("Authentication or staff id missing");
+      return;
+    }
+
+    if (idProofFile && idProofPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(idProofPreview);
+      setIdProofFile(null);
+      setIdProofPreview(existingIdProofUrl || "");
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+      toast.success("Selected ID proof removed");
+      return;
+    }
+
+    if (!existingIdProofUrl) {
+      setIdProofPreview("");
+      setIdProofFile(null);
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+      return;
+    }
+
+    try {
+      setRemovingIdProof(true);
+      await removeStaffIdProofById(accessToken, id);
+      setIdProofFile(null);
+      setIdProofPreview("");
+      setExistingIdProofUrl("");
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+      toast.success("ID proof removed successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove ID proof"
+      );
+    } finally {
+      setRemovingIdProof(false);
+    }
   };
 
   const validateForm = () => {
     const nextErrors: FieldErrors = {};
 
-    if (!form.role) {
-      nextErrors.role = "Role is required";
-    }
-
-    if (!form.name.trim()) {
-      nextErrors.name = "Full name is required";
-    }
-
-    if (!form.username.trim()) {
-      nextErrors.username = "Username is required";
-    }
+    if (!form.role) nextErrors.role = "Role is required";
+    if (!form.name.trim()) nextErrors.name = "Full name is required";
+    if (!form.username.trim()) nextErrors.username = "Username is required";
 
     if (!form.email.trim()) {
       nextErrors.email = "Email is required";
@@ -635,10 +663,7 @@ export default function EditTeamMemberPage() {
       nextErrors.mobile = "Enter a valid 10-digit Indian mobile number";
     }
 
-    if (
-      form.secondaryMobile.trim() &&
-      !isValidIndianMobile(form.secondaryMobile)
-    ) {
+    if (form.secondaryMobile.trim() && !isValidIndianMobile(form.secondaryMobile)) {
       nextErrors.secondaryMobile = "Enter a valid 10-digit secondary mobile";
     }
 
@@ -651,25 +676,11 @@ export default function EditTeamMemberPage() {
         "Secondary mobile must be different from primary mobile";
     }
 
-    if (!form.state.trim()) {
-      nextErrors.state = "State is required";
-    }
-
-    if (!form.district.trim()) {
-      nextErrors.district = "District is required";
-    }
-
-    if (!form.taluk.trim()) {
-      nextErrors.taluk = "Taluk is required";
-    }
-
-    if (!form.area.trim()) {
-      nextErrors.area = "Area is required";
-    }
-
-    if (!form.street.trim()) {
-      nextErrors.street = "Street is required";
-    }
+    if (!form.state.trim()) nextErrors.state = "State is required";
+    if (!form.district.trim()) nextErrors.district = "District is required";
+    if (!form.taluk.trim()) nextErrors.taluk = "Taluk is required";
+    if (!form.area.trim()) nextErrors.area = "Area is required";
+    if (!form.street.trim()) nextErrors.street = "Street is required";
 
     if (!form.pincode.trim()) {
       nextErrors.pincode = "Pincode is required";
@@ -704,10 +715,10 @@ export default function EditTeamMemberPage() {
     }
 
     loadStates();
-
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   useEffect(() => {
@@ -715,12 +726,7 @@ export default function EditTeamMemberPage() {
 
     if (!form.state) {
       resetDistrictTree();
-      setForm((prev) => ({
-        ...prev,
-        district: "",
-        taluk: "",
-        area: "",
-      }));
+      setForm((prev) => ({ ...prev, district: "", taluk: "", area: "" }));
       return;
     }
 
@@ -729,9 +735,7 @@ export default function EditTeamMemberPage() {
       setLocationError("");
 
       const data = await fetchApi(
-        `${SummaryApi.location_districts.url}?state=${encodeURIComponent(
-          form.state
-        )}`
+        `${SummaryApi.location_districts.url}?state=${encodeURIComponent(form.state)}`
       );
 
       if (!active) return;
@@ -748,10 +752,10 @@ export default function EditTeamMemberPage() {
     }
 
     loadDistricts();
-
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, accessToken]);
 
   useEffect(() => {
@@ -759,11 +763,7 @@ export default function EditTeamMemberPage() {
 
     if (!form.state || !form.district) {
       resetTalukTree();
-      setForm((prev) => ({
-        ...prev,
-        taluk: "",
-        area: "",
-      }));
+      setForm((prev) => ({ ...prev, taluk: "", area: "" }));
       return;
     }
 
@@ -790,10 +790,10 @@ export default function EditTeamMemberPage() {
     }
 
     loadTaluks();
-
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, accessToken]);
 
   useEffect(() => {
@@ -801,10 +801,7 @@ export default function EditTeamMemberPage() {
 
     if (!form.state || !form.district || !form.taluk) {
       resetAreaTree();
-      setForm((prev) => ({
-        ...prev,
-        area: "",
-      }));
+      setForm((prev) => ({ ...prev, area: "" }));
       return;
     }
 
@@ -826,10 +823,10 @@ export default function EditTeamMemberPage() {
     }
 
     loadAreas();
-
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, form.taluk, accessToken]);
 
   useEffect(() => {
@@ -850,8 +847,7 @@ export default function EditTeamMemberPage() {
           cache: "no-store",
         });
 
-        const result =
-          (await response.json().catch(() => ({}))) as StaffResponse;
+        const result = (await response.json().catch(() => ({}))) as StaffResponse;
 
         if (!active) return;
 
@@ -880,19 +876,17 @@ export default function EditTeamMemberPage() {
         });
 
         setAvatarPreview(staff.avatarUrl || "");
+        setExistingAvatarUrl(staff.avatarUrl || "");
         setIdProofPreview(staff.idProofUrl || "");
-      } catch (error) {
-        console.error(error);
+        setExistingIdProofUrl(staff.idProofUrl || "");
+      } catch {
         toast.error("Something went wrong while loading staff details");
       } finally {
-        if (active) {
-          setPageLoading(false);
-        }
+        if (active) setPageLoading(false);
       }
     }
 
     loadStaff();
-
     return () => {
       active = false;
     };
@@ -911,9 +905,7 @@ export default function EditTeamMemberPage() {
       return;
     }
 
-    const valid = validateForm();
-
-    if (!valid) {
+    if (!validateForm()) {
       toast.error("Please fix the form errors before updating");
       return;
     }
@@ -937,7 +929,6 @@ export default function EditTeamMemberPage() {
       const addressPayload = buildAddressPayload(form);
 
       const payload = new FormData();
-
       payload.append("role", form.role);
       payload.append("name", cleanName);
       payload.append("username", cleanUsername);
@@ -968,30 +959,14 @@ export default function EditTeamMemberPage() {
         payload.append("idproof", idProofFile);
       }
 
-      const response = await fetch(
-        `${baseURL}${SummaryApi.staff_update.url(id)}`,
-        {
-          method: SummaryApi.staff_update.method,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: payload,
-        }
-      );
-
-      const result =
-        (await response.json().catch(() => ({}))) as StaffResponse;
-
-      if (!response.ok || !result?.success) {
-        toast.error(result?.message || "Failed to update team member");
-        return;
-      }
+      await updateStaffWithFiles(accessToken, id, payload);
 
       toast.success("Team member updated successfully");
       router.replace(getRedirectPath(currentUserRole));
     } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong while updating the account");
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1010,41 +985,6 @@ export default function EditTeamMemberPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#082a5e] via-violet-800 to-[#9116a1]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_25%)]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
-                Staff Management
-              </div>
-
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Edit Team Member
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
-                Update basic details, address information, profile avatar, and
-                ID proof in a single page form.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <InfoPill label="Logged In As" value={getRoleBadgeText(currentUserRole)} />
-              <InfoPill
-                label="Can Manage"
-                value={
-                  allowedRoles.length
-                    ? allowedRoles.map((item) => getRoleBadgeText(item)).join(", ")
-                    : "No access"
-                }
-              />
-              <InfoPill label="Mode" value="Edit Staff" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       <form
         onSubmit={handleSubmit}
         className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
@@ -1075,9 +1015,7 @@ export default function EditTeamMemberPage() {
                 id="name"
                 label="Full Name"
                 value={form.name}
-                onChange={(e) =>
-                  updateField("name", alphaSpaceOnly(e.target.value))
-                }
+                onChange={(e) => updateField("name", alphaSpaceOnly(e.target.value))}
                 error={errors.name}
                 required
               />
@@ -1244,7 +1182,7 @@ export default function EditTeamMemberPage() {
 
               <FloatingInput
                 id="street"
-                label="Street / Door No"
+                label="Street"
                 value={form.street}
                 onChange={(e) => updateField("street", e.target.value)}
                 error={errors.street}
@@ -1254,7 +1192,6 @@ export default function EditTeamMemberPage() {
               <FloatingInput
                 id="pincode"
                 label="Pincode"
-                type="tel"
                 maxLength={6}
                 value={form.pincode}
                 onChange={(e) =>
@@ -1269,113 +1206,62 @@ export default function EditTeamMemberPage() {
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionHeader
               icon={<UploadCloud className="h-5 w-5" />}
-              title="Profile Uploads"
-              description="Update avatar and ID proof, then review before saving."
+              title="Profile & Upload"
+              description="Upload avatar and ID proof, or remove existing files."
             />
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="space-y-5">
-                <UploadPreviewCard
-                  title="Avatar"
-                  description="Upload new profile image if you want to replace the current one."
-                  preview={avatarPreview}
-                  onUpload={(file) => handleImageChange(file, "avatar")}
-                  onRemove={() => removeImage("avatar")}
-                  inputRef={avatarInputRef}
-                  buttonLabel="Upload Avatar"
-                  emptyIcon={<ImagePlus className="h-8 w-8" />}
-                  previewClassName="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
-                />
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <UploadCard
+                title="Profile Avatar"
+                description="Upload or replace staff profile image."
+                preview={avatarPreview}
+                onPick={(file) => handleImageChange(file, "avatar")}
+                onRemove={handleRemoveAvatar}
+                inputRef={avatarInputRef}
+                fileLabel="avatar"
+              />
 
-                <UploadPreviewCard
-                  title="ID Proof"
-                  description="Upload new Aadhaar, PAN, or any valid ID proof image."
-                  preview={idProofPreview}
-                  onUpload={(file) => handleImageChange(file, "idproof")}
-                  onRemove={() => removeImage("idproof")}
-                  inputRef={idProofInputRef}
-                  buttonLabel="Upload ID Proof"
-                  emptyIcon={<UploadCloud className="h-8 w-8" />}
-                  previewClassName="h-40 w-full max-w-[260px] rounded-2xl border border-slate-200 object-cover shadow-sm"
-                />
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <h4 className="text-base font-bold text-slate-900">
-                  Review Summary
-                </h4>
-                <p className="mt-1 text-sm text-slate-500">
-                  Confirm entered details before updating the account.
-                </p>
-
-                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <ReviewItem label="Role" value={getRoleBadgeText(form.role)} />
-                  <ReviewItem label="Full Name" value={form.name} />
-                  <ReviewItem label="Username" value={form.username} />
-                  <ReviewItem label="Email" value={form.email} />
-                  <ReviewItem label="Primary Mobile" value={form.mobile} />
-                  <ReviewItem
-                    label="Secondary Mobile"
-                    value={form.secondaryMobile || "-"}
-                  />
-                  <ReviewItem label="State" value={form.state} />
-                  <ReviewItem label="District" value={form.district} />
-                  <ReviewItem label="Taluk" value={form.taluk} />
-                  <ReviewItem label="Area" value={form.area} />
-                  <ReviewItem label="Street" value={form.street} />
-                  <ReviewItem label="Pincode" value={form.pincode} />
-                  <ReviewItem
-                    label="Avatar"
-                    value={avatarFile ? avatarFile.name : avatarPreview ? "Existing image" : "Not uploaded"}
-                  />
-                  <ReviewItem
-                    label="ID Proof"
-                    value={idProofFile ? idProofFile.name : idProofPreview ? "Existing image" : "Not uploaded"}
-                  />
-                </div>
-              </div>
+              <UploadCard
+                title="ID Proof"
+                description="Upload or replace staff ID proof image."
+                preview={idProofPreview}
+                onPick={(file) => handleImageChange(file, "idproof")}
+                onRemove={handleRemoveIdProof}
+                inputRef={idProofInputRef}
+                fileLabel="idproof"
+              />
             </div>
+
+            {(removingAvatar || removingIdProof) && (
+              <div className="mt-4 text-sm font-medium text-slate-500">
+                Removing file...
+              </div>
+            )}
           </section>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm text-slate-500">
-                Single page edit form with basic, address, avatar, and ID proof.
-              </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Cancel
+            </button>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={submitting || isLocationLoading}
-                  className={classNames(
-                    "inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-6 text-sm font-semibold text-white transition",
-                    submitting || isLocationLoading
-                      ? "cursor-not-allowed bg-slate-400"
-                      : "bg-emerald-600 hover:bg-emerald-700"
-                  )}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      Update Team Member
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Staff"
+              )}
+            </button>
           </div>
         </div>
       </form>

@@ -1,11 +1,5 @@
-import MasterPageWrapper from "@/components/common/MasterPageWrapper";
+import CreateCategoryPage from "@/components/category/create";
 
-export default function CategoryPage() {
-  return (
-    <MasterPageWrapper title="Create Shop">
-      <div className="rounded-xl border p-4">
-Category list here
-      </div>
-    </MasterPageWrapper>
-  );
+export default function Page() {
+  return <CreateCategoryPage />;
 }

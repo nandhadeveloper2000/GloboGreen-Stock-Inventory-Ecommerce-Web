@@ -389,13 +389,14 @@ function UploadPreviewCard({
 
       <div className="mt-4 flex flex-col items-center">
         {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={preview}
             alt={title}
             className={previewClassName}
           />
         ) : (
-          <div className="flex h-40 w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
+          <div className="flex h-40 w-full max-w-65 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             {emptyIcon}
           </div>
         )}
@@ -600,6 +601,7 @@ export default function CreateStaffPage() {
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   useEffect(() => {
@@ -644,6 +646,7 @@ export default function CreateStaffPage() {
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, accessToken]);
 
   useEffect(() => {
@@ -686,6 +689,7 @@ export default function CreateStaffPage() {
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, accessToken]);
 
   useEffect(() => {
@@ -722,6 +726,7 @@ export default function CreateStaffPage() {
     return () => {
       active = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, form.taluk, accessToken]);
 
   useEffect(() => {
@@ -967,7 +972,7 @@ export default function CreateStaffPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#082a5e] via-violet-800 to-[#9116a1]">
+      <div className="relative overflow-hidden bg-linear-to-r from-[#082a5e] via-violet-800 to-[#9116a1]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_25%)]" />
         <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">

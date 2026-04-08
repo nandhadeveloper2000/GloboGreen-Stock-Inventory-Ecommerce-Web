@@ -1,11 +1,7 @@
-import MasterPageWrapper from "@/components/common/MasterPageWrapper";
+import CreateMasterCategoryPage from "@/components/mastercategory/create";
 
 export default function MasterCategoryPage() {
     return (
-        <MasterPageWrapper title="Master Category">
-            <div className="rounded-xl border p-4">
-                Category content here
-            </div>
-        </MasterPageWrapper>
+    <CreateMasterCategoryPage />
     );
 }

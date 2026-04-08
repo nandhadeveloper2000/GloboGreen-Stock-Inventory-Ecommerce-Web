@@ -14,7 +14,7 @@ import {
 
 import { useAuth } from "@/context/auth/AuthProvider";
 import SummaryApi from "@/constants/SummaryApi";
-import { postJson, pickAuthData, type ApiResponse } from "@/lib/api";
+import apiClient from "@/lib/api-client";
 import { appToast } from "@/lib/toast";
 
 import { Button } from "@/components/ui/button";
@@ -34,17 +34,23 @@ type AuthUser = {
   name?: string;
   username?: string;
   email?: string;
+  avatarUrl?: string;
   role?: string;
   roles?: string[];
   [key: string]: unknown;
 };
 
-type LoginResponse = ApiResponse<{
+type LoginResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    user?: AuthUser;
+    accessToken?: string;
+    refreshToken?: string;
+  };
   user?: AuthUser;
   accessToken?: string;
   refreshToken?: string;
-}> & {
-  user?: AuthUser;
 };
 
 function isAuthUser(value: unknown): value is AuthUser {
@@ -56,9 +62,7 @@ function getLoginConfig(role: LoginRole): { method: string; url: string } {
     case "MASTER_ADMIN":
       return SummaryApi.master_login;
     case "MANAGER":
-      return SummaryApi.subadmin_login;
     case "SUPERVISOR":
-      return SummaryApi.supervisor_login;
     case "STAFF":
       return SummaryApi.staff_login;
     default:
@@ -81,6 +85,36 @@ function getRoleLabel(role: LoginRole): string {
   }
 }
 
+function pickLoginData(payload: LoginResponse) {
+  return {
+    accessToken: payload?.data?.accessToken || payload?.accessToken || "",
+    refreshToken: payload?.data?.refreshToken || payload?.refreshToken || "",
+    user: payload?.data?.user || payload?.user || null,
+  };
+}
+
+function getErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object" &&
+    (error as { response?: { data?: { message?: string } } }).response?.data
+      ?.message
+  ) {
+    return (
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message || "Unable to sign in"
+    );
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unable to sign in";
+}
+
 export default function MasterLoginForm() {
   const router = useRouter();
   const { setAuth } = useAuth();
@@ -91,7 +125,6 @@ export default function MasterLoginForm() {
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
-
 
   const redirectByRole = (role?: string): void => {
     const normalizedRole = String(role ?? "").toUpperCase();
@@ -163,19 +196,24 @@ export default function MasterLoginForm() {
 
       const endpoint = getLoginConfig(selectedRole);
 
-      const result = await postJson<LoginResponse>(endpoint.url, {
+      const response = await apiClient.post<LoginResponse>(endpoint.url, {
         login: loginId.trim(),
         pin: pin.trim(),
       });
 
-      if (!result.ok || !result.data) {
-        throw new Error(result.error || result.data?.message || "Login failed");
+      const payload = response.data;
+      const { accessToken, refreshToken, user } = pickLoginData(payload);
+
+      if (!isAuthUser(user)) {
+        throw new Error(payload?.message || "User data not found");
       }
 
-      const { accessToken, refreshToken, user } = pickAuthData(result.data);
+      if (!accessToken) {
+        throw new Error(payload?.message || "Access token not found");
+      }
 
-      if (!isAuthUser(user) || !accessToken || !refreshToken) {
-        throw new Error(result.data.message || "Invalid login response");
+      if (!refreshToken) {
+        throw new Error(payload?.message || "Refresh token not found");
       }
 
       await setAuth(user, accessToken, refreshToken);
@@ -187,10 +225,7 @@ export default function MasterLoginForm() {
 
       redirectByRole(user.role);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unable to sign in";
-
-      appToast.error("Login failed", message);
+      appToast.error("Login failed", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -210,8 +245,6 @@ export default function MasterLoginForm() {
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="relative mx-auto flex items-center justify-center rounded-[30px] border border-white/20 bg-white backdrop-blur-xl p-6 shadow-xl">
-
-            {/* Glass overlay */}
             <div className="absolute inset-0 rounded-[30px] bg-white/5" />
 
             <Image
@@ -222,7 +255,6 @@ export default function MasterLoginForm() {
               priority
               className="relative object-contain"
             />
-
           </div>
 
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white sm:text-[2rem]">
@@ -341,6 +373,7 @@ export default function MasterLoginForm() {
                 </button>
               </div>
             </div>
+
             <Button
               type="button"
               onClick={() => void handleLogin()}

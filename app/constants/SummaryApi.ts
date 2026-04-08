@@ -29,7 +29,7 @@ const SummaryApi = {
 
   /* ===================== MASTER ME ===================== */
   master_me: { method: "GET", url: `${API_BASE}/master/me` },
-  master_update_me: { method: "PATCH", url: `${API_BASE}/master/me` },
+  master_update_me: { method: "PUT", url: `${API_BASE}/master/me` },
   master_avatar_upload: {
     method: "POST",
     url: `${API_BASE}/master/me/avatar`,
@@ -53,50 +53,70 @@ const SummaryApi = {
     method: "DELETE",
     url: (id: string) => `${API_BASE}/master/${id}`,
   },
+/* ===================== STAFF AUTH ===================== */
+staff_login: { method: "POST", url: `${API_BASE}/staff/login` },
+staff_forgot_pin: { method: "POST", url: `${API_BASE}/staff/forgot-pin` },
+staff_verify_pin_otp: {
+  method: "POST",
+  url: `${API_BASE}/staff/verify-pin-otp`,
+},
+staff_reset_pin: { method: "POST", url: `${API_BASE}/staff/reset-pin` },
+staff_change_pin: {
+  method: "PUT",
+  url: `${API_BASE}/staff/me/change-pin`,
+},
 
-  /* ===================== STAFF AUTH ===================== */
-  staff_login: { method: "POST", url: `${API_BASE}/staff/login` },
-  staff_forgot_pin: { method: "POST", url: `${API_BASE}/staff/forgot-pin` },
-  staff_verify_pin_otp: {
-    method: "POST",
-    url: `${API_BASE}/staff/verify-pin-otp`,
-  },
-  staff_reset_pin: { method: "POST", url: `${API_BASE}/staff/reset-pin` },
-  staff_change_pin: {
-    method: "PUT",
-    url: `${API_BASE}/staff/me/change-pin`,
-  },
-  staff_toggle_active: {
-    method: "PUT",
-    url: (id: string) => `${API_BASE}/staff/${id}/activate`,
-  },
-  /* ===================== STAFF SELF ===================== */
-  staff_me: { method: "GET", url: `${API_BASE}/staff/me` },
-  staff_update_me: { method: "PUT", url: `${API_BASE}/staff/me` },
-  staff_avatar_upload_me: {
-    method: "POST",
-    url: `${API_BASE}/staff/me/avatar`,
-  },
-  staff_avatar_remove_me: {
-    method: "DELETE",
-    url: `${API_BASE}/staff/me/avatar`,
-  },
+/* ===================== STAFF SELF ===================== */
+staff_me: { method: "GET", url: `${API_BASE}/staff/me` },
+staff_update_me: { method: "PUT", url: `${API_BASE}/staff/me` },
 
-  /* ===================== STAFF CRUD ===================== */
-  staff_create: { method: "POST", url: `${API_BASE}/staff` },
-  staff_list: { method: "GET", url: `${API_BASE}/staff` },
-  staff_get: {
-    method: "GET",
-    url: (id: string) => `${API_BASE}/staff/${id}`,
-  },
-  staff_update: {
-    method: "PUT",
-    url: (id: string) => `${API_BASE}/staff/${id}`,
-  },
-  staff_delete: {
-    method: "DELETE",
-    url: (id: string) => `${API_BASE}/staff/${id}`,
-  },
+staff_avatar_upload_me: {
+  method: "POST",
+  url: `${API_BASE}/staff/me/avatar`,
+},
+staff_avatar_remove_me: {
+  method: "DELETE",
+  url: `${API_BASE}/staff/me/avatar`,
+},
+
+staff_idproof_upload_me: {
+  method: "POST",
+  url: `${API_BASE}/staff/me/idproof`,
+},
+staff_idproof_remove_me: {
+  method: "DELETE",
+  url: `${API_BASE}/staff/me/idproof`,
+},
+
+/* ===================== STAFF CRUD ===================== */
+staff_create: { method: "POST", url: `${API_BASE}/staff` },
+staff_list: { method: "GET", url: `${API_BASE}/staff` },
+staff_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/staff/${id}`,
+},
+staff_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/staff/${id}`,
+},
+staff_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/staff/${id}`,
+},
+
+staff_remove_avatar: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/staff/${id}/avatar`,
+},
+staff_remove_idproof: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/staff/${id}/idproof`,
+},
+staff_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/staff/${id}/activate`,
+},
+
 
   /* ===================== SHOP OWNER AUTH ===================== */
   shopowner_login: { method: "POST", url: `${API_BASE}/shopowners/login` },
@@ -214,6 +234,153 @@ const SummaryApi = {
   location_districts: { method: "GET", url: `${API_BASE}/locations/districts` },
   location_taluks: { method: "GET", url: `${API_BASE}/locations/taluks` },
   location_villages: { method: "GET", url: `${API_BASE}/locations/villages` },
+
+  /* ===================== MASTER CATALOG ===================== */
+master_category_create: { method: "POST", url: `${API_BASE}/master-categories` },
+master_category_list: { method: "GET", url: `${API_BASE}/master-categories` },
+master_category_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/master-categories/${id}`,
+},
+master_category_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/master-categories/${id}`,
+},
+master_category_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/master-categories/${id}`,
+},
+master_category_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/master-categories/${id}/active`,
+},
+master_category_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
+},
+master_category_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
+},
+
+/* ---------- CATEGORY ---------- */
+category_create: { method: "POST", url: `${API_BASE}/categories` },
+
+category_list: { method: "GET", url: `${API_BASE}/categories` },
+
+category_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/categories/${id}`,
+},
+
+category_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/categories/${id}`,
+},
+
+category_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/categories/${id}`,
+},
+
+category_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/categories/${id}/active`,
+},
+
+category_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/categories/${id}/image`,
+},
+
+category_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/categories/${id}/image`,
+},
+
+/* ---------- SUB CATEGORY ---------- */
+sub_category_create: { method: "POST", url: `${API_BASE}/sub-categories` },
+sub_category_list: { method: "GET", url: `${API_BASE}/sub-categories` },
+sub_category_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+},
+sub_category_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+},
+sub_category_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+},
+sub_category_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}/active`,
+},
+sub_category_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
+},
+sub_category_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
+},
+
+/* ---------- BRAND ---------- */
+brand_create: { method: "POST", url: `${API_BASE}/brands` },
+brand_list: { method: "GET", url: `${API_BASE}/brands` },
+brand_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/brands/${id}`,
+},
+brand_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/brands/${id}`,
+},
+brand_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/brands/${id}`,
+},
+brand_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/brands/${id}/active`,
+},
+brand_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/brands/${id}/image`,
+},
+brand_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/brands/${id}/image`,
+},
+
+/* ---------- MODEL ---------- */
+model_create: { method: "POST", url: `${API_BASE}/master-categories/models` },
+model_list: { method: "GET", url: `${API_BASE}/master-categories/models` },
+model_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/models${id}`,
+},
+model_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/models${id}`,
+},
+model_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/models${id}`,
+},
+model_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/models${id}/active`,
+},
+model_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/models${id}/image`,
+},
+model_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/models${id}/image`,
+},
 };
 
 export default SummaryApi;

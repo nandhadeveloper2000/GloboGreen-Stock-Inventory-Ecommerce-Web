@@ -246,8 +246,8 @@ export default function MasterDashboardPage() {
       setError("");
 
       const responses = await Promise.allSettled([
-        fetchJson<unknown>(SummaryApi.master_all_subadmin.url),
-        fetchJson<unknown>(SummaryApi.supervisor_list.url),
+        fetchJson<unknown>(SummaryApi.staff_list.url),
+        fetchJson<unknown>(SummaryApi.staff_list.url),
         fetchJson<unknown>(SummaryApi.staff_list.url),
         fetchJson<unknown>(SummaryApi.master_list_shops.url),
         fetchJson<unknown>("/api/master-category"),

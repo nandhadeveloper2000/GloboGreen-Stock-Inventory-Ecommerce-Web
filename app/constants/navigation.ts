@@ -30,6 +30,13 @@ export const SIDEBAR_MENU: Record<UserRole, NavItem[]> = {
       ],
     },
     {
+  label: "Shop Owner Management",
+  children: [
+    { label: "Create Shop Owner", href: "/master/shopowner/create" },
+    { label: "Shop Owner List", href: "/master/shopowner/list" },
+  ],
+},
+    {
       label: "Shop Management",
       children: [
         { label: "Create Shop", href: "/master/shop/create" },
@@ -95,6 +102,13 @@ export const SIDEBAR_MENU: Record<UserRole, NavItem[]> = {
       children: [
         { label: "Create Staff", href: "/manager/staff/create" },
         { label: "Staff List", href: "/manager/staff/list" },
+      ],
+    },
+    {
+      label: "Shop Owner Management",
+      children: [
+        { label: "Create Shop Owner", href: "/master/shopowner/create" },
+        { label: "Shop Owner List", href: "/master/shopowner/list" },
       ],
     },
     {
