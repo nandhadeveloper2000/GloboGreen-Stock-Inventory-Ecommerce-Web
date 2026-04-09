@@ -13,12 +13,11 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Loader2,
   ImagePlus,
-  Tag,
+  Pencil,
   ArrowLeft,
   Trash2,
   Save,
   Sparkles,
-  Shapes,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,36 +25,30 @@ import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
 
-type CategoryOption = {
+type SubCategoryOption = {
   _id: string;
   name: string;
   nameKey?: string;
-  isActive: boolean;
-  masterCategoryId?:
-    | string
-    | {
-        _id?: string;
-        name?: string;
-      };
+  isActive?: boolean;
   image?: {
     url?: string;
     publicId?: string;
   };
 };
 
-type CategoryListResponse = {
+type SubCategoryListResponse = {
   success?: boolean;
   message?: string;
-  data?: CategoryOption[];
-  categories?: CategoryOption[];
+  data?: SubCategoryOption[];
+  subCategories?: SubCategoryOption[];
 };
 
-type SubCategoryResponse = {
+type ProductTypeResponse = {
   success?: boolean;
   message?: string;
   data?: {
     _id: string;
-    categoryId?:
+    subCategoryId?:
       | string
       | {
           _id?: string;
@@ -73,12 +66,12 @@ type SubCategoryResponse = {
   };
 };
 
-type UpdateSubCategoryResponse = {
+type UpdateProductTypeResponse = {
   success?: boolean;
   message?: string;
   data?: {
     _id: string;
-    categoryId?: string;
+    subCategoryId?: string;
     name?: string;
     nameKey?: string;
     isActive?: boolean;
@@ -140,7 +133,7 @@ function getRoleBasePath(role?: string | null) {
   return "/master";
 }
 
-function extractCategoryId(
+function extractSubCategoryId(
   value?:
     | string
     | {
@@ -153,7 +146,7 @@ function extractCategoryId(
   return String(value._id || "");
 }
 
-export default function EditSubCategoryPage() {
+export default function EditProductTypePage() {
   const router = useRouter();
   const params = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -163,19 +156,21 @@ export default function EditSubCategoryPage() {
   const basePath = getRoleBasePath(role);
 
   const [loading, setLoading] = useState(true);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [removingImage, setRemovingImage] = useState(false);
 
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoryId, setCategoryId] = useState("");
+  const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
+  const [subCategoryId, setSubCategoryId] = useState("");
   const [name, setName] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
 
   const [initialData, setInitialData] = useState({
-    categoryId: "",
+    subCategoryId: "",
     name: "",
     imageUrl: "",
+    isActive: true,
   });
 
   const nameKeyPreview = useMemo(() => {
@@ -193,12 +188,12 @@ export default function EditSubCategoryPage() {
     };
   }, [imagePreview.url, imagePreview.isExisting]);
 
-  const fetchCategories = async () => {
+  const fetchSubCategories = async () => {
     try {
-      setLoadingCategories(true);
+      setLoadingSubCategories(true);
 
-      const response = await apiClient.get<CategoryListResponse>(
-        SummaryApi.category_list.url,
+      const response = await apiClient.get<SubCategoryListResponse>(
+        SummaryApi.sub_category_list.url,
         {
           headers: {
             Accept: "application/json",
@@ -209,27 +204,27 @@ export default function EditSubCategoryPage() {
       const result = response.data;
 
       if (!result?.success) {
-        throw new Error(result?.message || "Failed to load categories");
+        throw new Error(result?.message || "Failed to load sub categories");
       }
 
-      const list = result.data || result.categories || [];
+      const list = result.data || result.subCategories || [];
       const safeList = Array.isArray(list) ? list : [];
-      const activeOnly = safeList.filter((item) => item.isActive);
+      const activeOnly = safeList.filter((item) => item.isActive !== false);
 
-      setCategories(activeOnly);
+      setSubCategories(activeOnly);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
-      setLoadingCategories(false);
+      setLoadingSubCategories(false);
     }
   };
 
-  const fetchSubCategory = async () => {
+  const fetchProductType = async () => {
     try {
       setLoading(true);
 
-      const response = await apiClient.get<SubCategoryResponse>(
-        SummaryApi.sub_category_get.url(id),
+      const response = await apiClient.get<ProductTypeResponse>(
+        SummaryApi.product_type_get.url(id),
         {
           headers: {
             Accept: "application/json",
@@ -240,16 +235,18 @@ export default function EditSubCategoryPage() {
       const result = response.data;
 
       if (!result?.success) {
-        throw new Error(result?.message || "Failed to load sub category");
+        throw new Error(result?.message || "Failed to load product type");
       }
 
       const data = result.data;
-      const resolvedCategoryId = extractCategoryId(data?.categoryId);
+      const resolvedSubCategoryId = extractSubCategoryId(data?.subCategoryId);
       const resolvedName = String(data?.name || "");
       const resolvedImageUrl = String(data?.image?.url || "");
+      const resolvedIsActive = Boolean(data?.isActive);
 
-      setCategoryId(resolvedCategoryId);
+      setSubCategoryId(resolvedSubCategoryId);
       setName(resolvedName);
+      setIsActive(resolvedIsActive);
 
       if (resolvedImageUrl) {
         setImagePreview({
@@ -262,9 +259,10 @@ export default function EditSubCategoryPage() {
       }
 
       setInitialData({
-        categoryId: resolvedCategoryId,
+        subCategoryId: resolvedSubCategoryId,
         name: resolvedName,
         imageUrl: resolvedImageUrl,
+        isActive: resolvedIsActive,
       });
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -275,7 +273,7 @@ export default function EditSubCategoryPage() {
 
   useEffect(() => {
     if (!id) return;
-    void Promise.all([fetchCategories(), fetchSubCategory()]);
+    void Promise.all([fetchSubCategories(), fetchProductType()]);
   }, [id]);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -342,7 +340,7 @@ export default function EditSubCategoryPage() {
 
       setRemovingImage(true);
 
-      await apiClient.delete(SummaryApi.sub_category_image_remove.url(id));
+      await apiClient.delete(SummaryApi.product_type_image_remove.url(id));
 
       setImagePreview(initialPreview);
       setInitialData((prev) => ({
@@ -362,46 +360,21 @@ export default function EditSubCategoryPage() {
     }
   };
 
-  const resetForm = () => {
-    setCategoryId(initialData.categoryId);
-    setName(initialData.name);
-
-    setImagePreview((prev) => {
-      if (prev.url && !prev.isExisting) {
-        URL.revokeObjectURL(prev.url);
-      }
-
-      if (initialData.imageUrl) {
-        return {
-          file: null,
-          url: initialData.imageUrl,
-          isExisting: true,
-        };
-      }
-
-      return initialPreview;
-    });
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
   const validateForm = () => {
     const trimmedName = name.trim();
 
-    if (!categoryId) {
-      toast.error("Please select a category");
+    if (!subCategoryId) {
+      toast.error("Please select a sub category");
       return false;
     }
 
     if (!trimmedName) {
-      toast.error("Sub category name is required");
+      toast.error("Product type name is required");
       return false;
     }
 
     if (trimmedName.length < 2) {
-      toast.error("Sub category name must be at least 2 characters");
+      toast.error("Product type name must be at least 2 characters");
       return false;
     }
 
@@ -416,10 +389,10 @@ export default function EditSubCategoryPage() {
     try {
       setSubmitting(true);
 
-      const updateResponse = await apiClient.put<UpdateSubCategoryResponse>(
-        SummaryApi.sub_category_update.url(id),
+      const updateResponse = await apiClient.put<UpdateProductTypeResponse>(
+        SummaryApi.product_type_update.url(id),
         {
-          categoryId,
+          subCategoryId,
           name: name.trim(),
         }
       );
@@ -427,7 +400,7 @@ export default function EditSubCategoryPage() {
       const updateResult = updateResponse.data;
 
       if (!updateResult?.success) {
-        throw new Error(updateResult?.message || "Failed to update sub category");
+        throw new Error(updateResult?.message || "Failed to update product type");
       }
 
       if (imagePreview.file) {
@@ -435,7 +408,7 @@ export default function EditSubCategoryPage() {
         formData.append("image", imagePreview.file);
 
         await apiClient.patch(
-          SummaryApi.sub_category_image_upload.url(id),
+          SummaryApi.product_type_image_upload.url(id),
           formData,
           {
             headers: {
@@ -445,9 +418,8 @@ export default function EditSubCategoryPage() {
         );
       }
 
-      toast.success("Sub category updated successfully");
-
-      router.push(`${basePath}/subcategory/list`);
+      toast.success("Product type updated successfully");
+      router.push(`${basePath}/producttype/list`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -461,7 +433,7 @@ export default function EditSubCategoryPage() {
         <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
           <span className="text-sm font-medium text-slate-700">
-            Loading sub category...
+            Loading product type...
           </span>
         </div>
       </div>
@@ -469,43 +441,31 @@ export default function EditSubCategoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Edit Sub Category
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Update sub category details, change category, and manage image.
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#f3f4f6] p-4 md:p-6">
+      <div className="mx-auto max-w-[1280px]">
+        <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#0f1d63] via-[#273fbd] to-[#e50087] px-6 py-6 shadow-[0_14px_40px_rgba(79,70,229,0.18)] md:px-8 md:py-7">
+          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:28px_28px]" />
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5" />
+              <div className="mb-3 inline-flex items-center rounded-full border border-white/40 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur">
                 Catalog Management
               </div>
 
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
-                Edit Sub Category
-              </h2>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                Edit Product Type
+              </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                Modify sub category information and keep your catalog clean and
-                organized.
+              <p className="mt-2 text-sm font-medium text-white/90 md:text-base">
+                Update product type information, change image, and keep catalog
+                data clean.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+              className="inline-flex h-12 items-center justify-center gap-2 self-start rounded-2xl border border-white/60 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -513,95 +473,108 @@ export default function EditSubCategoryPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
-            <div className="mb-5 flex items-center gap-3">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+            <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
-                <Tag className="h-5 w-5" />
+                <Pencil className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h2 className="text-[30px] font-extrabold leading-none text-slate-900 md:text-[34px]">
                   Basic Information
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Update sub category details below.
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Edit product type details below.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Category <span className="text-rose-500">*</span>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Sub Category <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    disabled={loadingCategories || submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <option value="">
-                      {loadingCategories
-                        ? "Loading categories..."
-                        : "Select category"}
-                    </option>
+                <select
+                  value={subCategoryId}
+                  onChange={(e) => setSubCategoryId(e.target.value)}
+                  disabled={loadingSubCategories || submitting}
+                  className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                >
+                  <option value="">
+                    {loadingSubCategories
+                      ? "Loading sub categories..."
+                      : "Select sub category"}
+                  </option>
 
-                    {categories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {subCategories.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Sub Category Name <span className="text-rose-500">*</span>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Product Type Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter sub category name"
+                  placeholder="Enter product type name"
                   disabled={submitting}
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Name Key Preview
                 </label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
+                <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Status
+                </label>
+                <div>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                      isActive
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700"
+                    }`}
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
-            <div className="mb-5 flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
-                <ImagePlus className="h-6 w-6" />
+          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
+                <ImagePlus className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-[22px] font-bold tracking-tight text-slate-900">
-                  Sub Category Image
-                </h3>
+                <h2 className="text-3xl font-extrabold leading-none text-slate-900">
+                  Product Type Image
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Replace or remove the current image for better catalog
-                  presentation.
+                  Update or remove product type image.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_170px]">
               <div>
                 <input
                   ref={fileInputRef}
@@ -615,95 +588,88 @@ export default function EditSubCategoryPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={submitting}
-                  className="group flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-[190px] w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-white shadow-sm">
-                    <ImagePlus className="h-8 w-8 text-violet-600" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <ImagePlus className="h-6 w-6 text-violet-600" />
                   </div>
 
-                  <h4 className="mt-5 text-xl font-semibold text-slate-900">
-                    Click to upload image
-                  </h4>
+                  <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 md:text-[20px]">
+                    Click to choose image
+                  </h3>
 
                   <p className="mt-2 text-sm text-slate-500">
                     PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
                 </button>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {imagePreview.url && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      disabled={removingImage || submitting}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {removingImage ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Removing...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          Remove Image
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-                <h4 className="mb-4 text-lg font-semibold text-slate-900">
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-3">
+                <h3 className="mb-3 text-base font-bold text-slate-900">
                   Preview
-                </h4>
+                </h3>
 
-                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                <div className="relative h-[138px] overflow-hidden rounded-[18px] border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}
-                      alt="Sub category preview"
+                      alt="Product type preview"
                       fill
                       unoptimized
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center px-4 text-center">
-                      <ImagePlus className="mb-3 h-10 w-10 text-slate-300" />
-                      <p className="text-sm font-medium text-slate-400">
+                    <div className="flex h-full flex-col items-center justify-center text-center">
+                      <ImagePlus className="mb-2 h-8 w-8 text-slate-300" />
+                      <p className="text-xs font-medium text-slate-400">
                         No image selected
                       </p>
                     </div>
                   )}
                 </div>
-
-                {imagePreview.url && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    disabled={removingImage || submitting}
-                    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {removingImage ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Removing...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="h-4 w-4" />
-                        Remove Image
-                      </>
-                    )}
-                  </button>
-                )}
               </div>
             </div>
           </div>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={submitting}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Reset
-              </button>
-
+          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={submitting || loadingCategories}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={submitting || loadingSubCategories}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#4f46e5] to-[#e50087] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Updating...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    Update Sub Category
+                    Save Changes
                   </>
                 )}
               </button>

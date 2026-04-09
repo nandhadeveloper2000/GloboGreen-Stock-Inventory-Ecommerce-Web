@@ -330,7 +330,7 @@ export default function StaffListPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-[28px] border border-white/20 bg-gradient-to-r from-[#082a5e] to-[#9116a1] text-white shadow-[0_20px_60px_rgba(8,42,94,0.25)]">
+        <section className="overflow-hidden rounded-[28px] border border-white/20 bg-linear-to-r from-[#082a5e] to-[#9116a1] text-white shadow-[0_20px_60px_rgba(8,42,94,0.25)]">
           <div className="grid gap-6 p-6 md:grid-cols-[1.4fr_1fr] md:p-8">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
@@ -388,14 +388,14 @@ export default function StaffListPage() {
           </div>
 
           {loading ? (
-            <div className="flex min-h-[320px] items-center justify-center">
+            <div className="flex min-h-80 items-center justify-center">
               <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading records...
               </div>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
+            <div className="flex min-h-80 flex-col items-center justify-center px-6 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                 <CircleOff className="h-8 w-8 text-slate-400" />
               </div>

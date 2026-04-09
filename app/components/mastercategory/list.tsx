@@ -91,6 +91,9 @@ export default function MasterCategoryListPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const pageSize = 10;
 
   const fetchMasterCategories = async (showLoader = true) => {
     try {
@@ -131,6 +134,10 @@ export default function MasterCategoryListPage() {
     void fetchMasterCategories(true);
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -142,9 +149,29 @@ export default function MasterCategoryListPage() {
     );
   }, [items, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage]);
+
   const totalCount = items.length;
   const activeCount = items.filter((item) => item.isActive).length;
   const inactiveCount = items.filter((item) => !item.isActive).length;
+
+  const startEntry =
+    filteredItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endEntry =
+    filteredItems.length === 0
+      ? 0
+      : Math.min(currentPage * pageSize, filteredItems.length);
 
   const handleEdit = (id: string) => {
     router.push(`/master/mastercategory/edit/${id}`);
@@ -371,7 +398,7 @@ export default function MasterCategoryListPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map((item, index) => {
+                    paginatedItems.map((item, index) => {
                       const imageUrl = getImageUrl(item);
 
                       return (
@@ -380,7 +407,7 @@ export default function MasterCategoryListPage() {
                           className="border-t border-slate-100 transition hover:bg-slate-50/70"
                         >
                           <td className="px-5 py-4 text-sm font-medium text-slate-700">
-                            {index + 1}
+                            {(currentPage - 1) * pageSize + index + 1}
                           </td>
 
                           <td className="px-5 py-4">
@@ -470,7 +497,7 @@ export default function MasterCategoryListPage() {
                 No master categories found.
               </div>
             ) : (
-              filteredItems.map((item, index) => {
+              paginatedItems.map((item, index) => {
                 const imageUrl = getImageUrl(item);
 
                 return (
@@ -499,7 +526,7 @@ export default function MasterCategoryListPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm text-slate-500">
-                              #{index + 1}
+                              #{(currentPage - 1) * pageSize + index + 1}
                             </p>
                             <h4 className="truncate text-base font-semibold text-slate-900">
                               {item.name}
@@ -559,6 +586,42 @@ export default function MasterCategoryListPage() {
               })
             )}
           </div>
+
+          {!loading && filteredItems.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Showing {startEntry} to {endEntry} of {filteredItems.length} entries
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <span className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

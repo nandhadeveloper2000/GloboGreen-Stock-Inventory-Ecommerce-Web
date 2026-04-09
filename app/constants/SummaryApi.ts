@@ -326,6 +326,34 @@ sub_category_image_remove: {
   url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
 },
 
+/* ---------- PRODUCT TYPE ---------- */
+product_type_create: { method: "POST", url: `${API_BASE}/product-types` },
+product_type_list: { method: "GET", url: `${API_BASE}/product-types` },
+product_type_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/product-types/${id}`,
+},
+product_type_update: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/product-types/${id}`,
+},
+product_type_delete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/product-types/${id}`,
+},
+product_type_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/product-types/${id}/active`,
+},
+product_type_image_upload: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/product-types/${id}/image`,
+},
+product_type_image_remove: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/product-types/${id}/image`,
+},
+
 /* ---------- BRAND ---------- */
 brand_create: { method: "POST", url: `${API_BASE}/brands` },
 brand_list: { method: "GET", url: `${API_BASE}/brands` },
@@ -354,33 +382,74 @@ brand_image_remove: {
   url: (id: string) => `${API_BASE}/brands/${id}/image`,
 },
 
-/* ---------- MODEL ---------- */
-model_create: { method: "POST", url: `${API_BASE}/master-categories/models` },
-model_list: { method: "GET", url: `${API_BASE}/master-categories/models` },
+model_create: { method: "POST", url: `${API_BASE}/models` },
+model_list: { method: "GET", url: `${API_BASE}/models` },
 model_get: {
   method: "GET",
-  url: (id: string) => `${API_BASE}/models${id}`,
+  url: (id: string) => `${API_BASE}/models/${id}`,
 },
 model_update: {
   method: "PUT",
-  url: (id: string) => `${API_BASE}/models${id}`,
+  url: (id: string) => `${API_BASE}/models/${id}`,
 },
 model_delete: {
   method: "DELETE",
-  url: (id: string) => `${API_BASE}/models${id}`,
+  url: (id: string) => `${API_BASE}/models/${id}`,
 },
 model_toggle_active: {
   method: "PUT",
-  url: (id: string) => `${API_BASE}/models${id}/active`,
+  url: (id: string) => `${API_BASE}/models/${id}/active`,
 },
-model_image_upload: {
+
+
+/* ---------- COMPATIBLE ---------- */
+compatible_create: { method: "POST", url: `${API_BASE}/compatibles` },
+compatible_list: { method: "GET", url: `${API_BASE}/compatibles` },
+
+compatible_get: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/compatibles/${id}`,
+},
+
+compatible_update: {
   method: "PUT",
-  url: (id: string) => `${API_BASE}/models${id}/image`,
+  url: (id: string) => `${API_BASE}/compatibles/${id}`,
 },
-model_image_remove: {
+
+compatible_delete: {
   method: "DELETE",
-  url: (id: string) => `${API_BASE}/models${id}/image`,
+  url: (id: string) => `${API_BASE}/compatibles/${id}`,
 },
+
+compatible_toggle_active: {
+  method: "PUT",
+  url: (id: string) => `${API_BASE}/compatibles/${id}/active`,
+},
+
+// /* ---------- SERIES ---------- */
+// series_create: { method: "POST", url: `${API_BASE}/series` },
+
+// series_list: { method: "GET", url: `${API_BASE}/series` },
+
+// series_get: {
+//   method: "GET",
+//   url: (id: string) => `${API_BASE}/series/${id}`,
+// },
+
+// series_update: {
+//   method: "PUT",
+//   url: (id: string) => `${API_BASE}/series/${id}`,
+// },
+
+// series_delete: {
+//   method: "DELETE",
+//   url: (id: string) => `${API_BASE}/series/${id}`,
+// },
+
+// series_toggle_active: {
+//   method: "PUT",
+//   url: (id: string) => `${API_BASE}/series/${id}/active`,
+// },
 };
 
 export default SummaryApi;

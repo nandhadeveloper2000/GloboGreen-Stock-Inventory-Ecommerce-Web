@@ -19,6 +19,9 @@ import {
   Save,
   Sparkles,
   Shapes,
+  Search,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
@@ -117,6 +120,8 @@ function getRoleBasePath(role?: string | null) {
 export default function CreateSubCategoryPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
 
   const basePath = getRoleBasePath(role);
@@ -129,12 +134,28 @@ export default function CreateSubCategoryPage() {
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
   const [submitting, setSubmitting] = useState(false);
 
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
+
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-");
   }, [name]);
+
+  const selectedCategory = useMemo(() => {
+    return categories.find((item) => item._id === categoryId) || null;
+  }, [categories, categoryId]);
+
+  const filteredCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return categories;
+
+    return categories.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+  }, [categories, categorySearch]);
 
   useEffect(() => {
     return () => {
@@ -143,6 +164,30 @@ export default function CreateSubCategoryPage() {
       }
     };
   }, [imagePreview.url]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current) return;
+      if (!dropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isCategoryDropdownOpen) {
+      const timer = window.setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 80);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [isCategoryDropdownOpen]);
 
   const fetchCategories = async () => {
     try {
@@ -174,6 +219,7 @@ export default function CreateSubCategoryPage() {
       }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
+      setCategories([]);
     } finally {
       setLoadingCategories(false);
     }
@@ -181,6 +227,7 @@ export default function CreateSubCategoryPage() {
 
   useEffect(() => {
     void fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -228,6 +275,8 @@ export default function CreateSubCategoryPage() {
 
   const resetForm = () => {
     setName("");
+    setCategorySearch("");
+    setIsCategoryDropdownOpen(false);
     removeImage();
 
     if (categories.length > 0) {
@@ -256,6 +305,12 @@ export default function CreateSubCategoryPage() {
     }
 
     return true;
+  };
+
+  const handleSelectCategory = (id: string) => {
+    setCategoryId(id);
+    setIsCategoryDropdownOpen(false);
+    setCategorySearch("");
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -290,11 +345,8 @@ export default function CreateSubCategoryPage() {
         throw new Error(data?.message || "Failed to create sub category");
       }
 
-      toast.success("Sub category created successfully");
-
-      setTimeout(() => {
-        router.push(`${basePath}/subcategory/list`);
-      }, 600);
+      toast.success(data?.message || "Sub category created successfully");
+      router.push(`${basePath}/subcategory/list`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -369,26 +421,85 @@ export default function CreateSubCategoryPage() {
                   Category <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                <div ref={dropdownRef} className="relative z-30">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (loadingCategories || submitting) return;
+                      setIsCategoryDropdownOpen((prev) => !prev);
+                    }}
                     disabled={loadingCategories || submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
-                    <option value="">
-                      {loadingCategories
-                        ? "Loading categories..."
-                        : "Select category"}
-                    </option>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {loadingCategories
+                          ? "Loading categories..."
+                          : selectedCategory?.name || "Select category"}
+                      </span>
+                    </div>
 
-                    {categories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                        isCategoryDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isCategoryDropdownOpen && !loadingCategories ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-[100] overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                      <div className="border-b border-slate-100 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-400 focus-within:bg-white">
+                          <Search className="mr-2 h-4 w-4 text-slate-400" />
+                          <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            placeholder="Type a category"
+                            className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="px-4 pb-2 pt-3">
+                        <p className="text-sm font-semibold text-slate-700">
+                          Please select:
+                        </p>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto px-2 pb-2">
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map((item) => {
+                            const isSelected = categoryId === item._id;
+
+                            return (
+                              <button
+                                key={item._id}
+                                type="button"
+                                onClick={() => handleSelectCategory(item._id)}
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                                  isSelected
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="truncate">{item.name}</span>
+                                {isSelected ? (
+                                  <Check className="h-4 w-4 shrink-0" />
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-slate-400">
+                            No category found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -417,87 +528,90 @@ export default function CreateSubCategoryPage() {
             </div>
           </div>
 
-<div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
-  <div className="mb-5 flex items-start gap-4">
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
-      <ImagePlus className="h-6 w-6" />
-    </div>
+          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
+                <ImagePlus className="h-6 w-6" />
+              </div>
 
-    <div>
-      <h3 className="text-[22px] font-bold tracking-tight text-slate-900">
-        Sub Category Image
-      </h3>
-      <p className="mt-1 text-sm text-slate-500">
-        Upload an optional image for better catalog presentation.
-      </p>
-    </div>
-  </div>
+              <div>
+                <h3 className="text-[22px] font-bold tracking-tight text-slate-900">
+                  Sub Category Image
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Upload an optional image for better catalog presentation.
+                </p>
+              </div>
+            </div>
 
-  <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-    <div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/jpg,image/webp"
-        onChange={handleImageChange}
-        className="hidden"
-      />
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
 
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={submitting}
-        className="group flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-white shadow-sm">
-          <ImagePlus className="h-8 w-8 text-violet-600" />
-        </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={submitting}
+                  className="group flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-white shadow-sm">
+                    <ImagePlus className="h-8 w-8 text-violet-600" />
+                  </div>
 
-        <h4 className="mt-5 text-xl font-semibold text-slate-900">
-          Click to upload image
-        </h4>
+                  <h4 className="mt-5 text-xl font-semibold text-slate-900">
+                    Click to upload image
+                  </h4>
 
-        <p className="mt-2 text-sm text-slate-500">
-          PNG, JPG, JPEG, WEBP up to 3MB
-        </p>
-      </button>
-    </div>
+                  <p className="mt-2 text-sm text-slate-500">
+                    PNG, JPG, JPEG, WEBP up to 3MB
+                  </p>
+                </button>
+              </div>
 
-    <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-      <h4 className="mb-4 text-lg font-semibold text-slate-900">Preview</h4>
+              <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+                <h4 className="mb-4 text-lg font-semibold text-slate-900">
+                  Preview
+                </h4>
 
-      <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
-        {imagePreview.url ? (
-          <Image
-            src={imagePreview.url}
-            alt="Sub category preview"
-            fill
-            unoptimized
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center px-4 text-center">
-            <ImagePlus className="mb-3 h-10 w-10 text-slate-300" />
-            <p className="text-sm font-medium text-slate-400">
-              No image selected
-            </p>
+                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                  {imagePreview.url ? (
+                    <Image
+                      src={imagePreview.url}
+                      alt="Sub category preview"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center px-4 text-center">
+                      <ImagePlus className="mb-3 h-10 w-10 text-slate-300" />
+                      <p className="text-sm font-medium text-slate-400">
+                        No image selected
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {imagePreview.url ? (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    disabled={submitting}
+                    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remove Image
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {imagePreview.url && (
-        <button
-          type="button"
-          onClick={removeImage}
-          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
-        >
-          <Trash2 className="h-4 w-4" />
-          Remove Image
-        </button>
-      )}
-    </div>
-  </div>
-</div>
 
           <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">

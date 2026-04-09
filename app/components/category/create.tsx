@@ -19,6 +19,9 @@ import {
   Save,
   Sparkles,
   Shapes,
+  Search,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -113,6 +116,8 @@ function getRoleBasePath(role?: string | null) {
 export default function CreateCategoryPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
 
   const basePath = getRoleBasePath(role);
@@ -127,12 +132,31 @@ export default function CreateCategoryPage() {
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
   const [submitting, setSubmitting] = useState(false);
 
+  const [isMasterDropdownOpen, setIsMasterDropdownOpen] = useState(false);
+  const [masterCategorySearch, setMasterCategorySearch] = useState("");
+
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-");
   }, [name]);
+
+  const selectedMasterCategory = useMemo(() => {
+    return (
+      masterCategories.find((item) => item._id === masterCategoryId) || null
+    );
+  }, [masterCategories, masterCategoryId]);
+
+  const filteredMasterCategories = useMemo(() => {
+    const query = masterCategorySearch.trim().toLowerCase();
+
+    if (!query) return masterCategories;
+
+    return masterCategories.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+  }, [masterCategories, masterCategorySearch]);
 
   useEffect(() => {
     return () => {
@@ -141,6 +165,31 @@ export default function CreateCategoryPage() {
       }
     };
   }, [imagePreview.url]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current) return;
+
+      if (!dropdownRef.current.contains(event.target as Node)) {
+        setIsMasterDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMasterDropdownOpen) {
+      const timer = window.setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [isMasterDropdownOpen]);
 
   const fetchMasterCategories = async () => {
     try {
@@ -249,6 +298,12 @@ export default function CreateCategoryPage() {
     return true;
   };
 
+  const handleSelectMasterCategory = (id: string) => {
+    setMasterCategoryId(id);
+    setIsMasterDropdownOpen(false);
+    setMasterCategorySearch("");
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -282,7 +337,6 @@ export default function CreateCategoryPage() {
       }
 
       toast.success(result?.message || "Category created successfully");
-
       router.push(`${basePath}/category/list`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -359,26 +413,90 @@ export default function CreateCategoryPage() {
                   Master Category <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={masterCategoryId}
-                    onChange={(e) => setMasterCategoryId(e.target.value)}
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (loadingMasterCategories || submitting) return;
+                      setIsMasterDropdownOpen((prev) => !prev);
+                    }}
                     disabled={loadingMasterCategories || submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
-                    <option value="">
-                      {loadingMasterCategories
-                        ? "Loading master categories..."
-                        : "Select master category"}
-                    </option>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {loadingMasterCategories
+                          ? "Loading master categories..."
+                          : selectedMasterCategory?.name || "Select a category"}
+                      </span>
+                    </div>
 
-                    {masterCategories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                        isMasterDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isMasterDropdownOpen && !loadingMasterCategories ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                      <div className="border-b border-slate-200 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-300 bg-white px-3">
+                          <Search className="mr-2 h-4 w-4 text-slate-500" />
+                          <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={masterCategorySearch}
+                            onChange={(e) =>
+                              setMasterCategorySearch(e.target.value)
+                            }
+                            placeholder="Type a category"
+                            className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="px-4 pb-2 pt-3">
+                        <p className="text-sm font-semibold text-slate-700">
+                          Please select:
+                        </p>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto px-2 pb-2">
+                        {filteredMasterCategories.length > 0 ? (
+                          filteredMasterCategories.map((item) => {
+                            const isSelected = masterCategoryId === item._id;
+
+                            return (
+                              <button
+                                key={item._id}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectMasterCategory(item._id)
+                                }
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                                  isSelected
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="truncate">{item.name}</span>
+
+                                {isSelected ? (
+                                  <Check className="h-4 w-4 shrink-0" />
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-slate-400">
+                            No master category found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

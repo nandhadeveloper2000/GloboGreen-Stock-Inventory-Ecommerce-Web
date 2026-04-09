@@ -64,6 +64,13 @@ export const SIDEBAR_MENU: Record<UserRole, NavItem[]> = {
         { label: "Subcategory List", href: "/master/subcategory/list" },
       ],
     },
+        {
+      label: "Product Type",
+      children: [
+        { label: "Create ProductType", href: "/master/producttype/create" },
+        { label: "ProductType List", href: "/master/producttype/list" },
+      ],
+    },
     {
       label: "Brand",
       children: [

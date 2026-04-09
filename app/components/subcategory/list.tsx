@@ -123,6 +123,9 @@ export default function SubCategoryListPage() {
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const pageSize = 10;
 
   const fetchSubCategories = useCallback(async (showRefreshLoader = false) => {
     try {
@@ -132,7 +135,9 @@ export default function SubCategoryListPage() {
         setLoading(true);
       }
 
-      const res = await apiClient.get<ApiResponse>(SummaryApi.sub_category_list.url);
+      const res = await apiClient.get<ApiResponse>(
+        SummaryApi.sub_category_list.url
+      );
 
       if (!res.data?.success) {
         throw new Error(res.data?.message || "Failed to load sub categories");
@@ -151,6 +156,10 @@ export default function SubCategoryListPage() {
     fetchSubCategories();
   }, [fetchSubCategories]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -167,10 +176,30 @@ export default function SubCategoryListPage() {
     });
   }, [items, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage]);
+
   const totalCount = items.length;
   const activeCount = items.filter((item) => item.isActive).length;
   const inactiveCount = items.filter((item) => !item.isActive).length;
   const withImageCount = items.filter((item) => Boolean(getImage(item))).length;
+
+  const startEntry =
+    filteredItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endEntry =
+    filteredItems.length === 0
+      ? 0
+      : Math.min(currentPage * pageSize, filteredItems.length);
 
   const handleDelete = async (id?: string) => {
     if (!isValidMongoId(id)) {
@@ -239,18 +268,16 @@ export default function SubCategoryListPage() {
   return (
     <div className="min-h-screen bg-[#f6f8fc] px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto w-full max-w-7xl space-y-6">
-        {/* PAGE TITLE */}
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
             SubCategory List
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Manage sub category records, monitor status, and navigate to edit screens
-            from one premium dashboard.
+            Manage sub category records, monitor status, and navigate to edit
+            screens from one premium dashboard.
           </p>
         </div>
 
-        {/* HERO */}
         <div className="relative overflow-hidden rounded-[32px] border border-white/30 bg-gradient-to-r from-[#082a5e] via-[#5b2bbd] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(17,24,39,0.14)] md:p-8">
           <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-20 left-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
@@ -266,8 +293,9 @@ export default function SubCategoryListPage() {
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/85 md:text-base">
-                View, search, edit, activate, deactivate, and delete sub categories
-                with a clean, modern, enterprise-grade admin experience.
+                View, search, edit, activate, deactivate, and delete sub
+                categories with a clean, modern, enterprise-grade admin
+                experience.
               </p>
             </div>
 
@@ -296,7 +324,6 @@ export default function SubCategoryListPage() {
           </div>
         </div>
 
-        {/* STATS */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total Sub Categories"
@@ -324,7 +351,6 @@ export default function SubCategoryListPage() {
           />
         </div>
 
-        {/* DIRECTORY / SEARCH */}
         <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
@@ -337,7 +363,8 @@ export default function SubCategoryListPage() {
                   SubCategory Directory
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Search by sub category name, key, category, or master category.
+                  Search by sub category name, key, category, or master
+                  category.
                 </p>
               </div>
             </div>
@@ -354,9 +381,9 @@ export default function SubCategoryListPage() {
           </div>
         </div>
 
-        {/* TABLE / LIST */}
         <div className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-sm">
-          <div className="hidden grid-cols-[2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 lg:grid">
+          <div className="hidden grid-cols-[0.6fr_2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 lg:grid">
+            <div>S.No</div>
             <div>SubCategory</div>
             <div>Category</div>
             <div>Master Category</div>
@@ -388,203 +415,258 @@ export default function SubCategoryListPage() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-200">
-              {filteredItems.map((item) => {
-                const itemId = item._id;
-                const imageUrl = getImage(item);
-                const isDeleting = deletingId === itemId;
-                const isToggling = togglingId === itemId;
+            <>
+              <div className="divide-y divide-slate-200">
+                {paginatedItems.map((item, index) => {
+                  const itemId = item._id;
+                  const imageUrl = getImage(item);
+                  const isDeleting = deletingId === itemId;
+                  const isToggling = togglingId === itemId;
 
-                return (
-                  <div
-                    key={itemId || item.nameKey}
-                    className="px-4 py-4 transition hover:bg-slate-50/80 md:px-6"
-                  >
-                    {/* DESKTOP */}
-                    <div className="hidden grid-cols-[2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 lg:grid">
-                      <div className="flex items-center gap-4">
-                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                          {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={item.name}
-                              fill
-                              sizes="56px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <FolderTree className="h-5 w-5 text-slate-400" />
-                          )}
+                  return (
+                    <div
+                      key={itemId || item.nameKey}
+                      className="px-4 py-4 transition hover:bg-slate-50/80 md:px-6"
+                    >
+                      <div className="hidden grid-cols-[0.6fr_2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 lg:grid">
+                        <div className="text-sm font-semibold text-slate-700">
+                          {(currentPage - 1) * pageSize + index + 1}
                         </div>
 
-                        <div className="min-w-0">
-                          <h4 className="truncate text-base font-bold text-slate-900">
-                            {item.name}
-                          </h4>
-                          <p className="mt-1 truncate text-sm text-slate-500">
-                            Key: {item.nameKey}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-                          {getCategoryName(item)}
-                        </span>
-                      </div>
-
-                      <div>
-                        <span className="inline-flex rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
-                          {getMasterCategoryName(item)}
-                        </span>
-                      </div>
-
-                      <div>
-                        {item.isActive ? (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                            <XCircle className="h-3.5 w-3.5" />
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <CalendarDays className="h-4 w-4 text-slate-400" />
-                        {formatDate(item.updatedAt)}
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <ActionButton
-                          label={item.isActive ? "Deactivate" : "Activate"}
-                          onClick={() => handleToggle(itemId, item.isActive)}
-                          icon={
-                            <Power className={`h-4 w-4 ${isToggling ? "animate-pulse" : ""}`} />
-                          }
-                          className={
-                            item.isActive
-                              ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                          }
-                          disabled={isToggling}
-                        />
-
-                        <ActionButton
-                          label="Edit"
-                          onClick={() =>
-                            itemId &&
-                            router.push(`${basePath}/subcategory/edit/${itemId}`)
-                          }
-                          icon={<Pencil className="h-4 w-4" />}
-                          className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                          disabled={!itemId}
-                        />
-
-                        <ActionButton
-                          label="Delete"
-                          onClick={() => handleDelete(itemId)}
-                          icon={
-                            <Trash2 className={`h-4 w-4 ${isDeleting ? "animate-pulse" : ""}`} />
-                          }
-                          className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                          disabled={isDeleting}
-                        />
-                      </div>
-                    </div>
-
-                    {/* MOBILE / TABLET */}
-                    <div className="space-y-4 lg:hidden">
-                      <div className="flex items-start gap-4">
-                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                          {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={item.name}
-                              fill
-                              sizes="56px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <FolderTree className="h-5 w-5 text-slate-400" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <h4 className="text-base font-bold text-slate-900">
-                                {item.name}
-                              </h4>
-                              <p className="mt-1 text-sm text-slate-500">
-                                Key: {item.nameKey}
-                              </p>
-                            </div>
-
-                            {item.isActive ? (
-                              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Active
-                              </span>
+                        <div className="flex items-center gap-4">
+                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                            {imageUrl ? (
+                              <Image
+                                src={imageUrl}
+                                alt={item.name}
+                                fill
+                                sizes="56px"
+                                className="object-cover"
+                              />
                             ) : (
-                              <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                                <XCircle className="h-3.5 w-3.5" />
-                                Inactive
-                              </span>
+                              <FolderTree className="h-5 w-5 text-slate-400" />
                             )}
                           </div>
 
-                          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <InfoChip label="Category" value={getCategoryName(item)} />
-                            <InfoChip
-                              label="Master Category"
-                              value={getMasterCategoryName(item)}
-                            />
-                            <InfoChip label="Updated" value={formatDate(item.updatedAt)} />
+                          <div className="min-w-0">
+                            <h4 className="truncate text-base font-bold text-slate-900">
+                              {item.name}
+                            </h4>
+                            <p className="mt-1 truncate text-sm text-slate-500">
+                              Key: {item.nameKey}
+                            </p>
                           </div>
+                        </div>
+
+                        <div>
+                          <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                            {getCategoryName(item)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="inline-flex rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
+                            {getMasterCategoryName(item)}
+                          </span>
+                        </div>
+
+                        <div>
+                          {item.isActive ? (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                              <XCircle className="h-3.5 w-3.5" />
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <CalendarDays className="h-4 w-4 text-slate-400" />
+                          {formatDate(item.updatedAt)}
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <ActionButton
+                            label={item.isActive ? "Deactivate" : "Activate"}
+                            onClick={() => handleToggle(itemId, item.isActive)}
+                            icon={
+                              <Power
+                                className={`h-4 w-4 ${
+                                  isToggling ? "animate-pulse" : ""
+                                }`}
+                              />
+                            }
+                            className={
+                              item.isActive
+                                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            }
+                            disabled={isToggling}
+                          />
+
+                          <ActionButton
+                            label="Edit"
+                            onClick={() =>
+                              itemId &&
+                              router.push(`${basePath}/subcategory/edit/${itemId}`)
+                            }
+                            icon={<Pencil className="h-4 w-4" />}
+                            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                            disabled={!itemId}
+                          />
+
+                          <ActionButton
+                            label="Delete"
+                            onClick={() => handleDelete(itemId)}
+                            icon={
+                              <Trash2
+                                className={`h-4 w-4 ${
+                                  isDeleting ? "animate-pulse" : ""
+                                }`}
+                              />
+                            }
+                            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            disabled={isDeleting}
+                          />
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <ActionButton
-                          label={item.isActive ? "Deactivate" : "Activate"}
-                          onClick={() => handleToggle(itemId, item.isActive)}
-                          icon={<Power className="h-4 w-4" />}
-                          className={
-                            item.isActive
-                              ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                          }
-                          disabled={isToggling}
-                        />
+                      <div className="space-y-4 lg:hidden">
+                        <div className="flex items-start gap-4">
+                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                            {imageUrl ? (
+                              <Image
+                                src={imageUrl}
+                                alt={item.name}
+                                fill
+                                sizes="56px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <FolderTree className="h-5 w-5 text-slate-400" />
+                            )}
+                          </div>
 
-                        <ActionButton
-                          label="Edit"
-                          onClick={() =>
-                            itemId &&
-                            router.push(`${basePath}/subcategory/edit/${itemId}`)
-                          }
-                          icon={<Pencil className="h-4 w-4" />}
-                          className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                          disabled={!itemId}
-                        />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <span className="text-xs font-bold text-slate-400">
+                                  #{(currentPage - 1) * pageSize + index + 1}
+                                </span>
+                                <h4 className="text-base font-bold text-slate-900">
+                                  {item.name}
+                                </h4>
+                                <p className="mt-1 text-sm text-slate-500">
+                                  Key: {item.nameKey}
+                                </p>
+                              </div>
 
-                        <ActionButton
-                          label="Delete"
-                          onClick={() => handleDelete(itemId)}
-                          icon={<Trash2 className="h-4 w-4" />}
-                          className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                          disabled={isDeleting}
-                        />
+                              {item.isActive ? (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Inactive
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <InfoChip
+                                label="Category"
+                                value={getCategoryName(item)}
+                              />
+                              <InfoChip
+                                label="Master Category"
+                                value={getMasterCategoryName(item)}
+                              />
+                              <InfoChip
+                                label="Updated"
+                                value={formatDate(item.updatedAt)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <ActionButton
+                            label={item.isActive ? "Deactivate" : "Activate"}
+                            onClick={() => handleToggle(itemId, item.isActive)}
+                            icon={<Power className="h-4 w-4" />}
+                            className={
+                              item.isActive
+                                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            }
+                            disabled={isToggling}
+                          />
+
+                          <ActionButton
+                            label="Edit"
+                            onClick={() =>
+                              itemId &&
+                              router.push(`${basePath}/subcategory/edit/${itemId}`)
+                            }
+                            icon={<Pencil className="h-4 w-4" />}
+                            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                            disabled={!itemId}
+                          />
+
+                          <ActionButton
+                            label="Delete"
+                            onClick={() => handleDelete(itemId)}
+                            icon={<Trash2 className="h-4 w-4" />}
+                            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            disabled={isDeleting}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-500">
+                  Showing {startEntry} to {endEntry} of {filteredItems.length} entries
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -646,7 +728,9 @@ function InfoChip({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         {label}
       </p>
-      <p className="mt-1 truncate text-sm font-semibold text-slate-700">{value}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-slate-700">
+        {value}
+      </p>
     </div>
   );
 }

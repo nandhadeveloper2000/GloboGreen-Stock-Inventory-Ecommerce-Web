@@ -194,6 +194,9 @@ export default function CategoryListPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const pageSize = 10;
 
   const fetchCategories = useCallback(async (showLoader = true) => {
     try {
@@ -233,6 +236,10 @@ export default function CategoryListPage() {
     void fetchCategories(true);
   }, [fetchCategories]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -250,10 +257,30 @@ export default function CategoryListPage() {
     });
   }, [items, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage]);
+
   const totalCount = items.length;
   const activeCount = items.filter((item) => item.isActive).length;
   const inactiveCount = items.filter((item) => !item.isActive).length;
   const withImageCount = items.filter((item) => Boolean(getImageUrl(item))).length;
+
+  const startEntry =
+    filteredItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endEntry =
+    filteredItems.length === 0
+      ? 0
+      : Math.min(currentPage * pageSize, filteredItems.length);
 
   const handleDelete = async (id?: string) => {
     if (!isValidMongoId(id)) {
@@ -515,6 +542,9 @@ export default function CategoryListPage() {
                     <thead className="bg-slate-50/90">
                       <tr className="text-left">
                         <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          S.No
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                           Category
                         </th>
                         <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -533,7 +563,7 @@ export default function CategoryListPage() {
                     </thead>
 
                     <tbody className="divide-y divide-slate-100">
-                      {filteredItems.map((item, index) => {
+                      {paginatedItems.map((item, index) => {
                         const imageUrl = getImageUrl(item);
                         const itemId = item._id;
                         const isToggling = togglingId === itemId;
@@ -544,6 +574,10 @@ export default function CategoryListPage() {
                             key={itemId || `row-${index}`}
                             className="transition-colors hover:bg-slate-50/70"
                           >
+                            <td className="px-6 py-5 text-sm font-semibold text-slate-700">
+                              {(currentPage - 1) * pageSize + index + 1}
+                            </td>
+
                             <td className="px-6 py-5">
                               <div className="flex items-center gap-4">
                                 <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
@@ -650,7 +684,7 @@ export default function CategoryListPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-5 lg:hidden">
-                {filteredItems.map((item, index) => {
+                {paginatedItems.map((item, index) => {
                   const imageUrl = getImageUrl(item);
                   const itemId = item._id;
                   const isToggling = togglingId === itemId;
@@ -680,6 +714,9 @@ export default function CategoryListPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <div>
+                                <span className="text-xs font-bold text-slate-400">
+                                  #{(currentPage - 1) * pageSize + index + 1}
+                                </span>
                                 <h3 className="truncate text-base font-bold text-slate-900">
                                   {item.name}
                                 </h3>
@@ -767,6 +804,40 @@ export default function CategoryListPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-500">
+                  Showing {startEntry} to {endEntry} of {filteredItems.length} entries
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </>
           )}

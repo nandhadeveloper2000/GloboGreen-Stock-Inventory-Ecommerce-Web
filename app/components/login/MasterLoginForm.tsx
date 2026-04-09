@@ -232,19 +232,30 @@ export default function MasterLoginForm() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 bg-linear-hero">
-      <div className="premium-grid-bg absolute inset-1 opacity-50" />
-
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 bg-gradient-hero">
+      <div className="premium-grid-bg absolute inset-0 opacity-50" />
       <div className="absolute inset-0 bg-black/10" />
 
-      <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-(--primary)/30 blur-3xl" />
-      <div className="absolute -right-28 top-[8%] h-96 w-[24rem] rounded-full bg-(--accent)/25 blur-3xl" />
-      <div className="absolute -bottom-28 left-[8%] h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-      <div className="absolute -bottom-28 right-[10%] h-80 w-80 rounded-full bg-(--accent)/20 blur-3xl" />
+      <div
+        className="absolute -left-28 -top-28 h-80 w-80 rounded-full blur-3xl"
+        style={{ background: "rgba(46, 49, 146, 0.30)" }}
+      />
+      <div
+        className="absolute -right-28 top-[8%] h-96 w-[24rem] rounded-full blur-3xl"
+        style={{ background: "rgba(236, 6, 119, 0.25)" }}
+      />
+      <div
+        className="absolute -bottom-28 left-[8%] h-72 w-72 rounded-full blur-3xl"
+        style={{ background: "rgba(255, 255, 255, 0.10)" }}
+      />
+      <div
+        className="absolute -bottom-28 right-[10%] h-80 w-80 rounded-full blur-3xl"
+        style={{ background: "rgba(236, 6, 119, 0.20)" }}
+      />
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="relative mx-auto flex items-center justify-center rounded-[30px] border border-white/20 bg-white backdrop-blur-xl p-6 shadow-xl">
+          <div className="relative mx-auto flex items-center justify-center rounded-[30px] border border-white/20 bg-white p-6 backdrop-blur-xl shadow-xl">
             <div className="absolute inset-0 rounded-[30px] bg-white/5" />
 
             <Image
@@ -268,7 +279,7 @@ export default function MasterLoginForm() {
         </div>
 
         <Card className="premium-card premium-border overflow-hidden border-0 bg-white/85 backdrop-blur-2xl">
-          <div className="h-1.5 w-full bg-linear-primary" />
+          <div className="h-1.5 w-full bg-gradient-primary" />
 
           <CardHeader className="space-y-3 px-6 pb-2 pt-6">
             <div className="flex items-start justify-between gap-3">
@@ -281,7 +292,7 @@ export default function MasterLoginForm() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-primary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
@@ -313,7 +324,7 @@ export default function MasterLoginForm() {
               </label>
 
               <div className="relative">
-                <UserCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-text" />
+                <UserCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   id="loginId"
                   type="text"
@@ -338,7 +349,7 @@ export default function MasterLoginForm() {
               </label>
 
               <div className="relative">
-                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-text" />
+                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                 <input
                   id="pin"
@@ -350,7 +361,7 @@ export default function MasterLoginForm() {
                   inputMode="numeric"
                   maxLength={6}
                   disabled={loading}
-                  className="premium-input pr-12 pl-10 tracking-[0.24em] placeholder:tracking-normal"
+                  className="premium-input pl-10 pr-12 tracking-[0.24em] placeholder:tracking-normal"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       void handleLogin();
@@ -363,7 +374,7 @@ export default function MasterLoginForm() {
                   aria-label={showPin ? "Hide PIN" : "Show PIN"}
                   onClick={() => setShowPin((prev) => !prev)}
                   disabled={loading}
-                  className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-(--slate) transition hover:bg-black/5 hover:text-(--heading) disabled:cursor-not-allowed disabled:opacity-60"
+                  className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-black/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {showPin ? (
                     <EyeOff className="h-4 w-4" />
@@ -378,7 +389,7 @@ export default function MasterLoginForm() {
               type="button"
               onClick={() => void handleLogin()}
               disabled={loading}
-              className="group h-12 w-full rounded-2xl border-0 bg-linear-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+              className="group h-12 w-full rounded-2xl border-0 bg-gradient-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <span className="flex items-center justify-center gap-2">
                 {loading ? "Signing in..." : "Continue"}
