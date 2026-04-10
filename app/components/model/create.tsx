@@ -1,14 +1,21 @@
 "use client";
 
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import React, {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BadgePlus,
-  Box,
+  Check,
   ChevronDown,
   Loader2,
   Save,
+  Search,
   Shapes,
   Sparkles,
   Tag,
@@ -96,12 +103,32 @@ export default function CreateModelPage() {
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandSearch, setBrandSearch] = useState("");
+
+  const brandDropdownRef = useRef<HTMLDivElement | null>(null);
+  const brandSearchInputRef = useRef<HTMLInputElement | null>(null);
+
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-");
   }, [name]);
+
+  const selectedBrand = useMemo(() => {
+    return brands.find((brand) => brand._id === brandId) || null;
+  }, [brands, brandId]);
+
+  const filteredBrands = useMemo(() => {
+    const query = brandSearch.trim().toLowerCase();
+
+    if (!query) return brands;
+
+    return brands.filter((brand) =>
+      brand.name.toLowerCase().includes(query)
+    );
+  }, [brands, brandSearch]);
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -127,13 +154,11 @@ export default function CreateModelPage() {
         const finalBrands = Array.isArray(list) ? list : [];
 
         setBrands(finalBrands);
-
-        if (finalBrands.length > 0) {
-          setBrandId(finalBrands[0]._id);
-        }
+        setBrandId("");
       } catch (error: unknown) {
         toast.error(getErrorMessage(error) || "Unable to load brands");
         setBrands([]);
+        setBrandId("");
       } finally {
         setBrandsLoading(false);
       }
@@ -141,6 +166,33 @@ export default function CreateModelPage() {
 
     void fetchBrands();
   }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        brandDropdownRef.current &&
+        !brandDropdownRef.current.contains(event.target as Node)
+      ) {
+        setBrandOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (brandOpen) {
+      const timer = window.setTimeout(() => {
+        brandSearchInputRef.current?.focus();
+      }, 50);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [brandOpen]);
 
   const validateForm = () => {
     const trimmedName = name.trim();
@@ -161,6 +213,12 @@ export default function CreateModelPage() {
     }
 
     return true;
+  };
+
+  const handleSelectBrand = (selectedId: string) => {
+    setBrandId(selectedId);
+    setBrandOpen(false);
+    setBrandSearch("");
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -201,7 +259,7 @@ export default function CreateModelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(145,22,161,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-4 md:p-6">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(145,22,161,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#243b7a_0%,#6d28d9_55%,#c026d3_100%)] px-6 py-7 text-white shadow-[0_24px_70px_rgba(79,70,229,0.28)] md:px-8">
@@ -273,52 +331,85 @@ export default function CreateModelPage() {
                   Brand <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
-                    <Shapes className="h-4 w-4 text-slate-400" />
-                  </div>
-
-                  <select
-                    value={brandId}
-                    onChange={(e) => setBrandId(e.target.value)}
+                <div className="relative" ref={brandDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (brandsLoading || brands.length === 0) return;
+                      setBrandOpen((prev) => !prev);
+                    }}
                     disabled={brandsLoading || brands.length === 0}
-                    className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white pl-11 pr-11 text-sm font-medium text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white pl-4 pr-4 text-left transition focus:border-violet-400 focus:outline-none focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                   >
-                    {brandsLoading ? (
-                      <option value="">Loading brands...</option>
-                    ) : brands.length === 0 ? (
-                      <option value="">No brands available</option>
-                    ) : (
-                      brands.map((brand) => (
-                        <option key={brand._id} value={brand._id}>
-                          {brand.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span
+                        className={`truncate text-sm font-medium ${
+                          selectedBrand?.name ? "text-slate-800" : "text-slate-400"
+                        }`}
+                      >
+                        {brandsLoading
+                          ? "Loading brands..."
+                          : selectedBrand?.name || "Select brand"}
+                      </span>
+                    </div>
 
-                  <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </div>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                        brandOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {brandOpen && !brandsLoading && brands.length > 0 && (
+                    <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.15)]">
+                      <div className="border-b border-slate-100 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-violet-100">
+                          <Search className="mr-2 h-4 w-4 text-slate-400" />
+                          <input
+                            ref={brandSearchInputRef}
+                            type="text"
+                            value={brandSearch}
+                            onChange={(e) => setBrandSearch(e.target.value)}
+                            placeholder="Search brand..."
+                            className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto py-2">
+                        {filteredBrands.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-slate-500">
+                            No brands found
+                          </div>
+                        ) : (
+                          filteredBrands.map((brand) => {
+                            const isSelected = brandId === brand._id;
+
+                            return (
+                              <button
+                                key={brand._id}
+                                type="button"
+                                onClick={() => handleSelectBrand(brand._id)}
+                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition ${
+                                  isSelected
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="font-medium">{brand.name}</span>
+
+                                {isSelected && (
+                                  <Check className="h-4 w-4 text-violet-600" />
+                                )}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[30px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
-                <Box className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-                  Model Assignment
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  This model will be created under the selected brand. Image
-                  upload is not required for models.
-                </p>
               </div>
             </div>
           </section>

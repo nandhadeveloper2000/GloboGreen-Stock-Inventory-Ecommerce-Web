@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   BadgePlus,
   RefreshCw,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -122,6 +124,7 @@ export default function BrandEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [removingImage, setRemovingImage] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const [name, setName] = useState("");
   const [existingImageUrl, setExistingImageUrl] = useState("");
@@ -186,21 +189,24 @@ export default function BrandEditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -214,6 +220,40 @@ export default function BrandEditPage() {
         url: URL.createObjectURL(file),
       };
     });
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (uploadingImage || removingImage) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
   };
 
   const removeSelectedPreview = () => {
@@ -508,17 +548,29 @@ export default function BrandEditPage() {
               <div className="space-y-4">
                 <label
                   htmlFor="brand-image"
-                  className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-violet-50/60 px-6 py-8 text-center transition duration-200 hover:border-violet-400 hover:shadow-sm"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-gradient-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
+                  }`}
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
-                    <ImagePlus className="h-7 w-7" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-7 w-7" />
+                    ) : (
+                      <ImagePlus className="h-7 w-7" />
+                    )}
                   </div>
 
                   <p className="text-base font-semibold text-slate-800">
-                    Click to select new image
+                    {isDraggingImage ? "Drop image here" : "Click to select new image"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
 
                   <input
@@ -600,6 +652,7 @@ export default function BrandEditPage() {
                       fill
                       className="object-cover"
                       sizes="260px"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center px-4 text-center text-slate-400">

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent,
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,8 @@ import {
   Loader2,
   Package2,
   Search,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,6 +83,7 @@ export default function CreateProductTypePage() {
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [subCategories, setSubCategories] = useState<OptionItem[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -92,6 +96,7 @@ export default function CreateProductTypePage() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const nameKeyPreview = useMemo(() => {
     return name.trim() ? keyOf(name) : "auto-generated-from-name";
@@ -160,10 +165,6 @@ export default function CreateProductTypePage() {
       const activeRows = rows.filter((row) => row.isActive !== false);
 
       setSubCategories(activeRows);
-
-      if (!subCategoryId && activeRows.length > 0) {
-        setSubCategoryId(activeRows[0]._id);
-      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to load sub categories"));
       setSubCategories([]);
@@ -172,8 +173,7 @@ export default function CreateProductTypePage() {
     }
   }
 
-  function onSelectImage(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  function validateAndSetImage(file: File | null) {
     if (!file) return;
 
     const allowedTypes = [
@@ -185,13 +185,13 @@ export default function CreateProductTypePage() {
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Only PNG, JPG, JPEG, or WEBP files are allowed");
-      e.target.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     if (file.size > 3 * 1024 * 1024) {
       toast.error("Image size must be below 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -203,6 +203,40 @@ export default function CreateProductTypePage() {
     setPreviewUrl(URL.createObjectURL(file));
   }
 
+  function onSelectImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  }
+
+  function handleImageDragEnter(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  }
+
+  function handleImageDragOver(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  }
+
+  function handleImageDragLeave(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  }
+
+  function handleImageDrop(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
+  }
+
   function removeImage() {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -210,6 +244,10 @@ export default function CreateProductTypePage() {
 
     setImageFile(null);
     setPreviewUrl("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function resetForm() {
@@ -222,11 +260,11 @@ export default function CreateProductTypePage() {
     setPreviewUrl("");
     setSearch("");
     setIsDropdownOpen(false);
+    setSubCategoryId("");
+    setIsDraggingImage(false);
 
-    if (subCategories.length > 0) {
-      setSubCategoryId(subCategories[0]._id);
-    } else {
-      setSubCategoryId("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   }
 
@@ -370,19 +408,13 @@ export default function CreateProductTypePage() {
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Type sub category"
+                            placeholder="Search sub category"
                             className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
                           />
                         </div>
                       </div>
 
-                      <div className="px-4 pb-2 pt-3">
-                        <p className="text-sm font-semibold text-slate-700">
-                          Please select:
-                        </p>
-                      </div>
-
-                      <div className="max-h-64 overflow-y-auto px-2 pb-2">
+                      <div className="max-h-64 overflow-y-auto px-2 py-2">
                         {filteredSubCategories.length > 0 ? (
                           filteredSubCategories.map((item) => {
                             const isSelected = subCategoryId === item._id;
@@ -455,14 +487,28 @@ export default function CreateProductTypePage() {
                   Product Type Image
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Upload an optional image for better catalog presentation.
+                  Upload or drag and drop an optional image for better catalog
+                  presentation.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
-              <label className="flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-violet-300 hover:bg-violet-50/40">
+              <label
+                htmlFor="product-type-image"
+                onDragEnter={handleImageDragEnter}
+                onDragOver={handleImageDragOver}
+                onDragLeave={handleImageDragLeave}
+                onDrop={handleImageDrop}
+                className={`flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition ${
+                  isDraggingImage
+                    ? "border-violet-500 bg-violet-50 shadow-sm"
+                    : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
+                }`}
+              >
                 <input
+                  ref={fileInputRef}
+                  id="product-type-image"
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   className="hidden"
@@ -471,14 +517,18 @@ export default function CreateProductTypePage() {
                 />
 
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border bg-white text-violet-600 shadow-sm">
-                  <BadgePlus className="h-7 w-7" />
+                  {isDraggingImage ? (
+                    <UploadCloud className="h-7 w-7" />
+                  ) : (
+                    <BadgePlus className="h-7 w-7" />
+                  )}
                 </div>
 
                 <p className="text-2xl font-extrabold tracking-tight text-slate-900">
-                  Click to upload image
+                  {isDraggingImage ? "Drop image here" : "Click to upload image"}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  PNG, JPG, JPEG, WEBP up to 3MB
+                  Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                 </p>
               </label>
 
@@ -511,7 +561,7 @@ export default function CreateProductTypePage() {
                     disabled={submitting}
                     className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <ImagePlus className="hidden" />
+                    <Trash2 className="h-4 w-4" />
                     Remove Image
                   </button>
                 ) : null}

@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -19,6 +20,10 @@ import {
   Save,
   Sparkles,
   Shapes,
+  Search,
+  ChevronDown,
+  Check,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -157,15 +162,19 @@ export default function EditSubCategoryPage() {
   const router = useRouter();
   const params = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
 
-  const id = String(params?.id || "");
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? String(rawId[0] || "") : String(rawId || "");
   const basePath = getRoleBasePath(role);
 
   const [loading, setLoading] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [removingImage, setRemovingImage] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -178,12 +187,28 @@ export default function EditSubCategoryPage() {
     imageUrl: "",
   });
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-");
   }, [name]);
+
+  const selectedCategory = useMemo(() => {
+    return categories.find((item) => item._id === categoryId) || null;
+  }, [categories, categoryId]);
+
+  const filteredCategories = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return categories;
+
+    return categories.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+  }, [categories, search]);
 
   useEffect(() => {
     return () => {
@@ -192,6 +217,30 @@ export default function EditSubCategoryPage() {
       }
     };
   }, [imagePreview.url, imagePreview.isExisting]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current) return;
+      if (!dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isDropdownOpen) {
+      const timer = window.setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [isDropdownOpen]);
 
   const fetchCategories = async () => {
     try {
@@ -278,21 +327,24 @@ export default function EditSubCategoryPage() {
     void Promise.all([fetchCategories(), fetchSubCategory()]);
   }, [id]);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -307,6 +359,40 @@ export default function EditSubCategoryPage() {
         isExisting: false,
       };
     });
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting || removingImage) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
   };
 
   const handleRemoveImage = async () => {
@@ -365,6 +451,9 @@ export default function EditSubCategoryPage() {
   const resetForm = () => {
     setCategoryId(initialData.categoryId);
     setName(initialData.name);
+    setSearch("");
+    setIsDropdownOpen(false);
+    setIsDraggingImage(false);
 
     setImagePreview((prev) => {
       if (prev.url && !prev.isExisting) {
@@ -408,6 +497,12 @@ export default function EditSubCategoryPage() {
     return true;
   };
 
+  const handleSelectCategory = (selectedId: string) => {
+    setCategoryId(selectedId);
+    setIsDropdownOpen(false);
+    setSearch("");
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -446,7 +541,6 @@ export default function EditSubCategoryPage() {
       }
 
       toast.success("Sub category updated successfully");
-
       router.push(`${basePath}/subcategory/list`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -536,26 +630,80 @@ export default function EditSubCategoryPage() {
                   Category <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (loadingCategories || submitting) return;
+                      setIsDropdownOpen((prev) => !prev);
+                    }}
                     disabled={loadingCategories || submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
-                    <option value="">
-                      {loadingCategories
-                        ? "Loading categories..."
-                        : "Select category"}
-                    </option>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {loadingCategories
+                          ? "Loading categories..."
+                          : selectedCategory?.name || "Select category"}
+                      </span>
+                    </div>
 
-                    {categories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                        isDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isDropdownOpen && !loadingCategories ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                      <div className="border-b border-slate-200 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-300 bg-white px-3">
+                          <Search className="mr-2 h-4 w-4 text-slate-500" />
+                          <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search category"
+                            className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto px-2 py-2">
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map((item) => {
+                            const isSelected = categoryId === item._id;
+
+                            return (
+                              <button
+                                key={item._id}
+                                type="button"
+                                onClick={() => handleSelectCategory(item._id)}
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                                  isSelected
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="truncate">{item.name}</span>
+
+                                {isSelected ? (
+                                  <Check className="h-4 w-4 shrink-0" />
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-slate-400">
+                            No category found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -603,32 +751,44 @@ export default function EditSubCategoryPage() {
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
               <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={submitting}
-                  className="group flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+                <label
+                  htmlFor="subcategory-image"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`group flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 text-center transition ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
+                  }`}
                 >
+                  <input
+                    ref={fileInputRef}
+                    id="subcategory-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    disabled={submitting}
+                  />
+
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-white shadow-sm">
-                    <ImagePlus className="h-8 w-8 text-violet-600" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-8 w-8 text-violet-600" />
+                    ) : (
+                      <ImagePlus className="h-8 w-8 text-violet-600" />
+                    )}
                   </div>
 
                   <h4 className="mt-5 text-xl font-semibold text-slate-900">
-                    Click to upload image
+                    {isDraggingImage ? "Drop image here" : "Click to upload image"}
                   </h4>
 
                   <p className="mt-2 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
-                </button>
+                </label>
               </div>
 
               <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">

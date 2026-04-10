@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -22,6 +23,7 @@ import {
   Search,
   ChevronDown,
   Check,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,6 +136,7 @@ export default function CreateCategoryPage() {
 
   const [isMasterDropdownOpen, setIsMasterDropdownOpen] = useState(false);
   const [masterCategorySearch, setMasterCategorySearch] = useState("");
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -217,10 +220,6 @@ export default function CreateCategoryPage() {
       const activeOnly = safeList.filter((item) => item.isActive);
 
       setMasterCategories(activeOnly);
-
-      if (!masterCategoryId && activeOnly.length > 0) {
-        setMasterCategoryId(activeOnly[0]._id);
-      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
       setMasterCategories([]);
@@ -231,24 +230,26 @@ export default function CreateCategoryPage() {
 
   useEffect(() => {
     void fetchMasterCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -262,6 +263,40 @@ export default function CreateCategoryPage() {
         url: URL.createObjectURL(file),
       };
     });
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
   };
 
   const removeImage = () => {
@@ -346,7 +381,7 @@ export default function CreateCategoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(145,22,161,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-4 md:p-6">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(145,22,161,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -368,7 +403,7 @@ export default function CreateCategoryPage() {
           </button>
         </div>
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-gradient-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
+        <div className="relative overflow-hidden rounded-4xl border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
           <div className="absolute inset-0 bg-white/5" />
           <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
@@ -427,8 +462,8 @@ export default function CreateCategoryPage() {
                       <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
                       <span className="truncate">
                         {loadingMasterCategories
-                          ? "Loading master categories..."
-                          : selectedMasterCategory?.name || "Select a category"}
+                          ? "Loading..."
+                          : selectedMasterCategory?.name || "Select Category"}
                       </span>
                     </div>
 
@@ -457,13 +492,7 @@ export default function CreateCategoryPage() {
                         </div>
                       </div>
 
-                      <div className="px-4 pb-2 pt-3">
-                        <p className="text-sm font-semibold text-slate-700">
-                          Please select:
-                        </p>
-                      </div>
-
-                      <div className="max-h-64 overflow-y-auto px-2 pb-2">
+                      <div className="max-h-64 overflow-y-auto p-2">
                         {filteredMasterCategories.length > 0 ? (
                           filteredMasterCategories.map((item) => {
                             const isSelected = masterCategoryId === item._id;
@@ -536,7 +565,7 @@ export default function CreateCategoryPage() {
                   Category Image
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Upload an optional image for better catalog presentation.
+                  Upload or drag and drop an optional image for better catalog presentation.
                 </p>
               </div>
             </div>
@@ -545,17 +574,29 @@ export default function CreateCategoryPage() {
               <div>
                 <label
                   htmlFor="category-image"
-                  className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-violet-50/60 px-6 py-8 text-center transition duration-200 hover:border-violet-400 hover:shadow-sm"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
+                  }`}
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
-                    <ImagePlus className="h-7 w-7" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-7 w-7" />
+                    ) : (
+                      <ImagePlus className="h-7 w-7" />
+                    )}
                   </div>
 
                   <p className="text-base font-semibold text-slate-800">
-                    Click to upload image
+                    {isDraggingImage ? "Drop image here" : "Click to upload image"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
 
                   <input
@@ -575,7 +616,7 @@ export default function CreateCategoryPage() {
                   Preview
                 </p>
 
-                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}
@@ -583,6 +624,7 @@ export default function CreateCategoryPage() {
                       fill
                       className="object-cover"
                       sizes="260px"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center px-4 text-center text-slate-400">
@@ -621,7 +663,7 @@ export default function CreateCategoryPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#082a5e] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? (
                 <>

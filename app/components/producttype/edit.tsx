@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -17,7 +18,7 @@ import {
   ArrowLeft,
   Trash2,
   Save,
-  Sparkles,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -152,26 +153,21 @@ export default function EditProductTypePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
 
-  const id = String(params?.id || "");
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? String(rawId[0] || "") : String(rawId || "");
   const basePath = getRoleBasePath(role);
 
   const [loading, setLoading] = useState(true);
   const [loadingSubCategories, setLoadingSubCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [removingImage, setRemovingImage] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
   const [subCategoryId, setSubCategoryId] = useState("");
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
-
-  const [initialData, setInitialData] = useState({
-    subCategoryId: "",
-    name: "",
-    imageUrl: "",
-    isActive: true,
-  });
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -257,13 +253,6 @@ export default function EditProductTypePage() {
       } else {
         setImagePreview(initialPreview);
       }
-
-      setInitialData({
-        subCategoryId: resolvedSubCategoryId,
-        name: resolvedName,
-        imageUrl: resolvedImageUrl,
-        isActive: resolvedIsActive,
-      });
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -276,21 +265,24 @@ export default function EditProductTypePage() {
     void Promise.all([fetchSubCategories(), fetchProductType()]);
   }, [id]);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -307,9 +299,43 @@ export default function EditProductTypePage() {
     });
   };
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting || removingImage) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
   const handleRemoveImage = async () => {
     const hasExistingImage =
-      !!initialData.imageUrl && imagePreview.isExisting && !imagePreview.file;
+      !!imagePreview.url && imagePreview.isExisting && !imagePreview.file;
 
     const hasLocalSelectedImage = !!imagePreview.file && !imagePreview.isExisting;
 
@@ -343,10 +369,6 @@ export default function EditProductTypePage() {
       await apiClient.delete(SummaryApi.product_type_image_remove.url(id));
 
       setImagePreview(initialPreview);
-      setInitialData((prev) => ({
-        ...prev,
-        imageUrl: "",
-      }));
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -576,32 +598,44 @@ export default function EditProductTypePage() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_170px]">
               <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={submitting}
-                  className="flex min-h-[190px] w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+                <label
+                  htmlFor="product-type-image"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`flex min-h-[190px] w-full cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed px-6 text-center transition ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
+                  }`}
                 >
+                  <input
+                    ref={fileInputRef}
+                    id="product-type-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    disabled={submitting}
+                  />
+
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <ImagePlus className="h-6 w-6 text-violet-600" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-6 w-6 text-violet-600" />
+                    ) : (
+                      <ImagePlus className="h-6 w-6 text-violet-600" />
+                    )}
                   </div>
 
                   <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 md:text-[20px]">
-                    Click to choose image
+                    {isDraggingImage ? "Drop image here" : "Click to choose image"}
                   </h3>
 
                   <p className="mt-2 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
-                </button>
+                </label>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                   {imagePreview.url && (

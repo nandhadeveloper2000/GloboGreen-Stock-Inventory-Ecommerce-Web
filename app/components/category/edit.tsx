@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -19,6 +20,10 @@ import {
   Save,
   Sparkles,
   Shapes,
+  Search,
+  ChevronDown,
+  Check,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
@@ -148,6 +153,8 @@ export default function CategoryEditPage() {
   const router = useRouter();
   const params = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
   const basePath = getRoleBasePath(role);
 
@@ -158,7 +165,9 @@ export default function CategoryEditPage() {
   const [loadingMasterCategories, setLoadingMasterCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const [masterCategories, setMasterCategories] = useState<MasterCategoryOption[]>([]);
+  const [masterCategories, setMasterCategories] = useState<
+    MasterCategoryOption[]
+  >([]);
   const [masterCategoryId, setMasterCategoryId] = useState("");
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -166,6 +175,10 @@ export default function CategoryEditPage() {
   const [existingImage, setExistingImage] = useState<ExistingImage | null>(null);
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
   const [removeExistingImage, setRemoveExistingImage] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -174,6 +187,22 @@ export default function CategoryEditPage() {
       .replace(/\s+/g, "-");
   }, [name]);
 
+  const selectedMasterCategory = useMemo(() => {
+    return (
+      masterCategories.find((item) => item._id === masterCategoryId) || null
+    );
+  }, [masterCategories, masterCategoryId]);
+
+  const filteredMasterCategories = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return masterCategories;
+
+    return masterCategories.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+  }, [masterCategories, search]);
+
   useEffect(() => {
     return () => {
       if (imagePreview.url) {
@@ -181,6 +210,31 @@ export default function CategoryEditPage() {
       }
     };
   }, [imagePreview.url]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current) return;
+
+      if (!dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isDropdownOpen) {
+      const timer = window.setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [isDropdownOpen]);
 
   const fetchMasterCategories = async () => {
     try {
@@ -198,7 +252,10 @@ export default function CategoryEditPage() {
 
       const list =
         result.data || result.categories || result.masterCategories || [];
-      setMasterCategories(Array.isArray(list) ? list.filter((item) => item.isActive) : []);
+
+      setMasterCategories(
+        Array.isArray(list) ? list.filter((item) => item.isActive) : []
+      );
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -250,23 +307,27 @@ export default function CategoryEditPage() {
   useEffect(() => {
     void fetchMasterCategories();
     void fetchCategory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -282,6 +343,40 @@ export default function CategoryEditPage() {
     });
 
     setRemoveExistingImage(false);
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
   };
 
   const removeSelectedNewImage = () => {
@@ -301,6 +396,12 @@ export default function CategoryEditPage() {
     removeSelectedNewImage();
     setExistingImage(null);
     setRemoveExistingImage(true);
+  };
+
+  const handleSelectMasterCategory = (id: string) => {
+    setMasterCategoryId(id);
+    setIsDropdownOpen(false);
+    setSearch("");
   };
 
   const validateForm = () => {
@@ -354,11 +455,15 @@ export default function CategoryEditPage() {
     const formData = new FormData();
     formData.append("image", imagePreview.file);
 
-    const response = await apiClient.put<CategoryImageResponse>(imageUrl, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await apiClient.put<CategoryImageResponse>(
+      imageUrl,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
     const result = response.data;
 
@@ -377,7 +482,8 @@ export default function CategoryEditPage() {
         ? SummaryApi.category_image_remove.url(categoryId)
         : `${SummaryApi.category_image_remove.url}/${categoryId}`;
 
-    const response = await apiClient.delete<CategoryImageResponse>(imageRemoveUrl);
+    const response =
+      await apiClient.delete<CategoryImageResponse>(imageRemoveUrl);
     const result = response.data;
 
     if (!result?.success) {
@@ -468,7 +574,7 @@ export default function CategoryEditPage() {
 
             <button
               type="button"
-              onClick={() => router.push(`${basePath}/category`)}
+              onClick={() => router.push(`${basePath}/category/list`)}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition duration-200 hover:bg-white/15"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -489,7 +595,8 @@ export default function CategoryEditPage() {
                   Basic Information
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Update the parent master category, category name, and active status.
+                  Update the parent master category, category name, and active
+                  status.
                 </p>
               </div>
             </div>
@@ -500,26 +607,84 @@ export default function CategoryEditPage() {
                   Master Category <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={masterCategoryId}
-                    onChange={(e) => setMasterCategoryId(e.target.value)}
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (loadingMasterCategories || submitting) return;
+                      setIsDropdownOpen((prev) => !prev);
+                    }}
                     disabled={loadingMasterCategories || submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
-                    <option value="">
-                      {loadingMasterCategories
-                        ? "Loading master categories..."
-                        : "Select master category"}
-                    </option>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {loadingMasterCategories
+                          ? "Loading master categories..."
+                          : selectedMasterCategory?.name ||
+                            "Select master category"}
+                      </span>
+                    </div>
 
-                    {masterCategories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                        isDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isDropdownOpen && !loadingMasterCategories ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                      <div className="border-b border-slate-200 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-300 bg-white px-3">
+                          <Search className="mr-2 h-4 w-4 text-slate-500" />
+                          <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search master category"
+                            className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto px-2 py-2">
+                        {filteredMasterCategories.length > 0 ? (
+                          filteredMasterCategories.map((item) => {
+                            const isSelected =
+                              masterCategoryId === item._id;
+
+                            return (
+                              <button
+                                key={item._id}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectMasterCategory(item._id)
+                                }
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                                  isSelected
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="truncate">{item.name}</span>
+
+                                {isSelected ? (
+                                  <Check className="h-4 w-4 shrink-0" />
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-slate-400">
+                            No master category found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -533,6 +698,7 @@ export default function CategoryEditPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter category name"
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                  disabled={submitting}
                 />
               </div>
 
@@ -599,17 +765,29 @@ export default function CategoryEditPage() {
               <div>
                 <label
                   htmlFor="category-image"
-                  className="group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 px-6 py-8 text-center transition duration-200 hover:border-violet-400 hover:shadow-sm"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
+                  }`}
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
-                    <ImagePlus className="h-7 w-7" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-7 w-7" />
+                    ) : (
+                      <ImagePlus className="h-7 w-7" />
+                    )}
                   </div>
 
                   <p className="text-base font-semibold text-slate-800">
-                    Click to upload new image
+                    {isDraggingImage ? "Drop image here" : "Click to upload new image"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
 
                   <input
@@ -619,12 +797,15 @@ export default function CategoryEditPage() {
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     onChange={handleImageChange}
                     className="hidden"
+                    disabled={submitting}
                   />
                 </label>
               </div>
 
               <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-sm font-semibold text-slate-700">Preview</p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">
+                  Preview
+                </p>
 
                 <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {previewImageUrl ? (
@@ -643,27 +824,29 @@ export default function CategoryEditPage() {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  {imagePreview.url && (
+                  {imagePreview.url ? (
                     <button
                       type="button"
                       onClick={removeSelectedNewImage}
-                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                      disabled={submitting}
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Trash2 className="h-4 w-4" />
                       Remove New Image
                     </button>
-                  )}
+                  ) : null}
 
-                  {(existingImage?.url || removeExistingImage) && (
+                  {(existingImage?.url || removeExistingImage) ? (
                     <button
                       type="button"
                       onClick={handleRemoveCurrentImage}
-                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
+                      disabled={submitting}
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Trash2 className="h-4 w-4" />
                       Remove Current Image
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -673,7 +856,7 @@ export default function CategoryEditPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
-                onClick={() => router.push(`${basePath}/category`)}
+                onClick={() => router.push(`${basePath}/category/list`)}
                 disabled={submitting}
                 className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >

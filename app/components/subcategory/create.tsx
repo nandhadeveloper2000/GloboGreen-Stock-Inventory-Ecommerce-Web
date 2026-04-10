@@ -2,6 +2,7 @@
 
 import React, {
   ChangeEvent,
+  DragEvent,
   FormEvent,
   useEffect,
   useMemo,
@@ -14,7 +15,6 @@ import {
   Loader2,
   ImagePlus,
   Tag,
-  ArrowLeft,
   Trash2,
   Save,
   Sparkles,
@@ -22,6 +22,7 @@ import {
   Search,
   ChevronDown,
   Check,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
@@ -103,7 +104,9 @@ function getErrorMessage(error: unknown): string {
 }
 
 function normalizeRole(role?: string | null) {
-  return String(role ?? "").trim().toUpperCase();
+  return String(role ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 function getRoleBasePath(role?: string | null) {
@@ -136,6 +139,7 @@ export default function CreateSubCategoryPage() {
 
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -213,13 +217,11 @@ export default function CreateSubCategoryPage() {
       const activeOnly = safeList.filter((item) => item.isActive);
 
       setCategories(activeOnly);
-
-      if (!categoryId && activeOnly.length > 0) {
-        setCategoryId(activeOnly[0]._id);
-      }
+      setCategoryId("");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
       setCategories([]);
+      setCategoryId("");
     } finally {
       setLoadingCategories(false);
     }
@@ -227,24 +229,26 @@ export default function CreateSubCategoryPage() {
 
   useEffect(() => {
     void fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const validateAndSetImage = (file: File | null) => {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -258,6 +262,40 @@ export default function CreateSubCategoryPage() {
         url: URL.createObjectURL(file),
       };
     });
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    validateAndSetImage(file);
+  };
+
+  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (submitting) return;
+
+    const file = e.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
   };
 
   const removeImage = () => {
@@ -277,13 +315,8 @@ export default function CreateSubCategoryPage() {
     setName("");
     setCategorySearch("");
     setIsCategoryDropdownOpen(false);
+    setCategoryId("");
     removeImage();
-
-    if (categories.length > 0) {
-      setCategoryId(categories[0]._id);
-    } else {
-      setCategoryId("");
-    }
   };
 
   const validateForm = () => {
@@ -362,11 +395,12 @@ export default function CreateSubCategoryPage() {
             Create Sub Category
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Create sub category under a selected category with optional image upload.
+            Create sub category under a selected category with optional image
+            upload.
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
+        <div className="relative overflow-hidden rounded-4xl border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
           <div className="absolute inset-0 bg-white/5" />
           <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
@@ -383,18 +417,10 @@ export default function CreateSubCategoryPage() {
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                Select a category, enter the sub category name, and upload an optional image.
+                Select a category, enter the sub category name, and upload an
+                optional image.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
           </div>
         </div>
 
@@ -433,7 +459,13 @@ export default function CreateSubCategoryPage() {
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span className="truncate">
+                      <span
+                        className={`truncate ${
+                          selectedCategory?.name
+                            ? "text-slate-900"
+                            : "text-slate-400"
+                        }`}
+                      >
                         {loadingCategories
                           ? "Loading categories..."
                           : selectedCategory?.name || "Select category"}
@@ -457,16 +489,10 @@ export default function CreateSubCategoryPage() {
                             type="text"
                             value={categorySearch}
                             onChange={(e) => setCategorySearch(e.target.value)}
-                            placeholder="Type a category"
+                            placeholder="Search category"
                             className="w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
                           />
                         </div>
-                      </div>
-
-                      <div className="px-4 pb-2 pt-3">
-                        <p className="text-sm font-semibold text-slate-700">
-                          Please select:
-                        </p>
                       </div>
 
                       <div className="max-h-64 overflow-y-auto px-2 pb-2">
@@ -539,39 +565,51 @@ export default function CreateSubCategoryPage() {
                   Sub Category Image
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Upload an optional image for better catalog presentation.
+                  Upload or drag and drop an optional image for better catalog presentation.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
               <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={submitting}
-                  className="group flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 text-center transition hover:border-violet-300 hover:bg-violet-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+                <label
+                  htmlFor="subcategory-image"
+                  onDragEnter={handleImageDragEnter}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  className={`group flex min-h-55 w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 text-center transition ${
+                    isDraggingImage
+                      ? "border-violet-500 bg-violet-50 shadow-sm"
+                      : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
+                  }`}
                 >
+                  <input
+                    ref={fileInputRef}
+                    id="subcategory-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    disabled={submitting}
+                  />
+
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-white shadow-sm">
-                    <ImagePlus className="h-8 w-8 text-violet-600" />
+                    {isDraggingImage ? (
+                      <UploadCloud className="h-8 w-8 text-violet-600" />
+                    ) : (
+                      <ImagePlus className="h-8 w-8 text-violet-600" />
+                    )}
                   </div>
 
                   <h4 className="mt-5 text-xl font-semibold text-slate-900">
-                    Click to upload image
+                    {isDraggingImage ? "Drop image here" : "Click to upload image"}
                   </h4>
 
                   <p className="mt-2 text-sm text-slate-500">
-                    PNG, JPG, JPEG, WEBP up to 3MB
+                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                   </p>
-                </button>
+                </label>
               </div>
 
               <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
@@ -579,7 +617,7 @@ export default function CreateSubCategoryPage() {
                   Preview
                 </h4>
 
-                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}

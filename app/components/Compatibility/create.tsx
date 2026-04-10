@@ -1,0 +1,946 @@
+"use client";
+
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Loader2,
+  Save,
+  Shapes,
+  ShieldCheck,
+  Sparkles,
+  Search,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import SummaryApi from "@/constants/SummaryApi";
+import apiClient from "@/lib/api-client";
+import { useAuth } from "@/context/auth/AuthProvider";
+
+type ProductTypeItem = {
+  _id: string;
+  name: string;
+  nameKey?: string;
+  isActive?: boolean;
+};
+
+type BrandItem = {
+  _id: string;
+  name: string;
+  nameKey?: string;
+  isActive?: boolean;
+};
+
+type ModelItem = {
+  _id: string;
+  name: string;
+  nameKey?: string;
+  brandId?:
+    | string
+    | {
+        _id?: string;
+        name?: string;
+      };
+  isActive?: boolean;
+};
+
+type ProductTypeListResponse = {
+  success?: boolean;
+  message?: string;
+  data?: ProductTypeItem[];
+  productTypes?: ProductTypeItem[];
+};
+
+type BrandListResponse = {
+  success?: boolean;
+  message?: string;
+  data?: BrandItem[];
+  brands?: BrandItem[];
+};
+
+type ModelListResponse = {
+  success?: boolean;
+  message?: string;
+  data?: ModelItem[];
+  models?: ModelItem[];
+};
+
+type CompatibilityRow = {
+  rowId: string;
+  brandId: string;
+  enabled: boolean;
+  modelId: string[];
+  notes: string;
+  isActive: boolean;
+};
+
+type SearchableSelectOption = {
+  _id: string;
+  name: string;
+  subtitle?: string;
+};
+
+type SearchableSingleSelectProps = {
+  label?: string;
+  required?: boolean;
+  placeholder: string;
+  options: SearchableSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+};
+
+type ModelCheckboxSelectorProps = {
+  options: SearchableSelectOption[];
+  values: string[];
+  onChange: (values: string[]) => void;
+  disabled?: boolean;
+  emptyText: string;
+  allLabel: string;
+};
+
+function getErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong"
+): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object"
+  ) {
+    const response = error.response as {
+      data?: {
+        message?: string;
+      };
+    };
+
+    if (response.data?.message) return response.data.message;
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+function normalizeRole(role?: string | null) {
+  return String(role ?? "").trim().toUpperCase();
+}
+
+function getRoleBasePath(role?: string | null) {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === "MASTER_ADMIN") return "/master";
+  if (normalizedRole === "MANAGER") return "/manager";
+  if (normalizedRole === "SUPERVISOR") return "/supervisor";
+  if (normalizedRole === "STAFF") return "/staff";
+
+  return "/master";
+}
+
+function normalizeProductTypes(
+  response: ProductTypeListResponse
+): ProductTypeItem[] {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.productTypes)) return response.productTypes;
+  return [];
+}
+
+function normalizeBrands(response: BrandListResponse): BrandItem[] {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.brands)) return response.brands;
+  return [];
+}
+
+function normalizeModels(response: ModelListResponse): ModelItem[] {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.models)) return response.models;
+  return [];
+}
+
+function getBrandIdFromModel(item: ModelItem): string {
+  if (!item.brandId) return "";
+  if (typeof item.brandId === "string") return String(item.brandId);
+  return String(item.brandId?._id || "");
+}
+
+function SearchableSingleSelect({
+  label,
+  required = false,
+  placeholder,
+  options,
+  value,
+  onChange,
+  disabled = false,
+}: SearchableSingleSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selected = useMemo(
+    () => options.find((item) => item._id === value) || null,
+    [options, value]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return options;
+
+    return options.filter((item) => {
+      const name = item.name.toLowerCase();
+      const subtitle = (item.subtitle || "").toLowerCase();
+      return name.includes(q) || subtitle.includes(q);
+    });
+  }, [options, search]);
+
+  return (
+    <div className="space-y-2">
+      {label ? (
+        <label className="block text-sm font-semibold text-slate-700">
+          {label} {required ? <span className="text-rose-500">*</span> : null}
+        </label>
+      ) : null}
+
+      <div className={`relative ${open ? "z-[9999]" : "z-10"}`}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            setOpen((prev) => !prev);
+          }}
+          className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-fuchsia-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+        >
+          <span className={selected ? "text-slate-900" : "text-slate-400"}>
+            {selected ? selected.name : placeholder}
+          </span>
+          <span className="text-slate-400">{open ? "▲" : "▼"}</span>
+        </button>
+
+        {open ? (
+          <div className="absolute left-0 right-0 top-full z-[9999] mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 p-3">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Search ${label?.toLowerCase() || "option"}`}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="max-h-64 overflow-y-auto py-1">
+              {filtered.length ? (
+                filtered.map((item) => {
+                  const active = item._id === value;
+
+                  return (
+                    <button
+                      key={item._id}
+                      type="button"
+                      onClick={() => {
+                        onChange(item._id);
+                        setOpen(false);
+                        setSearch("");
+                      }}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition ${
+                        active
+                          ? "bg-violet-50 text-violet-700"
+                          : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{item.name}</div>
+                        {item.subtitle ? (
+                          <div className="truncate text-xs text-slate-400">
+                            {item.subtitle}
+                          </div>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-6 text-center text-sm text-slate-400">
+                  No results found
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ModelCheckboxSelector({
+  options,
+  values,
+  onChange,
+  disabled = false,
+  emptyText,
+  allLabel,
+}: ModelCheckboxSelectorProps) {
+  const optionIds = options.map((item) => item._id);
+  const allSelected =
+    optionIds.length > 0 && optionIds.every((id) => values.includes(id));
+
+  const toggleOne = (id: string) => {
+    if (values.includes(id)) {
+      onChange(values.filter((item) => item !== id));
+      return;
+    }
+    onChange([...values, id]);
+  };
+
+  const toggleAll = () => {
+    if (!optionIds.length) return;
+
+    if (allSelected) {
+      onChange(values.filter((id) => !optionIds.includes(id)));
+      return;
+    }
+
+    onChange(Array.from(new Set([...values, ...optionIds])));
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      {disabled ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-7 text-center text-sm text-slate-400">
+          {emptyText}
+        </div>
+      ) : options.length ? (
+        <div className="space-y-4">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            {allLabel}
+          </label>
+
+          <div className="flex flex-wrap gap-3">
+            {options.map((item) => {
+              const checked = values.includes(item._id);
+
+              return (
+                <label
+                  key={item._id}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                    checked
+                      ? "border-sky-600 bg-sky-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-sky-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleOne(item._id)}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  />
+                  <span>{item.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-7 text-center text-sm text-slate-400">
+          No models found
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ROWS_PER_PAGE = 5;
+
+export default function ProductCompatibilityCreatePage() {
+  const router = useRouter();
+  const { role } = useAuth();
+
+  const basePath = getRoleBasePath(role);
+
+  const [loading, setLoading] = useState(false);
+  const [bootLoading, setBootLoading] = useState(true);
+
+  const [productTypes, setProductTypes] = useState<ProductTypeItem[]>([]);
+  const [brands, setBrands] = useState<BrandItem[]>([]);
+  const [models, setModels] = useState<ModelItem[]>([]);
+
+  const [productTypeId, setProductTypeId] = useState("");
+  const [productBrandId, setProductBrandId] = useState("");
+
+  const [rows, setRows] = useState<CompatibilityRow[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [brandSearch, setBrandSearch] = useState("");
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setBootLoading(true);
+
+        const token =
+          localStorage.getItem("token") ||
+          localStorage.getItem("accessToken") ||
+          localStorage.getItem("authToken") ||
+          "";
+
+        const headers = token
+          ? {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            };
+
+        const [productTypeRes, brandRes, modelRes] = await Promise.all([
+          apiClient.get<ProductTypeListResponse>(
+            SummaryApi.product_type_list.url,
+            { headers }
+          ),
+          apiClient.get<BrandListResponse>(SummaryApi.brand_list.url, {
+            headers,
+          }),
+          apiClient.get<ModelListResponse>(SummaryApi.model_list.url, {
+            headers,
+          }),
+        ]);
+
+        const productTypeList = normalizeProductTypes(productTypeRes.data);
+        const brandList = normalizeBrands(brandRes.data);
+        const modelList = normalizeModels(modelRes.data);
+
+        const activeBrands = brandList.filter((item) => item.isActive !== false);
+        const activeModels = modelList.filter((item) => item.isActive !== false);
+
+        setProductTypes(
+          productTypeList.filter((item) => item.isActive !== false)
+        );
+        setBrands(activeBrands);
+        setModels(activeModels);
+
+        setRows(
+          activeBrands.map((brand) => ({
+            rowId: brand._id,
+            brandId: brand._id,
+            enabled: false,
+            modelId: [],
+            notes: "",
+            isActive: true,
+          }))
+        );
+      } catch (error) {
+        toast.error(getErrorMessage(error, "Failed to load form data"));
+        setProductTypes([]);
+        setBrands([]);
+        setModels([]);
+        setRows([]);
+      } finally {
+        setBootLoading(false);
+      }
+    };
+
+    void fetchInitialData();
+  }, []);
+
+  const productTypeOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      productTypes.map((item) => ({
+        _id: item._id,
+        name: item.name,
+        subtitle: item.nameKey || "",
+      })),
+    [productTypes]
+  );
+
+  const brandOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      brands.map((item) => ({
+        _id: item._id,
+        name: item.name,
+        subtitle: item.nameKey || "",
+      })),
+    [brands]
+  );
+
+  const brandMap = useMemo(() => {
+    const map = new Map<string, BrandItem>();
+    brands.forEach((item) => map.set(item._id, item));
+    return map;
+  }, [brands]);
+
+  const modelMap = useMemo(() => {
+    const map = new Map<string, ModelItem>();
+    models.forEach((item) => map.set(item._id, item));
+    return map;
+  }, [models]);
+
+  const modelMapByBrand = useMemo(() => {
+    const map = new Map<string, ModelItem[]>();
+
+    models.forEach((item) => {
+      const brandId = getBrandIdFromModel(item);
+      if (!brandId) return;
+
+      const existing = map.get(brandId) || [];
+      existing.push(item);
+      map.set(brandId, existing);
+    });
+
+    return map;
+  }, [models]);
+
+  const updateRow = (rowId: string, patch: Partial<CompatibilityRow>) => {
+    setRows((prev) =>
+      prev.map((item) => {
+        if (item.rowId !== rowId) return item;
+
+        const next: CompatibilityRow = {
+          ...item,
+          ...patch,
+        };
+
+        if (patch.enabled === false) {
+          next.modelId = [];
+          next.notes = "";
+        }
+
+        return next;
+      })
+    );
+  };
+
+  const validateForm = () => {
+    if (!productTypeId) {
+      toast.error("Please select product type");
+      return false;
+    }
+
+    if (!productBrandId) {
+      toast.error("Please select product brand");
+      return false;
+    }
+
+    const validRows = rows.filter((item) => item.enabled);
+
+    if (!validRows.length) {
+      toast.error("Please select at least one compatible brand");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        productTypeId,
+        productBrandId,
+        compatible: rows
+          .filter((item) => item.enabled)
+          .map((item, index) => ({
+            brandId: [item.brandId],
+            modelId: item.modelId,
+            notes: item.notes.trim(),
+            sortOrder: index,
+            isActive: item.isActive,
+          })),
+      };
+
+      const response = await apiClient.post(
+        SummaryApi.product_compatibility_create.url,
+        payload
+      );
+
+      if (!response?.data?.success) {
+        throw new Error(response?.data?.message || "Create failed");
+      }
+
+      toast.success(
+        response?.data?.message || "Product compatibility created successfully"
+      );
+      router.push(`${basePath}/compatibility/list`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Create failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredRows = useMemo(() => {
+    const q = brandSearch.trim().toLowerCase();
+    if (!q) return rows;
+
+    return rows.filter((row) => {
+      const brandName = brandMap.get(row.brandId)?.name || "";
+      return brandName.toLowerCase().includes(q);
+    });
+  }, [rows, brandSearch, brandMap]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [brandSearch]);
+
+  const selectedSummary = useMemo(() => {
+    return rows
+      .filter((row) => row.enabled)
+      .map((row) => {
+        const brandName = brandMap.get(row.brandId)?.name || "-";
+        const selectedModels = row.modelId
+          .map((id) => modelMap.get(id)?.name)
+          .filter(Boolean) as string[];
+
+        return {
+          brandId: row.brandId,
+          brandName,
+          models: selectedModels,
+          notes: row.notes.trim(),
+        };
+      });
+  }, [rows, brandMap, modelMap]);
+
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
+  const paginatedRows = filteredRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
+  const showingTo = Math.min(startIndex + ROWS_PER_PAGE, totalRows);
+
+  return (
+    <div className="min-h-screen bg-[#f6f7fb] px-4 py-6 md:px-6 md:py-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#2e3192] via-[#7a24ff] to-[#ec0677] p-8 text-white shadow-[0_24px_80px_rgba(46,49,146,0.22)]">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[size:42px_42px]" />
+          </div>
+
+          <div className="relative">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Compatibility Management
+            </div>
+
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              Create Product Compatibility
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm text-white/85 md:text-base">
+              Map one product type and one product brand to compatible brands and
+              models.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          <div className="relative z-30 rounded-[28px] border border-white/60 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+            <div className="mb-6 flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
+                <Shapes className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+                  Basic Information
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Select the main product type and main product brand.
+                </p>
+              </div>
+            </div>
+
+            {bootLoading ? (
+              <div className="flex h-48 items-center justify-center">
+                <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading form data...
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2">
+                <SearchableSingleSelect
+                  label="Product Type"
+                  required
+                  placeholder="Select product type"
+                  options={productTypeOptions}
+                  value={productTypeId}
+                  onChange={setProductTypeId}
+                />
+
+                <SearchableSingleSelect
+                  label="Product Brand"
+                  required
+                  placeholder="Select product brand"
+                  options={brandOptions}
+                  value={productBrandId}
+                  onChange={setProductBrandId}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="relative z-20 rounded-[28px] border border-white/60 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+              <div className="mb-6 flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+                    Compatible Brands & Models
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Search brand name, then select model list.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={brandSearch}
+                    onChange={(e) => setBrandSearch(e.target.value)}
+                    placeholder="Search compatible brand name..."
+                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-fuchsia-100"
+                  />
+                  {brandSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setBrandSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="relative overflow-visible rounded-2xl border border-slate-200 bg-white">
+                <div className="relative overflow-x-auto overflow-y-visible">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
+                          S.No
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
+                          Compatible Brand <span className="text-rose-500">*</span>
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
+                          Compatible Models
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
+                          Notes
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-200 bg-white">
+                      {paginatedRows.map((row, pageIndex) => {
+                        const brand = brands.find((item) => item._id === row.brandId);
+
+                        const compatibleModelOptions: SearchableSelectOption[] = (
+                          modelMapByBrand.get(row.brandId) || []
+                        ).map((item) => ({
+                          _id: item._id,
+                          name: item.name,
+                          subtitle: item.nameKey || "",
+                        }));
+
+                        const serialNo = startIndex + pageIndex + 1;
+
+                        return (
+                          <tr key={row.rowId} className="align-top">
+                            <td className="px-4 py-4 text-sm font-semibold text-slate-700">
+                              {serialNo}
+                            </td>
+
+                            <td className="min-w-[220px] px-4 py-4">
+                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-800">
+                                  <input
+                                    type="checkbox"
+                                    checked={row.enabled}
+                                    onChange={(e) =>
+                                      updateRow(row.rowId, {
+                                        enabled: e.target.checked,
+                                      })
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                  />
+                                  <span>{brand?.name || "-"}</span>
+                                </label>
+                              </div>
+                            </td>
+
+                            <td className="min-w-[420px] px-4 py-4">
+                              <ModelCheckboxSelector
+                                options={compatibleModelOptions}
+                                values={row.modelId}
+                                onChange={(values) =>
+                                  updateRow(row.rowId, { modelId: values })
+                                }
+                                disabled={!row.enabled}
+                                emptyText="Select compatible brand"
+                                allLabel="All models"
+                              />
+                            </td>
+
+                            <td className="min-w-[220px] px-4 py-4">
+                              <textarea
+                                value={row.notes}
+                                onChange={(e) =>
+                                  updateRow(row.rowId, { notes: e.target.value })
+                                }
+                                rows={4}
+                                disabled={!row.enabled}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-fuchsia-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                placeholder="Optional notes"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {!paginatedRows.length ? (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="px-4 py-8 text-center text-sm text-slate-500"
+                          >
+                            No compatible brand found
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-600">
+                    Showing {showingFrom} to {showingTo} of {totalRows} entries
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={safeCurrentPage === 1}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+
+                    <span className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                      {safeCurrentPage} / {totalPages}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
+                      disabled={safeCurrentPage === totalPages}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative z-10 rounded-[28px] border border-white/60 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+              <div className="mb-4 flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                    Selected Summary
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Brand name and selected model list.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {selectedSummary.length ? (
+                  selectedSummary.map((item) => (
+                    <div
+                      key={item.brandId}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="text-sm font-semibold text-slate-900">
+                        {item.brandName}
+                      </div>
+
+                      <div className="mt-2 text-sm text-slate-600">
+                        {item.models.length ? (
+                          <span>{item.models.join(", ")}</span>
+                        ) : (
+                          <span className="text-slate-400">No models selected</span>
+                        )}
+                      </div>
+
+                      {item.notes ? (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                          {item.notes}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
+                    No brand selected yet
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse items-center justify-end gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => router.push(`${basePath}/compatibility/list`)}
+              className="inline-flex h-12 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading || bootLoading}
+              className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-[#2e3192] to-[#ec0677] px-5 text-sm font-semibold text-white shadow-[0_16px_38px_rgba(236,6,119,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Compatibility
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

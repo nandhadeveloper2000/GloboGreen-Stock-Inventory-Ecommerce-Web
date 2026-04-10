@@ -278,7 +278,7 @@ export default function SubCategoryListPage() {
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/30 bg-gradient-to-r from-[#082a5e] via-[#5b2bbd] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(17,24,39,0.14)] md:p-8">
+        <div className="relative overflow-hidden rounded-4xl border border-white/30 bg-linear-to-r from-[#082a5e] via-[#5b2bbd] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(17,24,39,0.14)] md:p-8">
           <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-20 left-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
 
@@ -354,7 +354,7 @@ export default function SubCategoryListPage() {
         <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b2bbd] to-[#9116a1] text-white shadow-md">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-[#5b2bbd] to-[#9116a1] text-white shadow-md">
                 <FolderTree className="h-5 w-5" />
               </div>
 
@@ -393,7 +393,7 @@ export default function SubCategoryListPage() {
           </div>
 
           {loading ? (
-            <div className="flex min-h-[280px] items-center justify-center px-6 py-16">
+            <div className="flex min-h-70 items-center justify-center px-6 py-16">
               <div className="text-center">
                 <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-violet-600" />
                 <p className="text-sm font-medium text-slate-500">
@@ -402,7 +402,7 @@ export default function SubCategoryListPage() {
               </div>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-16 text-center">
+            <div className="flex min-h-70 flex-col items-center justify-center px-6 py-16 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-500">
                 <FolderTree className="h-7 w-7" />
               </div>

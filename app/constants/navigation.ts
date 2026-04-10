@@ -88,8 +88,8 @@ export const SIDEBAR_MENU: Record<UserRole, NavItem[]> = {
     {
       label: "Complaint",
       children: [
-        { label: "Create Complaint", href: "/master/complaint/create" },
-        { label: "Complaint List", href: "/master/complaint/list" },
+        { label: "Create Complaint", href: "/master/compatibility/create" },
+        { label: "Complaint List", href: "/master/compatibility/list" },
       ],
     },
     {
