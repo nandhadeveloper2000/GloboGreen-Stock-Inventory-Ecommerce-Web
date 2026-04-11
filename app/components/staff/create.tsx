@@ -1,12 +1,16 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   CheckCircle2,
   ImagePlus,
   Loader2,
   MapPin,
+  Save,
+  Sparkles,
   UploadCloud,
   User2,
   X,
@@ -203,14 +207,12 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-5 flex items-start gap-3">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
         {icon}
       </div>
       <div>
-        <h3 className="text-base font-bold tracking-tight text-slate-900">
-          {title}
-        </h3>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
+        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+        <p className="text-sm text-slate-500">{description}</p>
       </div>
     </div>
   );
@@ -252,7 +254,7 @@ function FloatingInput({
             "peer h-12 w-full rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition shadow-sm placeholder-transparent",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-violet-600",
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         />
@@ -306,7 +308,7 @@ function FloatingSelect({
             "peer h-12 w-full appearance-none rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition shadow-sm",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-violet-600",
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         >
@@ -352,9 +354,7 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">
-        {value || "-"}
-      </p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value || "-"}</p>
     </div>
   );
 }
@@ -383,18 +383,14 @@ function UploadPreviewCard({
   previewClassName: string;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+    <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
       <h4 className="text-sm font-bold text-slate-900">{title}</h4>
       <p className="mt-1 text-xs text-slate-500">{description}</p>
 
       <div className="mt-4 flex flex-col items-center">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={preview}
-            alt={title}
-            className={previewClassName}
-          />
+          <img src={preview} alt={title} className={previewClassName} />
         ) : (
           <div className="flex h-40 w-full max-w-65 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             {emptyIcon}
@@ -450,15 +446,12 @@ export default function CreateStaffPage() {
     if (currentUserRole === "MASTER_ADMIN") {
       return ["MANAGER", "SUPERVISOR", "STAFF"];
     }
-
     if (currentUserRole === "MANAGER") {
       return ["SUPERVISOR", "STAFF"];
     }
-
     if (currentUserRole === "SUPERVISOR") {
       return ["STAFF"];
     }
-
     return [];
   }, [currentUserRole]);
 
@@ -596,12 +589,11 @@ export default function CreateStaffPage() {
       }
     }
 
-    loadStates();
+    void loadStates();
 
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   useEffect(() => {
@@ -641,12 +633,11 @@ export default function CreateStaffPage() {
       }
     }
 
-    loadDistricts();
+    void loadDistricts();
 
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, accessToken]);
 
   useEffect(() => {
@@ -684,12 +675,11 @@ export default function CreateStaffPage() {
       }
     }
 
-    loadTaluks();
+    void loadTaluks();
 
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, accessToken]);
 
   useEffect(() => {
@@ -721,12 +711,11 @@ export default function CreateStaffPage() {
       }
     }
 
-    loadAreas();
+    void loadAreas();
 
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, form.taluk, accessToken]);
 
   useEffect(() => {
@@ -784,17 +773,9 @@ export default function CreateStaffPage() {
   const validateBasicAndAddress = () => {
     const nextErrors: FieldErrors = {};
 
-    if (!form.role) {
-      nextErrors.role = "Role is required";
-    }
-
-    if (!form.name.trim()) {
-      nextErrors.name = "Full name is required";
-    }
-
-    if (!form.username.trim()) {
-      nextErrors.username = "Username is required";
-    }
+    if (!form.role) nextErrors.role = "Role is required";
+    if (!form.name.trim()) nextErrors.name = "Full name is required";
+    if (!form.username.trim()) nextErrors.username = "Username is required";
 
     if (!form.email.trim()) {
       nextErrors.email = "Email is required";
@@ -830,25 +811,11 @@ export default function CreateStaffPage() {
         "Secondary mobile must be different from primary mobile";
     }
 
-    if (!form.state.trim()) {
-      nextErrors.state = "State is required";
-    }
-
-    if (!form.district.trim()) {
-      nextErrors.district = "District is required";
-    }
-
-    if (!form.taluk.trim()) {
-      nextErrors.taluk = "Taluk is required";
-    }
-
-    if (!form.area.trim()) {
-      nextErrors.area = "Area is required";
-    }
-
-    if (!form.street.trim()) {
-      nextErrors.street = "Street is required";
-    }
+    if (!form.state.trim()) nextErrors.state = "State is required";
+    if (!form.district.trim()) nextErrors.district = "District is required";
+    if (!form.taluk.trim()) nextErrors.taluk = "Taluk is required";
+    if (!form.area.trim()) nextErrors.area = "Area is required";
+    if (!form.street.trim()) nextErrors.street = "Street is required";
 
     if (!form.pincode.trim()) {
       nextErrors.pincode = "Pincode is required";
@@ -971,28 +938,34 @@ export default function CreateStaffPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="relative overflow-hidden bg-linear-to-r from-[#082a5e] via-violet-800 to-[#9116a1]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.18),transparent_25%)]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-md">
-                Staff Management
-              </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+                <Sparkles className="h-3.5 w-3.5" />
+                Staff Management
+              </span>
+
+              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                 Create Team Member
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
                 Add a new team member with basic details, address information,
                 profile avatar, and ID proof in one single form.
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <InfoPill label="Logged In As" value={getRoleBadgeText(currentUserRole)} />
+              <InfoPill
+                label="Logged In As"
+                value={getRoleBadgeText(currentUserRole)}
+              />
               <InfoPill
                 label="Can Create"
                 value={
@@ -1004,15 +977,10 @@ export default function CreateStaffPage() {
               <InfoPill label="Form Mode" value="Single Page" />
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
-      >
-        <div className="space-y-6">
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
               icon={<User2 className="h-5 w-5" />}
               title="Basic Information"
@@ -1045,7 +1013,7 @@ export default function CreateStaffPage() {
               />
 
               <div className="md:col-span-2">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_160px]">
                   <FloatingInput
                     id="username"
                     label="Username"
@@ -1126,7 +1094,7 @@ export default function CreateStaffPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
@@ -1231,7 +1199,7 @@ export default function CreateStaffPage() {
 
               <FloatingInput
                 id="street"
-                label="Street / Door No"
+                label="Street"
                 value={form.street}
                 onChange={(e) => updateField("street", e.target.value)}
                 error={errors.street}
@@ -1253,30 +1221,30 @@ export default function CreateStaffPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
-              icon={<UploadCloud className="h-5 w-5" />}
-              title="Profile Uploads"
-              description="Upload avatar and ID proof, then review before final submission."
+              icon={<ImagePlus className="h-5 w-5" />}
+              title="Profile & Documents"
+              description="Upload optional avatar and ID proof image."
             />
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <UploadPreviewCard
                   title="Avatar"
-                  description="Upload profile image for the team member."
+                  description="Upload a profile image for the team member."
                   preview={avatarPreview}
                   onUpload={(file) => handleImageChange(file, "avatar")}
                   onRemove={() => removeImage("avatar")}
                   inputRef={avatarInputRef}
                   buttonLabel="Upload Avatar"
                   emptyIcon={<ImagePlus className="h-8 w-8" />}
-                  previewClassName="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
+                  previewClassName="h-40 w-full max-w-[260px] rounded-2xl border border-slate-200 object-cover shadow-sm"
                 />
 
                 <UploadPreviewCard
                   title="ID Proof"
-                  description="Upload Aadhaar, PAN, or any valid ID proof image."
+                  description="Upload ID proof image."
                   preview={idProofPreview}
                   onUpload={(file) => handleImageChange(file, "idproof")}
                   onRemove={() => removeImage("idproof")}
@@ -1287,7 +1255,7 @@ export default function CreateStaffPage() {
                 />
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
                 <h4 className="text-base font-bold text-slate-900">
                   Review Summary
                 </h4>
@@ -1295,7 +1263,7 @@ export default function CreateStaffPage() {
                   Confirm entered details before creating the account.
                 </p>
 
-                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
                   <ReviewItem label="Role" value={getRoleBadgeText(form.role)} />
                   <ReviewItem label="Full Name" value={form.name} />
                   <ReviewItem label="Username" value={form.username} />
@@ -1313,49 +1281,56 @@ export default function CreateStaffPage() {
                   <ReviewItem label="Pincode" value={form.pincode} />
                   <ReviewItem
                     label="Avatar"
-                    value={avatarFile ? avatarFile.name : "Not uploaded"}
+                    value={avatarFile ? avatarFile.name : avatarPreview ? "Selected image" : "Not uploaded"}
                   />
                   <ReviewItem
                     label="ID Proof"
-                    value={idProofFile ? idProofFile.name : "Not uploaded"}
+                    value={idProofFile ? idProofFile.name : idProofPreview ? "Selected image" : "Not uploaded"}
                   />
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm text-slate-500">
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex items-center gap-2 text-sm text-slate-500">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 Single page create form with basic, address, avatar, and ID proof.
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting || isLocationLoading}
-                className={classNames(
-                  "inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-6 text-sm font-semibold text-white transition",
-                  submitting || isLocationLoading
-                    ? "cursor-not-allowed bg-slate-400"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                )}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Create Team Member
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(getRedirectPath(currentUserRole))}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submitting || isLocationLoading || allowedRoles.length === 0}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Create Account
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

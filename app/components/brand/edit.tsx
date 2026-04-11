@@ -117,7 +117,8 @@ export default function BrandEditPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { role } = useAuth();
 
-  const id = String(params?.id ?? "");
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? String(rawId[0] || "") : String(rawId || "");
   const basePath = getRoleBasePath(role);
 
   const [loading, setLoading] = useState(true);
@@ -424,9 +425,9 @@ export default function BrandEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(145,22,161,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-4 md:p-6">
+      <div className="page-shell">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-10 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+          <div className="premium-card-solid rounded-[30px] p-10">
             <div className="flex items-center justify-center gap-3 text-slate-600">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading brand details...
@@ -438,9 +439,9 @@ export default function BrandEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(145,22,161,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
               Edit Brand
@@ -460,10 +461,9 @@ export default function BrandEditPage() {
           </button>
         </div>
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-gradient-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-6 py-6 md:px-8 md:py-8">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
           <div className="relative z-10">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
@@ -480,10 +480,10 @@ export default function BrandEditPage() {
               catalog experience used across your admin module.
             </p>
           </div>
-        </div>
+        </section>
 
-        <form onSubmit={handleUpdateBrand} className="mt-6 space-y-6">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
+        <form onSubmit={handleUpdateBrand} className="space-y-5">
+          <section className="premium-card-solid rounded-[30px] p-5 md:p-7">
             <div className="mb-6 flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                 <BadgePlus className="h-5 w-5" />
@@ -501,7 +501,7 @@ export default function BrandEditPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Brand Name <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -512,23 +512,21 @@ export default function BrandEditPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter brand name"
                     disabled={submitting}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="premium-input pl-11 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
+                <label className="premium-label">Name Key Preview</label>
                 <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
+          <section className="premium-card-solid rounded-[30px] p-5 md:p-7">
             <div className="mb-6 flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
                 <ImagePlus className="h-5 w-5" />
@@ -552,10 +550,10 @@ export default function BrandEditPage() {
                   onDragOver={handleImageDragOver}
                   onDragLeave={handleImageDragLeave}
                   onDrop={handleImageDrop}
-                  className={`group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
+                  className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
                     isDraggingImage
                       ? "border-violet-500 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-gradient-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
+                      : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
                   }`}
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
@@ -589,7 +587,7 @@ export default function BrandEditPage() {
                     type="button"
                     onClick={handleUploadImage}
                     disabled={!imagePreview.file || uploadingImage}
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#082a5e] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {uploadingImage ? (
                       <>
@@ -644,7 +642,7 @@ export default function BrandEditPage() {
                   Preview
                 </p>
 
-                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {previewImageUrl ? (
                     <Image
                       src={previewImageUrl}
@@ -671,7 +669,7 @@ export default function BrandEditPage() {
                 </p>
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
@@ -687,7 +685,7 @@ export default function BrandEditPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#082a5e] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? (
                 <>

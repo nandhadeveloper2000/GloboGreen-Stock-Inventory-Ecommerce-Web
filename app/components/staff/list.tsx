@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Image from "next/image";
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
   CircleOff,
   Power,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -82,7 +84,7 @@ function getAvatarSrc(item: TeamMember) {
 
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
     item.name || "User"
-  )}&background=082a5e&color=ffffff`;
+  )}&background=2e3192&color=ffffff`;
 }
 
 function getPanelBasePath(role: AppRole) {
@@ -183,7 +185,6 @@ export default function StaffListPage() {
       }
 
       setData(normalizeList(result?.data));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(error);
       toast.error(error?.message || "Failed to load records");
@@ -194,7 +195,7 @@ export default function StaffListPage() {
   }, [accessToken]);
 
   useEffect(() => {
-    fetchTeam();
+    void fetchTeam();
   }, [fetchTeam]);
 
   const handleToggleStatus = async (item: TeamMember) => {
@@ -246,7 +247,6 @@ export default function StaffListPage() {
           ? "Staff activated successfully"
           : "Staff deactivated successfully"
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(error);
       toast.error(error?.message || "Status update failed");
@@ -286,7 +286,6 @@ export default function StaffListPage() {
 
       toast.success("Deleted successfully");
       await fetchTeam();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(error);
       toast.error(error?.message || "Delete failed");
@@ -328,61 +327,72 @@ export default function StaffListPage() {
   const inactiveCount = totalCount - activeCount;
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-[28px] border border-white/20 bg-linear-to-r from-[#082a5e] to-[#9116a1] text-white shadow-[0_20px_60px_rgba(8,42,94,0.25)]">
-          <div className="grid gap-6 p-6 md:grid-cols-[1.4fr_1fr] md:p-8">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
-                <ShieldCheck className="h-4 w-4" />
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
+
+          <div className="relative z-10 grid gap-6 md:grid-cols-[1.4fr_1fr]">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+                <ShieldCheck className="h-3.5 w-3.5" />
                 Staff Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  {getPageTitle(currentRole)}
+                </h1>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                  {getPageDescription(currentRole)}
+                </p>
               </div>
-
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-                {getPageTitle(currentRole)}
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm text-white/80 md:text-base">
-                {getPageDescription(currentRole)}
-              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Total</p>
-                <p className="mt-2 text-2xl font-bold">{totalCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">{totalCount}</p>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Active</p>
-                <p className="mt-2 text-2xl font-bold">{activeCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">{activeCount}</p>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Inactive</p>
-                <p className="mt-2 text-2xl font-bold">{inactiveCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">{inactiveCount}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between md:p-6">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Directory</h2>
-              <p className="text-sm text-slate-500">
-                Search by name, username, email, or role.
-              </p>
+        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                <Sparkles className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Directory</h2>
+                <p className="text-sm text-slate-500">
+                  Search by name, username, email, or role.
+                </p>
+              </div>
             </div>
 
-            <div className="relative w-full md:max-w-sm">
+            <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-[#9116a1] focus:bg-white focus:ring-4 focus:ring-fuchsia-100"
+                className="premium-input pl-11"
               />
             </div>
           </div>
@@ -407,145 +417,147 @@ export default function StaffListPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr className="border-b border-slate-200 text-left text-slate-600">
-                    <th className="px-5 py-4 font-semibold">S.No</th>
-                    <th className="px-5 py-4 font-semibold">Name</th>
-                    <th className="px-5 py-4 font-semibold">Role</th>
-                    <th className="px-5 py-4 font-semibold">Status</th>
-                    <th className="px-5 py-4 text-right font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-left text-slate-600">
+                      <th className="px-5 py-4 font-semibold">S.No</th>
+                      <th className="px-5 py-4 font-semibold">Name</th>
+                      <th className="px-5 py-4 font-semibold">Role</th>
+                      <th className="px-5 py-4 font-semibold">Status</th>
+                      <th className="px-5 py-4 text-right font-semibold">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
 
-                <tbody>
-                  {filteredData.map((item, index) => {
-                    const isBusy = actionLoading === item._id;
-                    const isActive = item.isActive ?? true;
+                  <tbody className="bg-white">
+                    {filteredData.map((item, index) => {
+                      const isBusy = actionLoading === item._id;
+                      const isActive = item.isActive ?? true;
 
-                    return (
-                      <tr
-                        key={item._id}
-                        className="border-b border-slate-100 last:border-b-0"
-                      >
-                        <td className="px-5 py-4 font-medium text-slate-700">
-                          {index + 1}
-                        </td>
+                      return (
+                        <tr
+                          key={item._id}
+                          className="border-b border-slate-100 last:border-b-0"
+                        >
+                          <td className="px-5 py-4 font-medium text-slate-700">
+                            {index + 1}
+                          </td>
 
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                              <Image
-                                src={getAvatarSrc(item)}
-                                alt={item.name || "Avatar"}
-                                fill
-                                sizes="44px"
-                                className="object-cover"
-                                unoptimized
-                              />
-                            </div>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="relative h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                                <Image
+                                  src={getAvatarSrc(item)}
+                                  alt={item.name || "Avatar"}
+                                  fill
+                                  sizes="44px"
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              </div>
 
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-900">
-                                {item.name}
-                              </p>
-                              <p className="truncate text-xs text-slate-500">
-                                @{item.username}
-                              </p>
-                              {item.email ? (
-                                <p className="truncate text-xs text-slate-400">
-                                  {item.email}
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-900">
+                                  {item.name}
                                 </p>
-                              ) : null}
+                                <p className="truncate text-xs text-slate-500">
+                                  @{item.username}
+                                </p>
+                                {item.email ? (
+                                  <p className="truncate text-xs text-slate-400">
+                                    {item.email}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
-                              item.role
-                            )}`}
-                          >
-                            {normalizeItemRole(item.role)}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              isActive
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-slate-100 text-slate-600 border border-slate-200"
-                            }`}
-                          >
-                            {isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={buildRoleAwareEditHref(panelBasePath, item)}
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                                item.role
+                              )}`}
                             >
+                              {normalizeItemRole(item.role)}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                                isActive
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-slate-200 bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href={buildRoleAwareEditHref(panelBasePath, item)}
+                              >
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-9 rounded-xl border-slate-200 px-3"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </Link>
+
                               <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="h-9 rounded-xl border-slate-200 px-3"
+                                onClick={() => handleToggleStatus(item)}
+                                disabled={isBusy}
+                                className={`h-9 rounded-xl px-3 ${
+                                  isActive
+                                    ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                                    : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                }`}
+                                title={isActive ? "Deactivate" : "Activate"}
                               >
-                                <Pencil className="h-4 w-4" />
+                                {isBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
                               </Button>
-                            </Link>
 
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleStatus(item)}
-                              disabled={isBusy}
-                              className={`h-9 rounded-xl px-3 ${
-                                isActive
-                                  ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-                                  : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                              }`}
-                              title={isActive ? "Deactivate" : "Activate"}
-                            >
-                              {isBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Power className="h-4 w-4" />
-                              )}
-                            </Button>
-
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDelete(item)}
-                              disabled={isBusy}
-                              className="h-9 rounded-xl px-3"
-                            >
-                              {isBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDelete(item)}
+                                disabled={isBusy}
+                                className="h-9 rounded-xl px-3"
+                              >
+                                {isBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import React, {
@@ -19,6 +20,8 @@ import {
   Trash2,
   Save,
   UploadCloud,
+  Sparkles,
+  Shapes,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -451,62 +454,66 @@ export default function EditProductTypePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
-          <span className="text-sm font-medium text-slate-700">
-            Loading product type...
-          </span>
+      <div className="page-shell">
+        <div className="mx-auto flex max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
+          <div className="inline-flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+            <span className="text-sm font-medium">Loading product type...</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] p-4 md:p-6">
-      <div className="mx-auto max-w-[1280px]">
-        <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#0f1d63] via-[#273fbd] to-[#e50087] px-6 py-6 shadow-[0_14px_40px_rgba(79,70,229,0.18)] md:px-8 md:py-7">
-          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:28px_28px]" />
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center rounded-full border border-white/40 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Edit Product Type
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm font-medium text-white/90 md:text-base">
+                  Update product type information, change image, and keep catalog
+                  data clean.
+                </p>
               </div>
-
-              <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                Edit Product Type
-              </h1>
-
-              <p className="mt-2 text-sm font-medium text-white/90 md:text-base">
-                Update product type information, change image, and keep catalog
-                data clean.
-              </p>
             </div>
 
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex h-12 items-center justify-center gap-2 self-start rounded-2xl border border-white/60 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
           </div>
-        </div>
+        </section>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
-          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                 <Pencil className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-[30px] font-extrabold leading-none text-slate-900 md:text-[34px]">
+                <h2 className="text-xl font-bold text-slate-900">
                   Basic Information
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="text-sm text-slate-500">
                   Edit product type details below.
                 </p>
               </div>
@@ -514,32 +521,35 @@ export default function EditProductTypePage() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="premium-label">
                   Sub Category <span className="text-rose-500">*</span>
                 </label>
 
-                <select
-                  value={subCategoryId}
-                  onChange={(e) => setSubCategoryId(e.target.value)}
-                  disabled={loadingSubCategories || submitting}
-                  className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
-                >
-                  <option value="">
-                    {loadingSubCategories
-                      ? "Loading sub categories..."
-                      : "Select sub category"}
-                  </option>
-
-                  {subCategories.map((item) => (
-                    <option key={item._id} value={item._id}>
-                      {item.name}
+                <div className="relative">
+                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <select
+                    value={subCategoryId}
+                    onChange={(e) => setSubCategoryId(e.target.value)}
+                    disabled={loadingSubCategories || submitting}
+                    className="premium-select pl-11 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  >
+                    <option value="">
+                      {loadingSubCategories
+                        ? "Loading sub categories..."
+                        : "Select sub category"}
                     </option>
-                  ))}
-                </select>
+
+                    {subCategories.map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="premium-label">
                   Product Type Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -548,23 +558,19 @@ export default function EditProductTypePage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter product type name"
                   disabled={submitting}
-                  className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="premium-input disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Name Key Preview
-                </label>
+                <label className="premium-label">Name Key Preview</label>
                 <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Status
-                </label>
+                <label className="premium-label">Status</label>
                 <div>
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
@@ -578,25 +584,25 @@ export default function EditProductTypePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
                 <ImagePlus className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-3xl font-extrabold leading-none text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Product Type Image
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="text-sm text-slate-500">
                   Update or remove product type image.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_170px]">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
               <div>
                 <label
                   htmlFor="product-type-image"
@@ -604,7 +610,7 @@ export default function EditProductTypePage() {
                   onDragOver={handleImageDragOver}
                   onDragLeave={handleImageDragLeave}
                   onDrop={handleImageDrop}
-                  className={`flex min-h-[190px] w-full cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed px-6 text-center transition ${
+                  className={`flex min-h-47.5 w-full cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 text-center transition ${
                     isDraggingImage
                       ? "border-violet-500 bg-violet-50 shadow-sm"
                       : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
@@ -628,7 +634,7 @@ export default function EditProductTypePage() {
                     )}
                   </div>
 
-                  <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 md:text-[20px]">
+                  <h3 className="mt-4 text-lg font-extrabold text-slate-900 md:text-xl">
                     {isDraggingImage ? "Drop image here" : "Click to choose image"}
                   </h3>
 
@@ -638,7 +644,7 @@ export default function EditProductTypePage() {
                 </label>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {imagePreview.url && (
+                  {imagePreview.url ? (
                     <button
                       type="button"
                       onClick={handleRemoveImage}
@@ -657,16 +663,16 @@ export default function EditProductTypePage() {
                         </>
                       )}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-3">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
                 <h3 className="mb-3 text-base font-bold text-slate-900">
                   Preview
                 </h3>
 
-                <div className="relative h-[138px] overflow-hidden rounded-[18px] border border-slate-200 bg-white">
+                <div className="relative h-40 overflow-hidden rounded-[18px] border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}
@@ -686,14 +692,14 @@ export default function EditProductTypePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={submitting || loadingSubCategories}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#4f46e5] to-[#e50087] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#4f46e5] to-[#e50087] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>

@@ -21,6 +21,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
+
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 
@@ -241,53 +242,45 @@ export default function CreateMasterCategoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Create Master Category
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Create a top-level catalog category with optional image upload.
-          </p>
-        </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-        <div className="relative overflow-hidden rounded-4xl border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
                 <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Create Master Category
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                  Add a premium, well-structured master category for your
+                  catalog. Keep naming clean and upload an optional category
+                  image.
+                </p>
               </div>
-
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
-                Create Master Category
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                Add a premium, well-structured master category for your catalog.
-                Keep naming clean and upload an optional category image.
-              </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
-            <div className="mb-6 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <Tag className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Basic Information
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                </h2>
+                <p className="text-sm text-slate-500">
                   Enter the master category name. The key preview will be
                   generated automatically.
                 </p>
@@ -304,7 +297,7 @@ export default function CreateMasterCategoryPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter master category name"
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                  className="premium-input"
                 />
               </div>
 
@@ -312,24 +305,24 @@ export default function CreateMasterCategoryPage() {
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Name Key Preview
                 </label>
-                <div className="flex min-h-13 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
+                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
-            <div className="mb-6 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
                 <ImagePlus className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Category Image
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                </h2>
+                <p className="text-sm text-slate-500">
                   Upload or drag and drop an optional category image.
                 </p>
               </div>
@@ -408,7 +401,7 @@ export default function CreateMasterCategoryPage() {
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -416,7 +409,7 @@ export default function CreateMasterCategoryPage() {
                 type="button"
                 onClick={resetForm}
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
               </button>
@@ -424,7 +417,7 @@ export default function CreateMasterCategoryPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>

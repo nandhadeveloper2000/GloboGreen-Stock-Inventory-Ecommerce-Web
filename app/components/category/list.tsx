@@ -139,7 +139,7 @@ function StatCard({
   iconWrapClassName: string;
 }) {
   return (
-    <div className="rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+    <div className="premium-card-solid rounded-[28px] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{title}</p>
@@ -160,7 +160,7 @@ function StatCard({
 
 function TableSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+    <div className="premium-card-solid overflow-hidden rounded-[30px] p-0">
       <div className="grid grid-cols-1 gap-4 p-6">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
@@ -390,22 +390,11 @@ export default function CategoryListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(145,22,161,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-4 md:p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            Category List
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage category records, monitor status, and navigate to edit screens
-            from one premium dashboard.
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-gradient-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
           <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -440,16 +429,16 @@ export default function CategoryListPage() {
               <button
                 type="button"
                 onClick={handleCreate}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#082a5e] shadow-[0_12px_30px_rgba(255,255,255,0.18)] transition duration-200 hover:scale-[1.01]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#2e3192] shadow-[0_12px_30px_rgba(255,255,255,0.18)] transition duration-200 hover:scale-[1.01]"
               >
                 <Plus className="h-4 w-4" />
                 Create Category
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total Categories"
             value={totalCount}
@@ -476,10 +465,10 @@ export default function CategoryListPage() {
           />
         </div>
 
-        <div className="mt-6 rounded-[30px] border border-slate-200 bg-white p-4 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-5">
+        <section className="premium-card-solid rounded-[30px] p-4 md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#082a5e] to-[#9116a1] text-white shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#2e3192] to-[#9116a1] text-white shadow-lg">
                 <FolderKanban className="h-5 w-5" />
               </div>
 
@@ -500,17 +489,17 @@ export default function CategoryListPage() {
                 placeholder="Search categories..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                className="premium-input pl-11"
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6">
+        <div>
           {loading ? (
             <TableSkeleton />
           ) : filteredItems.length === 0 ? (
-            <div className="rounded-[30px] border border-dashed border-slate-300 bg-white/80 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+            <div className="premium-card-solid rounded-[30px] border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                 <FolderTree className="h-10 w-10" />
               </div>
@@ -527,7 +516,7 @@ export default function CategoryListPage() {
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#082a5e] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
                 >
                   <Plus className="h-4 w-4" />
                   Create Category
@@ -806,7 +795,7 @@ export default function CategoryListPage() {
                 })}
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-500">
                   Showing {startEntry} to {endEntry} of {filteredItems.length} entries
                 </p>

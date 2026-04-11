@@ -16,6 +16,8 @@ import {
   Search as SearchIcon,
   CalendarDays,
   Power,
+  Sparkles,
+  FolderKanban,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -153,7 +155,7 @@ export default function SubCategoryListPage() {
   }, []);
 
   useEffect(() => {
-    fetchSubCategories();
+    void fetchSubCategories();
   }, [fetchSubCategories]);
 
   useEffect(() => {
@@ -266,25 +268,16 @@ export default function SubCategoryListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fc] px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto w-full max-w-7xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            SubCategory List
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage sub category records, monitor status, and navigate to edit
-            screens from one premium dashboard.
-          </p>
-        </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-        <div className="relative overflow-hidden rounded-4xl border border-white/30 bg-linear-to-r from-[#082a5e] via-[#5b2bbd] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(17,24,39,0.14)] md:p-8">
-          <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-20 left-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center rounded-full border border-white/35 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
               </span>
 
@@ -315,14 +308,14 @@ export default function SubCategoryListPage() {
               <button
                 type="button"
                 onClick={() => router.push(`${basePath}/subcategory/create`)}
-                className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#082a5e] shadow-lg transition hover:scale-[1.01]"
+                className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#2e3192] shadow-lg transition hover:scale-[1.01]"
               >
                 <Plus className="h-4 w-4" />
                 Create SubCategory
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -351,11 +344,11 @@ export default function SubCategoryListPage() {
           />
         </div>
 
-        <div className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5 shadow-sm">
+        <section className="premium-card-solid rounded-[28px] px-5 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-[#5b2bbd] to-[#9116a1] text-white shadow-md">
-                <FolderTree className="h-5 w-5" />
+                <FolderKanban className="h-5 w-5" />
               </div>
 
               <div>
@@ -375,11 +368,11 @@ export default function SubCategoryListPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search sub categories..."
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                className="premium-input pl-11"
               />
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-sm">
           <div className="hidden grid-cols-[0.6fr_2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 lg:grid">
@@ -683,7 +676,7 @@ function StatCard({
   iconWrapClassName = "bg-slate-100",
 }: StatCardProps) {
   return (
-    <div className="rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-sm">
+    <div className="premium-card-solid rounded-[26px] p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-slate-500">{title}</p>

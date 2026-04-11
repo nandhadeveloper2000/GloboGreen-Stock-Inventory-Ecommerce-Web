@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import React, {
@@ -307,7 +308,6 @@ export default function CategoryEditPage() {
   useEffect(() => {
     void fetchMasterCategories();
     void fetchCategory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
 
   const validateAndSetImage = (file: File | null) => {
@@ -528,8 +528,8 @@ export default function CategoryEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-center rounded-[30px] border border-slate-200 bg-white py-24 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+      <div className="page-shell">
+        <div className="mx-auto flex max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
           <div className="flex items-center gap-3 text-slate-600">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading category...
@@ -540,61 +540,54 @@ export default function CategoryEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Edit Category
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Update category details, parent master category, status, and image.
-          </p>
-        </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
                 <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Edit Category
+                </h1>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                  Update category details, parent master category, status, and
+                  image.
+                </p>
               </div>
-
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
-                Edit Category
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                Update category mapping and details cleanly and safely.
-              </p>
             </div>
 
             <button
               type="button"
               onClick={() => router.push(`${basePath}/category/list`)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition duration-200 hover:bg-white/15"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
           </div>
-        </div>
+        </section>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
-            <div className="mb-6 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                 <Tag className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Basic Information
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                </h2>
+                <p className="text-sm text-slate-500">
                   Update the parent master category, category name, and active
                   status.
                 </p>
@@ -603,7 +596,7 @@ export default function CategoryEditPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Master Category <span className="text-rose-500">*</span>
                 </label>
 
@@ -615,7 +608,7 @@ export default function CategoryEditPage() {
                       setIsDropdownOpen((prev) => !prev);
                     }}
                     disabled={loadingMasterCategories || submitting}
-                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
@@ -653,8 +646,7 @@ export default function CategoryEditPage() {
                       <div className="max-h-64 overflow-y-auto px-2 py-2">
                         {filteredMasterCategories.length > 0 ? (
                           filteredMasterCategories.map((item) => {
-                            const isSelected =
-                              masterCategoryId === item._id;
+                            const isSelected = masterCategoryId === item._id;
 
                             return (
                               <button
@@ -689,7 +681,7 @@ export default function CategoryEditPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -697,24 +689,20 @@ export default function CategoryEditPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter category name"
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                  className="premium-input"
                   disabled={submitting}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
+                <label className="premium-label">Name Key Preview</label>
                 <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Status
-                </label>
+                <label className="premium-label">Status</label>
 
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -743,19 +731,19 @@ export default function CategoryEditPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-7">
-            <div className="mb-6 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
                 <ImagePlus className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Category Image
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                </h2>
+                <p className="text-sm text-slate-500">
                   Replace the current image or remove it completely.
                 </p>
               </div>
@@ -850,7 +838,7 @@ export default function CategoryEditPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -858,7 +846,7 @@ export default function CategoryEditPage() {
                 type="button"
                 onClick={() => router.push(`${basePath}/category/list`)}
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -866,7 +854,7 @@ export default function CategoryEditPage() {
               <button
                 type="submit"
                 disabled={submitting || loadingMasterCategories}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>

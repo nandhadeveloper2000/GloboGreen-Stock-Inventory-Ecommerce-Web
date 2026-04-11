@@ -8,6 +8,7 @@ import {
   Search,
   Pencil,
   Trash2,
+  Loader2,
   FolderKanban,
   Layers3,
   CheckCircle2,
@@ -224,37 +225,29 @@ export default function MasterCategoryListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Master Category List
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage all top-level catalog categories from one premium dashboard.
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-gradient-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
           <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
                 <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Master Categories
+                </h1>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                  View, search, edit, and manage your master categories with a
+                  clean premium experience.
+                </p>
               </div>
-
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
-                Master Categories
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                View, search, edit, and manage your master categories with a
-                clean premium experience.
-              </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -280,10 +273,10 @@ export default function MasterCategoryListPage() {
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <section className="premium-card-solid rounded-[28px] p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Total</p>
@@ -295,9 +288,9 @@ export default function MasterCategoryListPage() {
                 <Layers3 className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+          <section className="premium-card-solid rounded-[28px] p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Active</p>
@@ -309,9 +302,9 @@ export default function MasterCategoryListPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+          <section className="premium-card-solid rounded-[28px] p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Inactive</p>
@@ -323,18 +316,24 @@ export default function MasterCategoryListPage() {
                 <XCircle className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="mt-6 rounded-[30px] border border-slate-200 bg-white p-4 shadow-[0_10px_35px_rgba(15,23,42,0.06)] md:p-6">
+        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900">
-                Category Records
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Search by category name or name key.
-              </p>
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                <FolderKanban className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Category Records
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Search by category name or name key.
+                </p>
+              </div>
             </div>
 
             <div className="relative w-full lg:max-w-sm">
@@ -344,12 +343,12 @@ export default function MasterCategoryListPage() {
                 placeholder="Search master category..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                className="premium-input pl-11"
               />
             </div>
           </div>
 
-          <div className="hidden overflow-hidden rounded-[24px] border border-slate-200 lg:block">
+          <div className="hidden overflow-hidden rounded-3xl border border-slate-200 lg:block">
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead className="bg-slate-50">
@@ -474,7 +473,11 @@ export default function MasterCategoryListPage() {
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 title="Delete"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deletingId === item._id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </button>
                             </div>
                           </td>
@@ -489,11 +492,11 @@ export default function MasterCategoryListPage() {
 
           <div className="grid grid-cols-1 gap-4 lg:hidden">
             {loading ? (
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                 Loading master categories...
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                 No master categories found.
               </div>
             ) : (
@@ -503,7 +506,7 @@ export default function MasterCategoryListPage() {
                 return (
                   <div
                     key={item._id}
-                    className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-start gap-4">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
@@ -575,7 +578,11 @@ export default function MasterCategoryListPage() {
                             disabled={deletingId === item._id}
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {deletingId === item._id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                             Delete
                           </button>
                         </div>
@@ -587,8 +594,8 @@ export default function MasterCategoryListPage() {
             )}
           </div>
 
-          {!loading && filteredItems.length > 0 && (
-            <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+          {!loading && filteredItems.length > 0 ? (
+            <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-500">
                 Showing {startEntry} to {endEntry} of {filteredItems.length} entries
               </p>
@@ -621,8 +628,8 @@ export default function MasterCategoryListPage() {
                 </button>
               </div>
             </div>
-          )}
-        </div>
+          ) : null}
+        </section>
       </div>
     </div>
   );

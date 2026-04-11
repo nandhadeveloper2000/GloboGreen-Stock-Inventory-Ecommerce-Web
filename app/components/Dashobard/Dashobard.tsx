@@ -184,7 +184,7 @@ function SoftStatCard({
           </div>
         </div>
 
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-400 to-lime-500 text-white shadow-[0_10px_24px_rgba(132,204,22,0.35)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-lime-400 to-lime-500 text-white shadow-[0_10px_24px_rgba(132,204,22,0.35)]">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -538,7 +538,7 @@ export default function MasterDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center rounded-[22px] bg-gradient-to-br from-lime-300 to-lime-500 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+                <div className="flex items-center justify-center rounded-[22px] bg-linear-to-br from-lime-300 to-lime-500 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
                   <div className="relative h-36 w-24">
                     <div className="absolute left-1/2 top-0 h-9 w-9 -translate-x-1/2 rounded-full bg-white" />
                     <div className="absolute inset-x-5 top-4 h-20 rounded-t-full bg-white shadow-md" />

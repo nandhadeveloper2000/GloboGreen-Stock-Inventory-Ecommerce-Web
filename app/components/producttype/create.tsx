@@ -12,8 +12,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  BadgePlus,
   Check,
   ChevronDown,
   FolderTree,
@@ -21,6 +19,7 @@ import {
   Loader2,
   Package2,
   Search,
+  Sparkles,
   Trash2,
   UploadCloud,
 } from "lucide-react";
@@ -55,7 +54,7 @@ type ApiErrorResponse = {
 };
 
 function keyOf(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -324,9 +323,10 @@ export default function CreateProductTypePage() {
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
 
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">
-              <span className="inline-flex w-fit items-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+                <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
               </span>
 
@@ -334,21 +334,12 @@ export default function CreateProductTypePage() {
                 <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                   Create Product Type
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80 md:text-base">
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
                   Select a sub category, enter the product type name, and upload
                   an optional image.
                 </p>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
           </div>
         </section>
 
@@ -369,7 +360,7 @@ export default function CreateProductTypePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-5">
               <div>
                 <label className="premium-label">
                   Sub Category <span className="text-rose-500">*</span>
@@ -383,13 +374,16 @@ export default function CreateProductTypePage() {
                       setIsDropdownOpen((prev) => !prev);
                     }}
                     disabled={loadingOptions || submitting}
-                    className="premium-select flex items-center justify-between text-left"
+                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
-                    <span className="truncate">
-                      {loadingOptions
-                        ? "Loading sub categories..."
-                        : selectedSubCategory?.name || "Select sub category"}
-                    </span>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <FolderTree className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {loadingOptions
+                          ? "Loading sub categories..."
+                          : selectedSubCategory?.name || "Select sub category"}
+                      </span>
+                    </div>
 
                     <ChevronDown
                       className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
@@ -399,10 +393,10 @@ export default function CreateProductTypePage() {
                   </button>
 
                   {isDropdownOpen && !loadingOptions ? (
-                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
                       <div className="border-b border-slate-200 p-3">
-                        <div className="flex h-11 items-center rounded-xl border border-slate-300 bg-white px-3">
-                          <Search className="mr-2 h-4 w-4 text-slate-500" />
+                        <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3">
+                          <Search className="mr-2 h-4 w-4 text-slate-400" />
                           <input
                             ref={searchInputRef}
                             type="text"
@@ -414,7 +408,7 @@ export default function CreateProductTypePage() {
                         </div>
                       </div>
 
-                      <div className="max-h-64 overflow-y-auto px-2 py-2">
+                      <div className="max-h-64 overflow-y-auto p-2">
                         {filteredSubCategories.length > 0 ? (
                           filteredSubCategories.map((item) => {
                             const isSelected = subCategoryId === item._id;
@@ -451,7 +445,7 @@ export default function CreateProductTypePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
                   <label className="premium-label">
                     Product Type Name <span className="text-rose-500">*</span>
@@ -468,7 +462,7 @@ export default function CreateProductTypePage() {
 
                 <div>
                   <label className="premium-label">Name Key Preview</label>
-                  <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500">
+                  <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                     {nameKeyPreview}
                   </div>
                 </div>
@@ -478,7 +472,7 @@ export default function CreateProductTypePage() {
 
           <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
                 <ImagePlus className="h-5 w-5" />
               </div>
 
@@ -493,17 +487,17 @@ export default function CreateProductTypePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_260px]">
               <label
                 htmlFor="product-type-image"
                 onDragEnter={handleImageDragEnter}
                 onDragOver={handleImageDragOver}
                 onDragLeave={handleImageDragLeave}
                 onDrop={handleImageDrop}
-                className={`flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition ${
+                className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
                   isDraggingImage
                     ? "border-violet-500 bg-violet-50 shadow-sm"
-                    : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
+                    : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
                 }`}
               >
                 <input
@@ -516,28 +510,28 @@ export default function CreateProductTypePage() {
                   disabled={submitting}
                 />
 
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border bg-white text-violet-600 shadow-sm">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
                   {isDraggingImage ? (
                     <UploadCloud className="h-7 w-7" />
                   ) : (
-                    <BadgePlus className="h-7 w-7" />
+                    <ImagePlus className="h-7 w-7" />
                   )}
                 </div>
 
-                <p className="text-2xl font-extrabold tracking-tight text-slate-900">
+                <p className="text-base font-semibold text-slate-800">
                   {isDraggingImage ? "Drop image here" : "Click to upload image"}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500">
                   Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
                 </p>
               </label>
 
-              <div className="rounded-[26px] border bg-slate-50 p-4">
-                <p className="mb-3 text-base font-bold text-slate-900">
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-slate-700">
                   Preview
                 </p>
 
-                <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[22px] border bg-white">
+                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {previewUrl ? (
                     <Image
                       src={previewUrl}
@@ -569,8 +563,8 @@ export default function CreateProductTypePage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={resetForm}
@@ -598,7 +592,7 @@ export default function CreateProductTypePage() {
                 )}
               </button>
             </div>
-          </section>
+          </div>
         </form>
       </div>
     </div>

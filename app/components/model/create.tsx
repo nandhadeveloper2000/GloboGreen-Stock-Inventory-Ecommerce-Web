@@ -259,39 +259,62 @@ export default function CreateModelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(145,22,161,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#243b7a_0%,#6d28d9_55%,#c026d3_100%)] px-6 py-7 text-white shadow-[0_24px_70px_rgba(79,70,229,0.28)] md:px-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_28%)]" />
-            <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5" />
-                Catalog Management
-              </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+              Create Model
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Create a new model and map it to a brand.
+            </p>
+          </div>
 
-              <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+          <button
+            type="button"
+            onClick={() => router.push(`${basePath}/model/list`)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to List
+          </button>
+        </div>
+
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
+
+          <div className="relative z-10">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+              <Sparkles className="h-3.5 w-3.5" />
+              Catalog Management
+            </span>
+
+            <div className="mt-3">
+              <h2 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                 Create Model
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/85 md:text-base">
-                Add the model name and assign it to a brand for a clean, premium
-                catalog management experience.
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                Add the model name and assign it to a brand for a clean,
+                premium catalog management experience.
               </p>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className="rounded-[30px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
-            <div className="mb-5 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <BadgePlus className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Basic Information
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="text-sm text-slate-500">
                   Enter the model name and select the related brand. Name key
                   will be auto-generated.
                 </p>
@@ -300,26 +323,25 @@ export default function CreateModelPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Model Name <span className="text-rose-500">*</span>
                 </label>
 
-                <div className="group flex h-12 items-center rounded-2xl border border-slate-200 bg-white px-4 transition focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-100">
-                  <Tag className="mr-3 h-4 w-4 text-slate-400 group-focus-within:text-violet-600" />
+                <div className="relative">
+                  <Tag className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter model name"
-                    className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                    className="premium-input pl-11"
+                    disabled={submitting}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
+                <label className="premium-label">Name Key Preview</label>
 
                 <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
@@ -327,7 +349,7 @@ export default function CreateModelPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Brand <span className="text-rose-500">*</span>
                 </label>
 
@@ -335,11 +357,11 @@ export default function CreateModelPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (brandsLoading || brands.length === 0) return;
+                      if (brandsLoading || brands.length === 0 || submitting) return;
                       setBrandOpen((prev) => !prev);
                     }}
-                    disabled={brandsLoading || brands.length === 0}
-                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white pl-4 pr-4 text-left transition focus:border-violet-400 focus:outline-none focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    disabled={brandsLoading || brands.length === 0 || submitting}
+                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
@@ -362,22 +384,22 @@ export default function CreateModelPage() {
                   </button>
 
                   {brandOpen && !brandsLoading && brands.length > 0 && (
-                    <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.15)]">
-                      <div className="border-b border-slate-100 p-3">
-                        <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-violet-100">
+                    <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                      <div className="border-b border-slate-200 p-3">
+                        <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3">
                           <Search className="mr-2 h-4 w-4 text-slate-400" />
                           <input
                             ref={brandSearchInputRef}
                             type="text"
                             value={brandSearch}
                             onChange={(e) => setBrandSearch(e.target.value)}
-                            placeholder="Search brand..."
+                            placeholder="Search brand"
                             className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
                           />
                         </div>
                       </div>
 
-                      <div className="max-h-64 overflow-y-auto py-2">
+                      <div className="max-h-64 overflow-y-auto p-2">
                         {filteredBrands.length === 0 ? (
                           <div className="px-4 py-3 text-sm text-slate-500">
                             No brands found
@@ -391,17 +413,19 @@ export default function CreateModelPage() {
                                 key={brand._id}
                                 type="button"
                                 onClick={() => handleSelectBrand(brand._id)}
-                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition ${
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
                                   isSelected
                                     ? "bg-violet-50 text-violet-700"
                                     : "text-slate-700 hover:bg-slate-50"
                                 }`}
                               >
-                                <span className="font-medium">{brand.name}</span>
+                                <span className="truncate font-medium">
+                                  {brand.name}
+                                </span>
 
-                                {isSelected && (
-                                  <Check className="h-4 w-4 text-violet-600" />
-                                )}
+                                {isSelected ? (
+                                  <Check className="h-4 w-4 shrink-0 text-violet-600" />
+                                ) : null}
                               </button>
                             );
                           })
@@ -414,33 +438,35 @@ export default function CreateModelPage() {
             </div>
           </section>
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={() => router.push(`${basePath}/model/list`)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Cancel
-            </button>
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={() => router.push(`${basePath}/model/list`)}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Cancel
+              </button>
 
-            <button
-              type="submit"
-              disabled={submitting || brandsLoading || brands.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#6d28d9_0%,#c026d3_100%)] px-5 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(192,38,211,0.28)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Model
-                </>
-              )}
-            </button>
+              <button
+                type="submit"
+                disabled={submitting || brandsLoading || brands.length === 0}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Model
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

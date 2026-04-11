@@ -232,7 +232,7 @@ export default function MasterLoginForm() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 bg-gradient-hero">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 bg-linear-hero">
       <div className="premium-grid-bg absolute inset-0 opacity-50" />
       <div className="absolute inset-0 bg-black/10" />
 
@@ -279,7 +279,7 @@ export default function MasterLoginForm() {
         </div>
 
         <Card className="premium-card premium-border overflow-hidden border-0 bg-white/85 backdrop-blur-2xl">
-          <div className="h-1.5 w-full bg-gradient-primary" />
+          <div className="h-1.5 w-full bg-linear-primary" />
 
           <CardHeader className="space-y-3 px-6 pb-2 pt-6">
             <div className="flex items-start justify-between gap-3">
@@ -292,7 +292,7 @@ export default function MasterLoginForm() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-primary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
@@ -389,7 +389,7 @@ export default function MasterLoginForm() {
               type="button"
               onClick={() => void handleLogin()}
               disabled={loading}
-              className="group h-12 w-full rounded-2xl border-0 bg-gradient-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+              className="group h-12 w-full rounded-2xl border-0 bg-linear-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <span className="flex items-center justify-center gap-2">
                 {loading ? "Signing in..." : "Continue"}

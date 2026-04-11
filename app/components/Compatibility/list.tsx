@@ -20,42 +20,26 @@ import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
 
-type BrandRef =
+type RefItem =
   | string
   | {
       _id?: string;
       name?: string;
     };
 
-type ModelRef =
-  | string
-  | {
-      _id?: string;
-      name?: string;
-    };
+type CompatibilityRow = {
+  _id?: string;
+  brandId?: RefItem;
+  modelId?: RefItem[];
+  notes?: string;
+  isActive?: boolean;
+};
 
 type ProductCompatibilityItem = {
   _id: string;
-  productTypeId?:
-    | string
-    | {
-        _id?: string;
-        name?: string;
-      };
-  productBrandId?:
-    | string
-    | {
-        _id?: string;
-        name?: string;
-      };
-  compatible?: Array<{
-    _id?: string;
-    brandIds?: BrandRef[];
-    modelIds?: ModelRef[];
-    notes?: string;
-    sortOrder?: number;
-    isActive?: boolean;
-  }>;
+  productTypeId?: RefItem;
+  productBrandId?: RefItem;
+  compatible?: CompatibilityRow[];
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -93,7 +77,9 @@ function getErrorMessage(
 }
 
 function normalizeRole(role?: string | null) {
-  return String(role ?? "").trim().toUpperCase();
+  return String(role ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 function getRoleBasePath(role?: string | null) {
@@ -111,37 +97,44 @@ function normalizeCompatibilityList(
   response: ProductCompatibilityListResponse
 ): ProductCompatibilityItem[] {
   if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.productCompatibilities))
+  if (Array.isArray(response?.productCompatibilities)) {
     return response.productCompatibilities;
+  }
   return [];
 }
 
-function getNameFromRef(
-  item?:
-    | string
-    | {
-        _id?: string;
-        name?: string;
-      }
-    | null
-): string {
-  if (!item) return "-";
-  if (typeof item === "string") return item;
-  return item.name || "-";
+function getNameFromRef(item?: RefItem | null): string {
+  if (!item) return "";
+  if (typeof item === "string") return item.trim();
+  return String(item.name || "").trim();
 }
 
-function getRefId(
-  item?:
-    | string
-    | {
-        _id?: string;
-        name?: string;
-      }
-    | null
-): string {
-  if (!item) return "";
-  if (typeof item === "string") return item;
-  return item._id || "";
+function getDisplayNameFromRef(item?: RefItem | null): string {
+  const value = getNameFromRef(item);
+  return value || "-";
+}
+
+function buildSearchText(item: ProductCompatibilityItem): string {
+  const productTypeName = getNameFromRef(item.productTypeId);
+  const productBrandName = getNameFromRef(item.productBrandId);
+
+  const compatibleText = (item.compatible || [])
+    .map((row) => {
+      const brandName = getNameFromRef(row.brandId);
+      const models = (row.modelId || [])
+        .map((model) => getNameFromRef(model))
+        .filter(Boolean)
+        .join(" ");
+
+      const notes = String(row.notes || "").trim();
+      return `${brandName} ${models} ${notes}`.trim();
+    })
+    .join(" ");
+
+  return `${productTypeName} ${productBrandName} ${compatibleText}`
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 const PAGE_SIZE = 10;
@@ -149,18 +142,22 @@ const PAGE_SIZE = 10;
 export default function ProductCompatibilityListPage() {
   const router = useRouter();
   const { role } = useAuth();
-
   const basePath = getRoleBasePath(role);
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState("");
   const [items, setItems] = useState<ProductCompatibilityItem[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchCompatibilities = async () => {
+  const fetchCompatibilities = async (showRefreshLoader = false) => {
     try {
-      setLoading(true);
+      if (showRefreshLoader) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       const token =
         localStorage.getItem("token") ||
@@ -189,6 +186,7 @@ export default function ProductCompatibilityListPage() {
       setItems([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -199,30 +197,7 @@ export default function ProductCompatibilityListPage() {
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
-
-    return items.filter((item) => {
-      const productTypeName = getNameFromRef(item.productTypeId).toLowerCase();
-      const productBrandName = getNameFromRef(item.productBrandId).toLowerCase();
-
-      const compatibleBrands =
-        item.compatible
-          ?.flatMap((row) => row.brandIds || [])
-          .map((brand) => getNameFromRef(brand).toLowerCase())
-          .join(" ") || "";
-
-      const compatibleModels =
-        item.compatible
-          ?.flatMap((row) => row.modelIds || [])
-          .map((model) => getNameFromRef(model).toLowerCase())
-          .join(" ") || "";
-
-      return (
-        productTypeName.includes(q) ||
-        productBrandName.includes(q) ||
-        compatibleBrands.includes(q) ||
-        compatibleModels.includes(q)
-      );
-    });
+    return items.filter((item) => buildSearchText(item).includes(q));
   }, [items, search]);
 
   useEffect(() => {
@@ -238,7 +213,9 @@ export default function ProductCompatibilityListPage() {
   const showingTo = Math.min(startIndex + PAGE_SIZE, totalEntries);
 
   const handleDelete = async (id: string) => {
-    const ok = window.confirm("Are you sure you want to delete this compatibility?");
+    const ok = window.confirm(
+      "Are you sure you want to delete this compatibility?"
+    );
     if (!ok) return;
 
     try {
@@ -299,81 +276,90 @@ export default function ProductCompatibilityListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] px-4 py-6 md:px-6 md:py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#2e3192] via-[#7a24ff] to-[#ec0677] p-8 text-white shadow-[0_24px_80px_rgba(46,49,146,0.22)]">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[size:42px_42px]" />
-          </div>
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Compatibility Management
-              </div>
+              </span>
 
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Product Compatibility List
-              </h1>
-              <p className="mt-3 max-w-3xl text-sm text-white/85 md:text-base">
-                View product type, product brand, compatible brands, and selected
-                model summary.
-              </p>
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Product Compatibility List
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                  View product type, product brand, compatible brands, and
+                  selected model summary.
+                </p>
+              </div>
             </div>
 
             <button
               type="button"
-              onClick={() => router.push(`${basePath}/productcompatibility/create`)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-slate-900 shadow-[0_18px_40px_rgba(255,255,255,0.18)] transition hover:-translate-y-0.5"
+              onClick={() => router.push(`${basePath}/compatibility/create`)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
             >
               <BadgePlus className="h-4 w-4" />
               Add Compatibility
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6 rounded-[28px] border border-white/60 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-600">
+        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <Sparkles className="h-5 w-5" />
               </div>
+
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Compatibility Records
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Search by product type, brand, compatible brand, or model.
+                <p className="text-sm text-slate-500">
+                  Search by product type, product brand, compatible brand, or
+                  model.
                 </p>
               </div>
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <div className="relative w-full sm:min-w-[320px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
+                  type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search compatibility..."
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-fuchsia-100"
+                  placeholder="Search compatibility"
+                  className="premium-input pl-11"
                 />
               </div>
 
               <button
                 type="button"
-                onClick={() => void fetchCompatibilities()}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                onClick={() => void fetchCompatibilities(true)}
+                disabled={refreshing}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <RefreshCcw className="h-4 w-4" />
+                {refreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-4 w-4" />
+                )}
                 Refresh
               </button>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
+              <table className="min-w-full">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
@@ -407,43 +393,51 @@ export default function ProductCompatibilityListPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : paginatedItems.length ? (
+                  ) : paginatedItems.length > 0 ? (
                     paginatedItems.map((item, index) => {
                       const serialNo = startIndex + index + 1;
-                      const productTypeName = getNameFromRef(item.productTypeId);
-                      const productBrandName = getNameFromRef(item.productBrandId);
-
+                      const productTypeName = getDisplayNameFromRef(
+                        item.productTypeId
+                      );
+                      const productBrandName = getDisplayNameFromRef(
+                        item.productBrandId
+                      );
                       const compatibleRows = item.compatible || [];
 
                       return (
                         <tr key={item._id} className="align-top">
-                          <td className="px-4 py-4 text-sm font-semibold text-slate-700">
+                          <td className="px-4 py-4 text-sm font-semibold text-slate-600">
                             {serialNo}
                           </td>
 
                           <td className="px-4 py-4">
-                            <div className="min-w-[160px] text-sm font-semibold text-slate-900">
+                            <div className="min-w-40 text-sm font-semibold text-slate-900">
                               {productTypeName}
                             </div>
                           </td>
 
                           <td className="px-4 py-4">
-                            <div className="min-w-[160px] text-sm font-medium text-slate-700">
+                            <div className="min-w-40 text-sm font-medium text-slate-600">
                               {productBrandName}
                             </div>
                           </td>
 
-                          <td className="min-w-[430px] px-4 py-4">
-                            {compatibleRows.length ? (
+                          <td className="min-w-107.5 px-4 py-4">
+                            {compatibleRows.length > 0 ? (
                               <div className="space-y-3">
                                 {compatibleRows.map((row, rowIndex) => {
-                                  const brandNames = (row.brandIds || [])
-                                    .map((brand) => getNameFromRef(brand))
-                                    .filter(Boolean);
+                                  const brandName = getDisplayNameFromRef(
+                                    row.brandId
+                                  );
 
-                                  const modelNames = (row.modelIds || [])
+                                  const modelNames = (row.modelId || [])
                                     .map((model) => getNameFromRef(model))
-                                    .filter(Boolean);
+                                    .filter(
+                                      (name) =>
+                                        Boolean(name) &&
+                                        name.trim() !== "-" &&
+                                        name.trim() !== ""
+                                    );
 
                                   return (
                                     <div
@@ -451,19 +445,21 @@ export default function ProductCompatibilityListPage() {
                                       className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
                                     >
                                       <div className="text-sm font-semibold text-slate-900">
-                                        {brandNames.join(", ") || "-"}
+                                        {brandName}
                                       </div>
 
                                       <div className="mt-2 flex flex-wrap gap-2">
-                                        {modelNames.length ? (
-                                          modelNames.map((modelName, modelIndex) => (
-                                            <span
-                                              key={`${modelName}-${modelIndex}`}
-                                              className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
-                                            >
-                                              {modelName}
-                                            </span>
-                                          ))
+                                        {modelNames.length > 0 ? (
+                                          modelNames.map(
+                                            (modelName, modelIndex) => (
+                                              <span
+                                                key={`${modelName}-${modelIndex}`}
+                                                className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"
+                                              >
+                                                {modelName}
+                                              </span>
+                                            )
+                                          )
                                         ) : (
                                           <span className="text-xs text-slate-400">
                                             No models selected
@@ -472,7 +468,7 @@ export default function ProductCompatibilityListPage() {
                                       </div>
 
                                       {row.notes ? (
-                                        <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                                        <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                                           {row.notes}
                                         </div>
                                       ) : null}
@@ -492,11 +488,11 @@ export default function ProductCompatibilityListPage() {
                               type="button"
                               onClick={() => void handleToggleActive(item._id)}
                               disabled={actionLoadingId === item._id}
-                              className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-bold transition ${
+                              className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                 item.isActive !== false
-                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                  : "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                              } disabled:cursor-not-allowed disabled:opacity-60`}
+                                  ? "bg-emerald-100 text-emerald-700 hover:opacity-90"
+                                  : "bg-rose-100 text-rose-700 hover:opacity-90"
+                              }`}
                             >
                               {actionLoadingId === item._id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -514,10 +510,10 @@ export default function ProductCompatibilityListPage() {
                                 type="button"
                                 onClick={() =>
                                   router.push(
-                                    `${basePath}/productcompatibility/edit/${item._id}`
+                                    `${basePath}/compatibility/edit/${item._id}`
                                   )
                                 }
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                               >
                                 <Pencil className="h-4 w-4" />
                                 Edit
@@ -527,7 +523,7 @@ export default function ProductCompatibilityListPage() {
                                 type="button"
                                 onClick={() => void handleDelete(item._id)}
                                 disabled={actionLoadingId === item._id}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {actionLoadingId === item._id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -543,53 +539,60 @@ export default function ProductCompatibilityListPage() {
                     })
                   ) : (
                     <tr>
-                      <td
-                        colSpan={6}
-                        className="px-4 py-14 text-center text-sm text-slate-500"
-                      >
-                        No compatibility records found
+                      <td colSpan={6} className="px-4 py-14 text-center">
+                        <div className="mx-auto max-w-md">
+                          <div className="text-base font-semibold text-slate-900">
+                            No compatibility records found
+                          </div>
+                          <p className="mt-2 text-sm text-slate-500">
+                            Try changing the search term or add a new
+                            compatibility record.
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+          </div>
 
-            <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-600">
-                Showing {showingFrom} to {showingTo} of {totalEntries} entries
-              </p>
+          <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-slate-500">
+              Showing <span className="font-semibold">{showingFrom}</span> to{" "}
+              <span className="font-semibold">{showingTo}</span> of{" "}
+              <span className="font-semibold">{totalEntries}</span> entries
+            </p>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={safeCurrentPage === 1}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={safeCurrentPage === 1}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Prev
+              </button>
 
-                <span className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                  {safeCurrentPage} / {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
-                  disabled={safeCurrentPage === totalPages}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+              <div className="inline-flex h-10 min-w-11 items-center justify-center rounded-xl bg-violet-50 px-4 text-sm font-bold text-violet-700">
+                {safeCurrentPage}
               </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={safeCurrentPage === totalPages}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

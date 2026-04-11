@@ -1,13 +1,18 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
+  CheckCircle2,
+  ImagePlus,
   Loader2,
   MapPin,
-  User2,
-  ImagePlus,
+  Save,
+  Sparkles,
   UploadCloud,
+  User2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -192,14 +197,12 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-5 flex items-start gap-3">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
         {icon}
       </div>
       <div>
-        <h3 className="text-base font-bold tracking-tight text-slate-900">
-          {title}
-        </h3>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
+        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+        <p className="text-sm text-slate-500">{description}</p>
       </div>
     </div>
   );
@@ -241,7 +244,7 @@ function FloatingInput({
             "peer h-12 w-full rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition shadow-sm placeholder-transparent",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-violet-600",
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         />
@@ -295,7 +298,7 @@ function FloatingSelect({
             "peer h-12 w-full appearance-none rounded-2xl border bg-white px-4 pt-5 text-sm text-slate-900 outline-none transition shadow-sm",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-violet-600",
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         >
@@ -318,6 +321,16 @@ function FloatingSelect({
         >
           {label} {required ? "*" : ""}
         </label>
+
+        <svg
+          className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 8l4 4 4-4" />
+        </svg>
       </div>
 
       {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
@@ -333,6 +346,7 @@ function UploadCard({
   onRemove,
   inputRef,
   fileLabel,
+  removing = false,
 }: {
   title: string;
   description: string;
@@ -341,11 +355,12 @@ function UploadCard({
   onRemove: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   fileLabel: "avatar" | "idproof";
+  removing?: boolean;
 }) {
   const isAvatar = fileLabel === "avatar";
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+    <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
       <h4 className="text-sm font-bold text-slate-900">{title}</h4>
       <p className="mt-1 text-xs text-slate-500">{description}</p>
 
@@ -357,8 +372,8 @@ function UploadCard({
             alt={title}
             className={
               isAvatar
-                ? "h-36 w-36 rounded-full object-cover border border-slate-200 bg-white"
-                : "h-40 w-full max-w-65 rounded-2xl object-cover border border-slate-200 bg-white"
+                ? "h-36 w-36 rounded-full border border-slate-200 bg-white object-cover"
+                : "h-40 w-full max-w-65 rounded-2xl border border-slate-200 bg-white object-cover"
             }
           />
         ) : (
@@ -392,9 +407,14 @@ function UploadCard({
             <button
               type="button"
               onClick={onRemove}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+              disabled={removing}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <X className="h-4 w-4" />
+              {removing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
               Remove
             </button>
           ) : null}
@@ -496,9 +516,7 @@ export default function EditTeamMemberPage() {
 
       const data = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        return [];
-      }
+      if (!response.ok) return [];
 
       if (Array.isArray(data?.data)) return data.data;
       if (Array.isArray(data?.results)) return data.results;
@@ -599,7 +617,9 @@ export default function EditTeamMemberPage() {
       if (avatarInputRef.current) avatarInputRef.current.value = "";
       toast.success("Avatar removed successfully");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove avatar");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove avatar"
+      );
     } finally {
       setRemovingAvatar(false);
     }
@@ -714,11 +734,10 @@ export default function EditTeamMemberPage() {
       }
     }
 
-    loadStates();
+    void loadStates();
     return () => {
       active = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   useEffect(() => {
@@ -751,11 +770,10 @@ export default function EditTeamMemberPage() {
       }
     }
 
-    loadDistricts();
+    void loadDistricts();
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, accessToken]);
 
   useEffect(() => {
@@ -789,11 +807,10 @@ export default function EditTeamMemberPage() {
       }
     }
 
-    loadTaluks();
+    void loadTaluks();
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, accessToken]);
 
   useEffect(() => {
@@ -822,11 +839,10 @@ export default function EditTeamMemberPage() {
       }
     }
 
-    loadAreas();
+    void loadAreas();
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.district, form.taluk, accessToken]);
 
   useEffect(() => {
@@ -886,7 +902,7 @@ export default function EditTeamMemberPage() {
       }
     }
 
-    loadStaff();
+    void loadStaff();
     return () => {
       active = false;
     };
@@ -974,23 +990,44 @@ export default function EditTeamMemberPage() {
 
   if (pageLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-slate-100">
-        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-sm">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading team member details...
+      <div className="page-shell">
+        <div className="mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center">
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-sm">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading team member details...
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <form
-        onSubmit={handleSubmit}
-        className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
-      >
-        <div className="space-y-6">
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
+
+          <div className="relative z-10">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+              <Sparkles className="h-3.5 w-3.5" />
+              Staff Management
+            </span>
+
+            <div className="mt-3">
+              <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                Edit Team Member
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                Update role, profile details, address information, avatar, and
+                ID proof in one single form.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
               icon={<User2 className="h-5 w-5" />}
               title="Basic Information"
@@ -1077,7 +1114,7 @@ export default function EditTeamMemberPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
@@ -1182,7 +1219,7 @@ export default function EditTeamMemberPage() {
 
               <FloatingInput
                 id="street"
-                label="Street"
+                label="Street / Door No"
                 value={form.street}
                 onChange={(e) => updateField("street", e.target.value)}
                 error={errors.street}
@@ -1192,6 +1229,7 @@ export default function EditTeamMemberPage() {
               <FloatingInput
                 id="pincode"
                 label="Pincode"
+                type="tel"
                 maxLength={6}
                 value={form.pincode}
                 onChange={(e) =>
@@ -1203,68 +1241,187 @@ export default function EditTeamMemberPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <SectionHeader
               icon={<UploadCloud className="h-5 w-5" />}
-              title="Profile & Upload"
-              description="Upload avatar and ID proof, or remove existing files."
+              title="Profile Uploads"
+              description="Upload avatar and ID proof, then review before final submission."
             />
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <UploadCard
-                title="Profile Avatar"
-                description="Upload or replace staff profile image."
-                preview={avatarPreview}
-                onPick={(file) => handleImageChange(file, "avatar")}
-                onRemove={handleRemoveAvatar}
-                inputRef={avatarInputRef}
-                fileLabel="avatar"
-              />
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <UploadCard
+                  title="Avatar"
+                  description="Upload profile image for the team member."
+                  preview={avatarPreview}
+                  onPick={(file) => handleImageChange(file, "avatar")}
+                  onRemove={handleRemoveAvatar}
+                  inputRef={avatarInputRef}
+                  fileLabel="avatar"
+                  removing={removingAvatar}
+                />
 
-              <UploadCard
-                title="ID Proof"
-                description="Upload or replace staff ID proof image."
-                preview={idProofPreview}
-                onPick={(file) => handleImageChange(file, "idproof")}
-                onRemove={handleRemoveIdProof}
-                inputRef={idProofInputRef}
-                fileLabel="idproof"
-              />
-            </div>
-
-            {(removingAvatar || removingIdProof) && (
-              <div className="mt-4 text-sm font-medium text-slate-500">
-                Removing file...
+                <UploadCard
+                  title="ID Proof"
+                  description="Upload ID proof image for verification."
+                  preview={idProofPreview}
+                  onPick={(file) => handleImageChange(file, "idproof")}
+                  onRemove={handleRemoveIdProof}
+                  inputRef={idProofInputRef}
+                  fileLabel="idproof"
+                  removing={removingIdProof}
+                />
               </div>
-            )}
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+                <h4 className="text-base font-bold text-slate-900">
+                  Review Summary
+                </h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Confirm updated details before saving changes.
+                </p>
+
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Role
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {getRoleBadgeText(form.role)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Full Name
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.name || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Username
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.username || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Email
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.email || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Primary Mobile
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.mobile || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Secondary Mobile
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.secondaryMobile || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      State
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.state || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      District
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.district || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Taluk
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.taluk || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Area
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.area || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Street
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.street || "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Pincode
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {form.pincode || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </button>
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex items-center gap-2 text-sm text-slate-500">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Update basic details, address, avatar, and ID proof from one page.
+              </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Staff"
-              )}
-            </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(getRedirectPath(currentUserRole))}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submitting || isLocationLoading}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Update Team Member
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

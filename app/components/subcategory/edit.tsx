@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import React, {
@@ -551,71 +552,63 @@ export default function EditSubCategoryPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
-          <span className="text-sm font-medium text-slate-700">
-            Loading sub category...
-          </span>
+      <div className="page-shell">
+        <div className="mx-auto flex max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+            <span className="text-sm font-medium">Loading sub category...</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Edit Sub Category
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Update sub category details, change category, and manage image.
-          </p>
-        </div>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
 
-        <div className="relative overflow-hidden rounded-[32px] border border-white/40 bg-linear-to-r from-[#082a5e] via-[#5b21b6] to-[#9116a1] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:p-8">
-          <div className="absolute inset-0 bg-white/5" />
-          <div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-64 w-64 rounded-full bg-fuchsia-300/20 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
                 <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
+              </span>
+
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Edit Sub Category
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
+                  Modify sub category information and keep your catalog clean and
+                  organized.
+                </p>
               </div>
-
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
-                Edit Sub Category
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                Modify sub category information and keep your catalog clean and
-                organized.
-              </p>
             </div>
 
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
           </div>
-        </div>
+        </section>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                 <Tag className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-xl font-bold text-slate-900">
                   Basic Information
                 </h3>
                 <p className="text-sm text-slate-500">
@@ -626,7 +619,7 @@ export default function EditSubCategoryPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Category <span className="text-rose-500">*</span>
                 </label>
 
@@ -638,7 +631,7 @@ export default function EditSubCategoryPage() {
                       setIsDropdownOpen((prev) => !prev);
                     }}
                     disabled={loadingCategories || submitting}
-                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
@@ -708,7 +701,7 @@ export default function EditSubCategoryPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="premium-label">
                   Sub Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -717,22 +710,20 @@ export default function EditSubCategoryPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter sub category name"
                   disabled={submitting}
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="premium-input disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
+                <label className="premium-label">Name Key Preview</label>
                 <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
                   {nameKeyPreview || "auto-generated-from-name"}
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_10px_35px_rgba(15,23,42,0.08)] md:p-6">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
             <div className="mb-5 flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
                 <ImagePlus className="h-6 w-6" />
@@ -757,7 +748,7 @@ export default function EditSubCategoryPage() {
                   onDragOver={handleImageDragOver}
                   onDragLeave={handleImageDragLeave}
                   onDrop={handleImageDrop}
-                  className={`group flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 text-center transition ${
+                  className={`group flex min-h-55 w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 text-center transition ${
                     isDraggingImage
                       ? "border-violet-500 bg-violet-50 shadow-sm"
                       : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
@@ -796,7 +787,7 @@ export default function EditSubCategoryPage() {
                   Preview
                 </h4>
 
-                <div className="relative flex h-[220px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}
@@ -815,7 +806,7 @@ export default function EditSubCategoryPage() {
                   )}
                 </div>
 
-                {imagePreview.url && (
+                {imagePreview.url ? (
                   <button
                     type="button"
                     onClick={handleRemoveImage}
@@ -834,10 +825,10 @@ export default function EditSubCategoryPage() {
                       </>
                     )}
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -845,7 +836,7 @@ export default function EditSubCategoryPage() {
                 type="button"
                 onClick={resetForm}
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
               </button>
@@ -853,7 +844,7 @@ export default function EditSubCategoryPage() {
               <button
                 type="submit"
                 disabled={submitting || loadingCategories}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#082a5e] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
