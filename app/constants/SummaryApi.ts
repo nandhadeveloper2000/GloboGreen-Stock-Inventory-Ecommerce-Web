@@ -485,7 +485,7 @@ compatible_toggle_active: {
   },
 
   product_patch: {
-    method: "PATCH",
+    method: "PUT",
     url: (id: string) => `${API_BASE}/product/${id}`,
   },
 
