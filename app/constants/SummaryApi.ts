@@ -463,6 +463,36 @@ compatible_toggle_active: {
     url: (id: string) => `${API_BASE}/productcompatibility/${id}/active`,
   },
 
+
+   product_list: {
+    method: "GET",
+    url: `${API_BASE}/product`,
+  },
+
+  product_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/product/${id}`,
+  },
+
+  product_create: {
+    method: "POST",
+    url: `${API_BASE}/product`,
+  },
+
+  product_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/product/${id}`,
+  },
+
+  product_patch: {
+    method: "PATCH",
+    url: (id: string) => `${API_BASE}/product/${id}`,
+  },
+
+  product_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/product/${id}`,
+  },
 // /* ---------- SERIES ---------- */
 // series_create: { method: "POST", url: `${API_BASE}/series` },
 
