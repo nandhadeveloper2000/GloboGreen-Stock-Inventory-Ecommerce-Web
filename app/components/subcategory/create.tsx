@@ -20,7 +20,6 @@ import {
   Sparkles,
   Shapes,
   Search,
-  ChevronDown,
   Check,
   UploadCloud,
 } from "lucide-react";
@@ -28,6 +27,11 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import {
+  TopLabelInput,
+  TopLabelPanel,
+  TopLabelSelectButton,
+} from "@/components/ui/top-label-fields";
 
 type CategoryOption = {
   _id: string;
@@ -389,7 +393,9 @@ export default function CreateSubCategoryPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -433,41 +439,24 @@ export default function CreateSubCategoryPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Category <span className="text-rose-500">*</span>
-                </label>
-
                 <div ref={dropdownRef} className="relative z-30">
-                  <button
-                    type="button"
+                  <TopLabelSelectButton
+                    label="Category"
+                    text={
+                      loadingCategories
+                        ? "Loading..."
+                        : selectedCategory?.name || "Select category"
+                    }
+                    muted={!loadingCategories && !selectedCategory?.name}
+                    icon={Shapes}
+                    open={isCategoryDropdownOpen}
+                    disabled={loadingCategories || submitting}
+                    required
                     onClick={() => {
                       if (loadingCategories || submitting) return;
                       setIsCategoryDropdownOpen((prev) => !prev);
                     }}
-                    disabled={loadingCategories || submitting}
-                    className="premium-input flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span
-                        className={`truncate ${
-                          selectedCategory?.name
-                            ? "text-slate-900"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        {loadingCategories
-                          ? "Loading categories..."
-                          : selectedCategory?.name || "Select category"}
-                      </span>
-                    </div>
-
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
-                        isCategoryDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                  />
 
                   {isCategoryDropdownOpen && !loadingCategories ? (
                     <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-100 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -519,28 +508,22 @@ export default function CreateSubCategoryPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Sub Category Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter sub category name"
-                  disabled={submitting}
-                  className="premium-input disabled:cursor-not-allowed disabled:bg-slate-50"
-                />
-              </div>
+              <TopLabelInput
+                label="Sub Category Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter sub category name"
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
             </div>
           </section>
 

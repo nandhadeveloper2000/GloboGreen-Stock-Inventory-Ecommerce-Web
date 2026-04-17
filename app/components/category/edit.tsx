@@ -22,7 +22,6 @@ import {
   Sparkles,
   Shapes,
   Search,
-  ChevronDown,
   Check,
   UploadCloud,
 } from "lucide-react";
@@ -30,6 +29,11 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import {
+  TopLabelInput,
+  TopLabelPanel,
+  TopLabelSelectButton,
+} from "@/components/ui/top-label-fields";
 
 type ExistingImage = {
   url?: string;
@@ -541,7 +545,9 @@ export default function CategoryEditPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -596,36 +602,24 @@ export default function CategoryEditPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="premium-label">
-                  Master Category <span className="text-rose-500">*</span>
-                </label>
-
                 <div ref={dropdownRef} className="relative">
-                  <button
-                    type="button"
+                  <TopLabelSelectButton
+                    label="Master Category"
+                    text={
+                      loadingMasterCategories
+                        ? "Loading master categories..."
+                        : selectedMasterCategory?.name || "Select master category"
+                    }
+                    muted={!loadingMasterCategories && !selectedMasterCategory?.name}
+                    icon={Shapes}
+                    open={isDropdownOpen}
+                    disabled={loadingMasterCategories || submitting}
+                    required
                     onClick={() => {
                       if (loadingMasterCategories || submitting) return;
                       setIsDropdownOpen((prev) => !prev);
                     }}
-                    disabled={loadingMasterCategories || submitting}
-                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span className="truncate">
-                        {loadingMasterCategories
-                          ? "Loading master categories..."
-                          : selectedMasterCategory?.name ||
-                            "Select master category"}
-                      </span>
-                    </div>
-
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
-                        isDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                  />
 
                   {isDropdownOpen && !loadingMasterCategories ? (
                     <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -680,55 +674,51 @@ export default function CategoryEditPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="premium-label">
-                  Category Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter category name"
-                  className="premium-input"
-                  disabled={submitting}
-                />
-              </div>
+              <TopLabelInput
+                label="Category Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter category name"
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="premium-label">Name Key Preview</label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
 
               <div className="md:col-span-2">
-                <label className="premium-label">Status</label>
+                <TopLabelPanel label="Status">
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsActive(true)}
+                      className={`inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-emerald-600 text-white shadow-[0_10px_24px_rgba(5,150,105,0.22)]"
+                          : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      Active
+                    </button>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsActive(true)}
-                    className={`inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition ${
-                      isActive
-                        ? "bg-emerald-600 text-white shadow-[0_10px_24px_rgba(5,150,105,0.22)]"
-                        : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    Active
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsActive(false)}
-                    className={`inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition ${
-                      !isActive
-                        ? "bg-rose-600 text-white shadow-[0_10px_24px_rgba(225,29,72,0.22)]"
-                        : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    Inactive
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsActive(false)}
+                      className={`inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition ${
+                        !isActive
+                          ? "bg-rose-600 text-white shadow-[0_10px_24px_rgba(225,29,72,0.22)]"
+                          : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      Inactive
+                    </button>
+                  </div>
+                </TopLabelPanel>
               </div>
             </div>
           </section>

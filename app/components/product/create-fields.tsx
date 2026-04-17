@@ -2,6 +2,7 @@ import Image from "next/image";
 import {
   Check,
   ChevronDown,
+  Film,
   ImagePlus,
   Plus,
   Search,
@@ -23,7 +24,9 @@ import type {
   ModelCheckboxSelectorProps,
   PresetValueOption,
   ProductImageItem,
+  ProductMediaItem,
   ProductInformationSection,
+  ProductVideoItem,
   VariantAttribute,
 } from "./create-types";
 
@@ -55,17 +58,13 @@ export function ProductDropdown({
     config.options.find((item) => item._id === config.value) || null;
 
   return (
-    <div>
-      <label className="premium-label">
-        {config.label} <span className="text-rose-500">*</span>
-      </label>
-
+    <div className="space-y-1.5">
       <div ref={dropdownRef} className="relative">
         <button
           type="button"
           onClick={() => onToggle(config.key)}
           disabled={config.loading || config.disabled}
-          className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
+          className="flex h-14 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 pb-2 pt-6 text-left text-sm text-slate-900 shadow-sm transition outline-none focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
         >
           <div className="flex min-w-0 items-center gap-3">
             <Icon className="h-4 w-4 shrink-0 text-slate-400" />
@@ -82,6 +81,10 @@ export function ProductDropdown({
             }`}
           />
         </button>
+
+        <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
+          {config.label} <span className="text-rose-500">*</span>
+        </label>
 
         {config.open && !config.loading ? (
           <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -407,20 +410,36 @@ export function PresetValueDropdown({
   );
 }
 
-export function VariantImageUploader({
+function ProductMediaUploader({
   inputId,
-  images,
+  items,
   accept,
+  mediaType,
   disabled = false,
+  title,
+  description,
+  emptyStateText,
   onFilesSelected,
   onRemove,
 }: {
   inputId: string;
-  images: ProductImageItem[];
+  items: Array<
+    ProductMediaItem & {
+      mediaKind: "image" | "video";
+    }
+  >;
   accept: string;
+  mediaType: "image" | "video" | "mixed";
   disabled?: boolean;
+  title: string;
+  description: string;
+  emptyStateText: string;
   onFilesSelected: (files: FileList | File[]) => void;
-  onRemove: (imageId: string) => void;
+  onRemove: (
+    item: ProductMediaItem & {
+      mediaKind: "image" | "video";
+    }
+  ) => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const dragDepthRef = useRef(0);
@@ -501,8 +520,17 @@ export function VariantImageUploader({
         />
 
         <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
-          {images.length ? (
-            <ImagePlus className="h-6 w-6 text-violet-600" />
+          {items.length ? (
+            mediaType === "image" ? (
+              <ImagePlus className="h-6 w-6 text-violet-600" />
+            ) : mediaType === "mixed" ? (
+              <div className="flex items-center gap-1.5 text-violet-600">
+                <ImagePlus className="h-5 w-5" />
+                <Film className="h-5 w-5" />
+              </div>
+            ) : (
+              <Film className="h-6 w-6 text-violet-600" />
+            )
           ) : (
             <UploadCloud className="h-6 w-6 text-slate-500" />
           )}
@@ -510,36 +538,57 @@ export function VariantImageUploader({
 
         <div className="space-y-1">
           <p className="text-sm font-semibold text-slate-900">
-            Upload variant images
+            {title}
           </p>
           <p className="text-sm text-slate-500">
-            Drag and drop or click to browse PNG, JPG, JPEG, or WEBP files.
+            {description}
           </p>
         </div>
       </label>
 
-      {images.length ? (
+      {items.length ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {images.map((image) => (
+          {items.map((item) => (
             <div
-              key={image.id}
+              key={item.id}
               className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
             >
               <div className="relative h-44 overflow-hidden bg-slate-100">
-                <Image
-                  src={image.previewUrl}
-                  alt={image.name}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
+                {item.mediaKind === "image" ? (
+                  <Image
+                    src={item.previewUrl}
+                    alt={item.name}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <video
+                    src={item.previewUrl}
+                    controls
+                    preload="metadata"
+                    className="h-full w-full object-cover"
+                  />
+                )}
+
+                {mediaType === "mixed" ? (
+                  <span
+                    className={`absolute left-3 top-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm ${
+                      item.mediaKind === "image"
+                        ? "bg-sky-600/90"
+                        : "bg-emerald-600/90"
+                    }`}
+                  >
+                    {item.mediaKind}
+                  </span>
+                ) : null}
 
                 <button
                   type="button"
-                  onClick={() => onRemove(image.id)}
+                  onClick={() => onRemove(item)}
                   disabled={disabled}
                   className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/90 text-rose-600 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                  aria-label={`Remove ${image.name}`}
+                  aria-label={`Remove ${item.name}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -547,10 +596,22 @@ export function VariantImageUploader({
 
               <div className="space-y-1 px-4 py-3">
                 <p className="truncate text-sm font-semibold text-slate-900">
-                  {image.name}
+                  {item.name}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {formatFileSize(image.size)}
+                  {mediaType === "mixed"
+                    ? `${item.mediaKind === "image" ? "Image" : "Video"}${
+                        item.size > 0
+                          ? ` - ${formatFileSize(item.size)}`
+                          : item.isExisting
+                            ? " - Existing file"
+                            : ""
+                      }`
+                    : item.size > 0
+                      ? formatFileSize(item.size)
+                      : item.isExisting
+                        ? "Existing file"
+                        : formatFileSize(item.size)}
                 </p>
               </div>
             </div>
@@ -558,10 +619,138 @@ export function VariantImageUploader({
         </div>
       ) : (
         <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
-          Preview images will appear here after upload.
+          {emptyStateText}
         </div>
       )}
     </div>
+  );
+}
+
+export function VariantImageUploader({
+  inputId,
+  images,
+  accept,
+  disabled = false,
+  title = "Upload variant images",
+  description = "Drag and drop or click to browse PNG, JPG, JPEG, or WEBP files.",
+  emptyStateText = "Preview images will appear here after upload.",
+  onFilesSelected,
+  onRemove,
+}: {
+  inputId: string;
+  images: ProductImageItem[];
+  accept: string;
+  disabled?: boolean;
+  title?: string;
+  description?: string;
+  emptyStateText?: string;
+  onFilesSelected: (files: FileList | File[]) => void;
+  onRemove: (imageId: string) => void;
+}) {
+  return (
+    <ProductMediaUploader
+      inputId={inputId}
+      items={images.map((item) => ({
+        ...item,
+        mediaKind: "image" as const,
+      }))}
+      accept={accept}
+      mediaType="image"
+      disabled={disabled}
+      title={title}
+      description={description}
+      emptyStateText={emptyStateText}
+      onFilesSelected={onFilesSelected}
+      onRemove={(item) => onRemove(item.id)}
+    />
+  );
+}
+
+export function VariantVideoUploader({
+  inputId,
+  videos,
+  accept,
+  disabled = false,
+  title = "Upload variant videos",
+  description = "Drag and drop or click to browse MP4, MOV, or WEBM files.",
+  emptyStateText = "Preview videos will appear here after upload.",
+  onFilesSelected,
+  onRemove,
+}: {
+  inputId: string;
+  videos: ProductVideoItem[];
+  accept: string;
+  disabled?: boolean;
+  title?: string;
+  description?: string;
+  emptyStateText?: string;
+  onFilesSelected: (files: FileList | File[]) => void;
+  onRemove: (videoId: string) => void;
+}) {
+  return (
+    <ProductMediaUploader
+      inputId={inputId}
+      items={videos.map((item) => ({
+        ...item,
+        mediaKind: "video" as const,
+      }))}
+      accept={accept}
+      mediaType="video"
+      disabled={disabled}
+      title={title}
+      description={description}
+      emptyStateText={emptyStateText}
+      onFilesSelected={onFilesSelected}
+      onRemove={(item) => onRemove(item.id)}
+    />
+  );
+}
+
+export function VariantMediaUploader({
+  inputId,
+  images,
+  videos,
+  accept,
+  disabled = false,
+  title = "Upload variant images & media",
+  description = "Drag and drop or click to browse PNG, JPG, JPEG, WEBP, MP4, MOV, or WEBM files.",
+  emptyStateText = "Preview media will appear here after upload.",
+  onFilesSelected,
+  onRemove,
+}: {
+  inputId: string;
+  images: ProductImageItem[];
+  videos: ProductVideoItem[];
+  accept: string;
+  disabled?: boolean;
+  title?: string;
+  description?: string;
+  emptyStateText?: string;
+  onFilesSelected: (files: FileList | File[]) => void;
+  onRemove: (mediaKind: "image" | "video", itemId: string) => void;
+}) {
+  return (
+    <ProductMediaUploader
+      inputId={inputId}
+      items={[
+        ...images.map((item) => ({
+          ...item,
+          mediaKind: "image" as const,
+        })),
+        ...videos.map((item) => ({
+          ...item,
+          mediaKind: "video" as const,
+        })),
+      ]}
+      accept={accept}
+      mediaType="mixed"
+      disabled={disabled}
+      title={title}
+      description={description}
+      emptyStateText={emptyStateText}
+      onFilesSelected={onFilesSelected}
+      onRemove={(item) => onRemove(item.mediaKind, item.id)}
+    />
   );
 }
 

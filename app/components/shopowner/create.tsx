@@ -1,20 +1,46 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ChevronsUpDown,
+  FileBadge2,
+  ImagePlus,
+  Loader2,
+  MapPin,
+  Plus,
+  Save,
+  Search,
+  Sparkles,
+  UploadCloud,
+  User2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import SummaryApi, { baseURL } from "@/constants/SummaryApi";
+import { useAuth } from "@/context/auth/AuthProvider";
 
-
+type AppRole = "MASTER_ADMIN" | "MANAGER" | "SUPERVISOR" | "STAFF";
 type ShopControl = "INVENTORY_ONLY" | "ALL_IN_ONE_ECOMMERCE";
-type BusinessType = "Retail" | "Wholesale" | "";
 
-type PickedFile = {
-  file: File;
-  preview?: string;
+type Option = {
+  label: string;
+  value: string;
 };
 
-type Address = {
+type FormState = {
+  name: string;
+  username: string;
+  email: string;
+  pin: string;
+  mobile: string;
+  secondaryMobile: string;
+  shopControl: ShopControl;
   state: string;
   district: string;
   taluk: string;
@@ -23,1052 +49,2104 @@ type Address = {
   pincode: string;
 };
 
-type OwnerResponse = {
-  _id: string;
-  name: string;
-  username: string;
-  email: string;
-  mobile?: string;
-  additionalNumber?: string;
-  avatarUrl?: string;
-  shopControl?: ShopControl;
-};
+type FieldErrors = Partial<Record<keyof FormState, string>>;
+type ShopOwnerFormMode = "create" | "edit";
 
-type ShopResponse = {
-  _id: string;
-  name?: string;
-  shopName?: string;
-  businessType?: string | string[];
-  frontImageUrl?: string;
-  shopAddress?: Partial<Address>;
-  address?: Partial<Address>;
-};
-
-type ApiJson = {
+type CreateShopOwnerApiResponse = {
   success?: boolean;
   message?: string;
-  data?: unknown;
-  owner?: unknown;
-  shop?: unknown;
-  result?: unknown;
-  error?: string;
-  errors?: Array<string | { message?: string }>;
-  keyPattern?: Record<string, unknown>;
-  keyValue?: Record<string, unknown>;
-  code?: number;
+  data?: {
+    _id?: string;
+    name?: string;
+    role?: string;
+  };
 };
 
-const SHOP_CONTROL_OPTIONS: { label: string; value: ShopControl }[] = [
+type ShopOwnerDetailsResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    _id?: string;
+    name?: string;
+    username?: string;
+    email?: string;
+    mobile?: string;
+    additionalNumber?: string;
+    avatarUrl?: string;
+    verifyEmail?: boolean;
+    shopControl?: ShopControl;
+    address?: {
+      state?: string;
+      district?: string;
+      taluk?: string;
+      area?: string;
+      street?: string;
+      pincode?: string;
+    };
+    idProof?: {
+      url?: string;
+      mimeType?: string;
+      fileName?: string;
+    };
+  };
+};
+
+type ShopOwnerActionResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    _id?: string;
+    avatarUrl?: string;
+    idProof?: {
+      url?: string;
+      mimeType?: string;
+      fileName?: string;
+    };
+  };
+};
+
+const INITIAL: FormState = {
+  name: "",
+  username: "",
+  email: "",
+  pin: "",
+  mobile: "",
+  secondaryMobile: "",
+  shopControl: "INVENTORY_ONLY",
+  state: "",
+  district: "",
+  taluk: "",
+  area: "",
+  street: "",
+  pincode: "",
+};
+
+const SHOP_CONTROL_OPTIONS: Option[] = [
   { label: "Inventory Only", value: "INVENTORY_ONLY" },
   { label: "All In One Ecommerce", value: "ALL_IN_ONE_ECOMMERCE" },
 ];
 
-const BUSINESS_OPTIONS: BusinessType[] = ["", "Retail", "Wholesale"];
-const DOC_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp";
-
-function buildApiUrl(path?: string) {
-  return `${baseURL}${path || ""}`;
+function classNames(...arr: Array<string | false | null | undefined>) {
+  return arr.filter(Boolean).join(" ");
 }
 
-function getToken() {
-  if (typeof window === "undefined") return "";
-  return (
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("authToken") ||
-    ""
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function alphaSpaceOnly(value: string) {
+  return value.replace(/[^a-zA-Z\s]/g, "");
+}
+
+function toTitleCase(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((part) =>
+      part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : ""
+    )
+    .join(" ");
+}
+
+function normalizeOptionText(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function appendOption(options: Option[], rawValue: string) {
+  const value = normalizeOptionText(rawValue);
+
+  if (!value) return options;
+
+  const exists = options.some(
+    (option) =>
+      normalizeOptionText(option.value).toLowerCase() === value.toLowerCase()
   );
+
+  if (exists) return options;
+
+  return [...options, { label: value, value }];
 }
 
-function authHeaders(extra?: HeadersInit): HeadersInit {
-  const token = getToken();
+function createUsernameFromName(name: string) {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "");
+
+  if (!base) return "";
+  const suffix = String(Date.now()).slice(-4);
+  return `${base}${suffix}`;
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+function isValidPin(pin: string) {
+  return /^\d{4,8}$/.test(pin);
+}
+
+function isValidIndianMobile(mobile: string) {
+  return /^[6-9]\d{9}$/.test(mobile);
+}
+
+function isValidPincode(pincode: string) {
+  return /^\d{6}$/.test(pincode);
+}
+
+function getRoleBadgeText(role?: string | null) {
+  const value = String(role || "").toUpperCase();
+
+  if (value === "MASTER_ADMIN") return "Master Admin";
+  if (value === "MANAGER") return "Manager";
+  if (value === "SUPERVISOR") return "Supervisor";
+  if (value === "STAFF") return "Staff";
+  if (value === "SHOP_OWNER") return "Shop Owner";
+
+  return "Unknown";
+}
+
+function isImageAsset(url?: string | null, mimeType?: string | null) {
+  const normalizedMime = String(mimeType || "").trim().toLowerCase();
+
+  if (normalizedMime.startsWith("image/")) {
+    return true;
+  }
+
+  const normalizedUrl = String(url || "").trim().toLowerCase();
+  return /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(normalizedUrl);
+}
+
+function toOptions(arr: unknown): Option[] {
+  if (!Array.isArray(arr)) return [];
+
+  return arr
+    .map((item) => {
+      if (typeof item === "string") {
+        return { label: item, value: item };
+      }
+
+      if (item && typeof item === "object") {
+        const obj = item as Record<string, unknown>;
+
+        const raw =
+          typeof obj.name === "string"
+            ? obj.name
+            : typeof obj.label === "string"
+              ? obj.label
+              : typeof obj.value === "string"
+                ? obj.value
+                : typeof obj.title === "string"
+                  ? obj.title
+                  : "";
+
+        if (raw) {
+          return { label: raw, value: raw };
+        }
+      }
+
+      return null;
+    })
+    .filter(Boolean) as Option[];
+}
+
+function buildAddressPayload(form: FormState) {
   return {
-    ...(extra || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    state: form.state.trim(),
+    district: form.district.trim(),
+    taluk: form.taluk.trim(),
+    area: form.area.trim(),
+    street: form.street.trim(),
+    pincode: form.pincode.trim(),
   };
 }
 
-async function readResponse(res: Response) {
-  const text = await res.text();
-  try {
-    return { text, json: JSON.parse(text) as ApiJson };
-  } catch {
-    return { text, json: null as ApiJson | null };
-  }
-}
-
-function getApiErrorMessage(json: ApiJson | null, fallback = "Something went wrong") {
-  if (!json) return fallback;
-  if (typeof json.message === "string" && json.message.trim()) return json.message;
-  if (typeof json.error === "string" && json.error.trim()) return json.error;
-
-  if (Array.isArray(json.errors) && json.errors.length > 0) {
-    const first = json.errors[0];
-    if (typeof first === "string") return first;
-    if (typeof first?.message === "string") return first.message;
-  }
-
-  if (json.keyPattern) {
-    const field = Object.keys(json.keyPattern)[0];
-    if (field) return `${field} already exists`;
-  }
-
-  if (json.code === 11000 && json.keyValue) {
-    const field = Object.keys(json.keyValue)[0];
-    if (field) return `${field} already exists`;
-  }
-
-  return fallback;
-}
-
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
-
-function isValidPin(v: string) {
-  return /^\d{4,8}$/.test(v);
-}
-
-function isValidPhone(v: string) {
-  return /^\d{10}$/.test(v);
-}
-
-function getOwnerFromJson(json: ApiJson | null): OwnerResponse | null {
-  const owner = json?.data || json?.owner || null;
-  return owner?._id ? (owner as OwnerResponse) : null;
-}
-
-function getShopFromJson(json: ApiJson | null): ShopResponse | null {
-  const shop = json?.data || json?.shop || json?.result || null;
-  return shop?._id ? (shop as ShopResponse) : null;
-}
-
-function formatAddress(address?: Partial<Address>) {
-  if (!address) return "-";
-  return [
-    address.street,
-    address.area,
-    address.taluk,
-    address.district,
-    address.state,
-    address.pincode,
-  ]
-    .filter(Boolean)
-    .join(", ") || "-";
-}
-
-function cls(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(" ");
-}
-
-function StepBadge({ index, title, active }: { index: number; title: string; active: boolean }) {
+function InfoPill({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      className={cls(
-        "flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all",
-        active
-          ? "border-violet-300 bg-violet-50 shadow-sm"
-          : "border-slate-200 bg-white"
-      )}
-    >
-      <div
-        className={cls(
-          "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
-          active ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600"
-        )}
-      >
-        {index}
+    <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-5 flex items-start gap-3">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+        {icon}
       </div>
       <div>
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
+        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+        <p className="text-sm text-slate-500">{description}</p>
       </div>
     </div>
   );
 }
 
-function Field({
+function FloatingInput({
+  id,
   label,
-  children,
+  value,
+  onChange,
+  type = "text",
+  maxLength,
+  disabled,
+  error,
+  required,
 }: {
+  id: string;
   label: string;
-  children: React.ReactNode;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  maxLength?: number;
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="space-y-1.5">
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={onChange}
+          maxLength={maxLength}
+          disabled={disabled}
+          placeholder={disabled ? "" : `Enter ${label.toLowerCase()}`}
+          className={classNames(
+            "h-14 w-full rounded-2xl border bg-white px-4 pb-2 pt-6 text-sm text-slate-900 outline-none transition shadow-sm placeholder:text-slate-400",
+            error
+              ? "border-rose-300 focus:border-rose-500"
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
+            disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
+          )}
+        />
+        <label
+          htmlFor={id}
+          className={classNames(
+            "pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none transition-all",
+            error ? "text-rose-500" : "text-slate-500"
+          )}
+        >
+          {label} {required ? "*" : ""}
+        </label>
+      </div>
+
+      {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function FloatingSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+  error,
+  required,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: Option[];
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={classNames(
+            "h-14 w-full appearance-none rounded-2xl border bg-white px-4 pb-2 pt-6 text-sm text-slate-900 outline-none transition shadow-sm",
+            error
+              ? "border-rose-300 focus:border-rose-500"
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
+            disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
+          )}
+        >
+          <option value=""></option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <label
+          htmlFor={id}
+          className={classNames(
+            "pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none transition-all",
+            error ? "text-rose-500" : "text-slate-500"
+          )}
+        >
+          {label} {required ? "*" : ""}
+        </label>
+
+        <svg
+          className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 8l4 4 4-4" />
+        </svg>
+      </div>
+
+      {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function SearchableSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+  error,
+  required,
+  placeholder,
+  searchPlaceholder,
+  helperText,
+  allowCustom = false,
+  onCreateOption,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Option[];
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  helperText?: string;
+  allowCustom?: boolean;
+  onCreateOption?: (value: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const selectedLabel = useMemo(() => {
+    const matched = options.find((option) => option.value === value);
+    return matched?.label || value;
+  }, [options, value]);
+
+  const normalizedQuery = normalizeOptionText(query);
+  const loweredQuery = normalizedQuery.toLowerCase();
+
+  const filteredOptions = useMemo(() => {
+    if (!loweredQuery) return options;
+
+    return options.filter((option) => {
+      const haystack = `${option.label} ${option.value}`.toLowerCase();
+      return haystack.includes(loweredQuery);
+    });
+  }, [options, loweredQuery]);
+
+  const canCreate =
+    allowCustom &&
+    Boolean(normalizedQuery) &&
+    !options.some((option) => {
+      const optionLabel = normalizeOptionText(option.label).toLowerCase();
+      const optionValue = normalizeOptionText(option.value).toLowerCase();
+      return optionLabel === loweredQuery || optionValue === loweredQuery;
+    });
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  const handleSelect = (nextValue: string) => {
+    onChange(normalizeOptionText(nextValue));
+    setOpen(false);
+    setQuery("");
+  };
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+
+    onCreateOption?.(normalizedQuery);
+    handleSelect(normalizedQuery);
+  };
+
+  return (
+    <div ref={containerRef} className="space-y-1.5">
+      <div className="relative">
+        <button
+          id={id}
+          type="button"
+          disabled={disabled}
+          onClick={() => setOpen((prev) => !prev)}
+          className={classNames(
+            "flex h-14 w-full items-center justify-between rounded-2xl border bg-white px-4 pb-2 pt-6 text-left text-sm text-slate-900 outline-none transition shadow-sm",
+            error
+              ? "border-rose-300 focus:border-rose-500"
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
+            disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
+          )}
+        >
+          <span
+            className={classNames(
+              "truncate",
+              selectedLabel ? "text-slate-900" : "text-slate-400"
+            )}
+          >
+            {selectedLabel || placeholder || `Select ${label.toLowerCase()}`}
+          </span>
+
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400" />
+        </button>
+
+        <label
+          htmlFor={id}
+          className={classNames(
+            "pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none transition-all",
+            error ? "text-rose-500" : "text-slate-500"
+          )}
+        >
+          {label} {required ? "*" : ""}
+        </label>
+
+        {open ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+            <div className="border-b border-slate-100 p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setOpen(false);
+                    }
+
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+
+                      if (canCreate) {
+                        handleCreate();
+                        return;
+                      }
+
+                      if (filteredOptions.length === 1) {
+                        handleSelect(filteredOptions[0].value);
+                      }
+                    }
+                  }}
+                  placeholder={
+                    searchPlaceholder ||
+                    (allowCustom
+                      ? "Search or type a new value"
+                      : "Search options")
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-violet-500 focus:bg-white"
+                />
+              </div>
+
+              {helperText ? (
+                <p className="mt-2 text-xs text-slate-500">{helperText}</p>
+              ) : null}
+            </div>
+
+            <div className="max-h-64 overflow-y-auto p-2">
+              {canCreate ? (
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-violet-700 transition hover:bg-violet-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Use &quot;{normalizedQuery}&quot;
+                </button>
+              ) : null}
+
+              {filteredOptions.length ? (
+                filteredOptions.map((option) => {
+                  const selected = option.value === value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleSelect(option.value)}
+                      className={classNames(
+                        "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition",
+                        selected
+                          ? "bg-violet-50 font-semibold text-violet-700"
+                          : "text-slate-700 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {selected ? <Check className="h-4 w-4 shrink-0" /> : null}
+                    </button>
+                  );
+                })
+              ) : canCreate ? null : (
+                <p className="px-3 py-3 text-sm text-slate-500">
+                  No matching options found.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function ReviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function TextInput({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={cls(
-        "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-violet-400",
-        className
-      )}
-    />
-  );
-}
-
-function Select({ className = "", ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={cls(
-        "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-violet-400",
-        className
-      )}
-    />
+      </p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value || "-"}</p>
+    </div>
   );
 }
 
 function UploadCard({
   title,
-  subtitle,
-  file,
+  description,
+  preview,
+  fileName,
+  onUpload,
+  onRemove,
+  inputRef,
   accept,
-  onPick,
-  onClear,
-  image,
+  buttonLabel,
+  emptyIcon,
+  previewClassName,
 }: {
   title: string;
-  subtitle: string;
-  file: PickedFile | null;
+  description: string;
+  preview: string;
+  fileName: string;
+  onUpload: (file: File | null | undefined) => void;
+  onRemove: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   accept: string;
-  onPick: (e: ChangeEvent<HTMLInputElement>) => void;
-  onClear: () => void;
-  image?: boolean;
+  buttonLabel: string;
+  emptyIcon: ReactNode;
+  previewClassName: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="mb-3">
-        <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
-        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
-      </div>
+    <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+      <h4 className="text-sm font-bold text-slate-900">{title}</h4>
+      <p className="mt-1 text-xs text-slate-500">{description}</p>
 
-      <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-3">
-        {image && file?.preview ? (
+      <div className="mt-4 flex flex-col items-center">
+        {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={file.preview} alt={title} className="max-h-44 rounded-xl object-cover" />
+          <img src={preview} alt={title} className={previewClassName} />
+        ) : fileName ? (
+          <div className="flex h-40 w-full max-w-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 text-center">
+            <FileBadge2 className="h-9 w-9 text-slate-400" />
+            <p className="mt-3 line-clamp-2 text-sm font-medium text-slate-700">
+              {fileName}
+            </p>
+          </div>
         ) : (
-          <div className="text-center text-xs text-slate-400">
-            <p>No file selected</p>
+          <div className="flex h-40 w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
+            {emptyIcon}
           </div>
         )}
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
-          {file ? "Replace" : "Choose File"}
-          <input type="file" accept={accept} className="hidden" onChange={onPick} />
-        </label>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => onUpload(e.target.files?.[0])}
+        />
 
-        {file && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
-            onClick={onClear}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Remove
+            {buttonLabel}
           </button>
-        )}
-      </div>
 
-      <p className="mt-2 truncate text-xs font-medium text-slate-600">
-        {file ? file.file.name : "No file selected"}
-      </p>
+          {preview || fileName ? (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+            >
+              <X className="h-4 w-4" />
+              Remove
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
 
-function SummaryItem({ label, value }: { label: string; value: string }) {
+export function ShopOwnerForm({
+  mode = "create",
+}: {
+  mode?: ShopOwnerFormMode;
+}) {
+  const router = useRouter();
+  const params = useParams<{ id?: string }>();
+  const { accessToken, role } = useAuth();
+  const isEditMode = mode === "edit";
+  const shopOwnerId = String(params?.id || "").trim();
+  const listPath = "/master/shopowner/list";
+
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const idProofInputRef = useRef<HTMLInputElement | null>(null);
+
+  const currentUserRole = useMemo(
+    () => String(role || "").toUpperCase() as AppRole,
+    [role]
+  );
+
+  const [form, setForm] = useState<FormState>(INITIAL);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [pageLoading, setPageLoading] = useState(isEditMode);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+
+  const [states, setStates] = useState<Option[]>([]);
+  const [districts, setDistricts] = useState<Option[]>([]);
+  const [taluks, setTaluks] = useState<Option[]>([]);
+  const [areas, setAreas] = useState<Option[]>([]);
+
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingTaluks, setLoadingTaluks] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+  const [locationError, setLocationError] = useState("");
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [existingAvatarUrl, setExistingAvatarUrl] = useState("");
+  const [removingAvatar, setRemovingAvatar] = useState(false);
+
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
+  const [idProofPreview, setIdProofPreview] = useState("");
+  const [existingIdProofUrl, setExistingIdProofUrl] = useState("");
+  const [existingIdProofName, setExistingIdProofName] = useState("");
+  const [existingIdProofMimeType, setExistingIdProofMimeType] = useState("");
+  const [removingIdProof, setRemovingIdProof] = useState(false);
+
+  const isLocationLoading =
+    loadingStates || loadingDistricts || loadingTaluks || loadingAreas;
+
+  const updateField = (key: keyof FormState, value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  const resetDistrictTree = () => {
+    setDistricts([]);
+    setTaluks([]);
+    setAreas([]);
+  };
+
+  const resetTalukTree = () => {
+    setTaluks([]);
+    setAreas([]);
+  };
+
+  const resetAreaTree = () => {
+    setAreas([]);
+  };
+
+  const resetAvatar = () => {
+    if (avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setExistingAvatarUrl("");
+
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+  };
+
+  const resetIdProof = () => {
+    if (idProofPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(idProofPreview);
+    }
+
+    setIdProofFile(null);
+    setIdProofPreview("");
+    setExistingIdProofUrl("");
+    setExistingIdProofName("");
+    setExistingIdProofMimeType("");
+
+    if (idProofInputRef.current) {
+      idProofInputRef.current.value = "";
+    }
+  };
+
+  const resetForm = () => {
+    setForm(INITIAL);
+    setErrors({});
+    setLocationError("");
+    setEmailVerified(false);
+    resetDistrictTree();
+    resetAvatar();
+    resetIdProof();
+  };
+
+  const fetchApi = async (url: string) => {
+    if (!accessToken) return [];
+
+    try {
+      const response = await fetch(`${baseURL}${url}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        console.error("Location API failed:", { url, status: response.status, data });
+        return [];
+      }
+
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.results)) return data.results;
+      if (Array.isArray(data)) return data;
+
+      return [];
+    } catch (error) {
+      console.error("Location API error:", error);
+      return [];
+    }
+  };
+
+  const fetchAreas = async () => {
+    const primaryUrl = `${SummaryApi.location_villages.url}?state=${encodeURIComponent(
+      form.state
+    )}&district=${encodeURIComponent(
+      form.district
+    )}&talukName=${encodeURIComponent(form.taluk)}`;
+
+    const fallbackUrl = `${SummaryApi.location_villages.url}?state=${encodeURIComponent(
+      form.state
+    )}&district=${encodeURIComponent(form.district)}&taluk=${encodeURIComponent(
+      form.taluk
+    )}`;
+
+    let data = await fetchApi(primaryUrl);
+
+    if (!data.length) {
+      data = await fetchApi(fallbackUrl);
+    }
+
+    return data;
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadStates() {
+      if (!accessToken) return;
+
+      setLoadingStates(true);
+      setLocationError("");
+
+      const data = await fetchApi(SummaryApi.location_states.url);
+
+      if (!active) return;
+
+      const options = toOptions(data);
+      setStates(options);
+      setLoadingStates(false);
+
+      if (!options.length) {
+        setLocationError("Unable to load states. Please check location API.");
+      }
+    }
+
+    void loadStates();
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!form.state) {
+      resetDistrictTree();
+      setForm((prev) => ({
+        ...prev,
+        district: "",
+        taluk: "",
+        area: "",
+      }));
+      return;
+    }
+
+    async function loadDistricts() {
+      setLoadingDistricts(true);
+      setLocationError("");
+
+      const data = await fetchApi(
+        `${SummaryApi.location_districts.url}?state=${encodeURIComponent(
+          form.state
+        )}`
+      );
+
+      if (!active) return;
+
+      const options = toOptions(data);
+      setDistricts(options);
+      setTaluks([]);
+      setAreas([]);
+      setLoadingDistricts(false);
+
+      if (!options.length) {
+        setLocationError("No districts found for the selected state.");
+      }
+    }
+
+    void loadDistricts();
+
+    return () => {
+      active = false;
+    };
+  }, [form.state, accessToken]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!form.state || !form.district) {
+      resetTalukTree();
+      setForm((prev) => ({
+        ...prev,
+        taluk: "",
+        area: "",
+      }));
+      return;
+    }
+
+    async function loadTaluks() {
+      setLoadingTaluks(true);
+      setLocationError("");
+
+      const data = await fetchApi(
+        `${SummaryApi.location_taluks.url}?state=${encodeURIComponent(
+          form.state
+        )}&district=${encodeURIComponent(form.district)}`
+      );
+
+      if (!active) return;
+
+      const options = toOptions(data);
+      setTaluks(options);
+      setAreas([]);
+      setLoadingTaluks(false);
+
+      if (!options.length) {
+        setLocationError("No taluks found for the selected district.");
+      }
+    }
+
+    void loadTaluks();
+
+    return () => {
+      active = false;
+    };
+  }, [form.state, form.district, accessToken]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!form.state || !form.district || !form.taluk) {
+      resetAreaTree();
+      setForm((prev) => ({
+        ...prev,
+        area: "",
+      }));
+      return;
+    }
+
+    async function loadAreas() {
+      setLoadingAreas(true);
+      setLocationError("");
+
+      const data = await fetchAreas();
+
+      if (!active) return;
+
+      const options = toOptions(data);
+      setAreas(options);
+      setLoadingAreas(false);
+
+      if (!options.length) {
+        setLocationError("No areas found for the selected taluk.");
+      }
+    }
+
+    void loadAreas();
+
+    return () => {
+      active = false;
+    };
+  }, [form.state, form.district, form.taluk, accessToken]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+      if (idProofPreview.startsWith("blob:")) URL.revokeObjectURL(idProofPreview);
+    };
+  }, [avatarPreview, idProofPreview]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadShopOwner() {
+      if (!isEditMode) {
+        setPageLoading(false);
+        setLoadFailed(false);
+        return;
+      }
+
+      if (!shopOwnerId) {
+        setLoadFailed(true);
+        setPageLoading(false);
+        return;
+      }
+
+      if (!accessToken) return;
+
+      try {
+        setPageLoading(true);
+        setLoadFailed(false);
+
+        const response = await fetch(
+          `${baseURL}${SummaryApi.shopowner_get.url(shopOwnerId)}`,
+          {
+            method: SummaryApi.shopowner_get.method,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: "application/json",
+            },
+            cache: "no-store",
+          }
+        );
+
+        const result =
+          (await response.json().catch(() => ({}))) as ShopOwnerDetailsResponse;
+
+        if (!active) return;
+
+        if (!response.ok || !result?.success || !result?.data) {
+          throw new Error(result?.message || "Failed to load shop owner details");
+        }
+
+        const owner = result.data;
+        const nextAvatarUrl = String(owner.avatarUrl || "").trim();
+        const nextIdProofUrl = String(owner.idProof?.url || "").trim();
+        const nextIdProofMimeType = String(owner.idProof?.mimeType || "").trim();
+
+        setForm({
+          name: owner.name || "",
+          username: owner.username || "",
+          email: owner.email || "",
+          pin: "",
+          mobile: owner.mobile || "",
+          secondaryMobile: owner.additionalNumber || "",
+          shopControl: owner.shopControl || "INVENTORY_ONLY",
+          state: owner.address?.state || "",
+          district: owner.address?.district || "",
+          taluk: owner.address?.taluk || "",
+          area: owner.address?.area || "",
+          street: owner.address?.street || "",
+          pincode: owner.address?.pincode || "",
+        });
+
+        setEmailVerified(owner.verifyEmail === true);
+        setExistingAvatarUrl(nextAvatarUrl);
+        setAvatarFile(null);
+        setAvatarPreview(nextAvatarUrl);
+
+        setExistingIdProofUrl(nextIdProofUrl);
+        setExistingIdProofName(String(owner.idProof?.fileName || ""));
+        setExistingIdProofMimeType(nextIdProofMimeType);
+        setIdProofFile(null);
+        setIdProofPreview(
+          isImageAsset(nextIdProofUrl, nextIdProofMimeType) ? nextIdProofUrl : ""
+        );
+
+        if (avatarInputRef.current) {
+          avatarInputRef.current.value = "";
+        }
+
+        if (idProofInputRef.current) {
+          idProofInputRef.current.value = "";
+        }
+      } catch (error) {
+        console.error(error);
+
+        if (!active) return;
+
+        setLoadFailed(true);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load shop owner details"
+        );
+      } finally {
+        if (active) {
+          setPageLoading(false);
+        }
+      }
+    }
+
+    void loadShopOwner();
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken, isEditMode, shopOwnerId]);
+
+  const handleAvatarChange = (file: File | null | undefined) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid avatar image");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Avatar size must be under 2MB");
+      return;
+    }
+
+    if (avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleIdProofChange = (file: File | null | undefined) => {
+    if (!file) return;
+
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+
+    if (!isPdf && !isImage) {
+      toast.error("Upload PDF, JPG, JPEG, PNG, or WEBP for ID proof");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("ID proof size must be under 5MB");
+      return;
+    }
+
+    if (idProofPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(idProofPreview);
+    }
+
+    setIdProofFile(file);
+    setIdProofPreview(isImage ? URL.createObjectURL(file) : "");
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (avatarFile) {
+      if (avatarPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+
+      setAvatarFile(null);
+      setAvatarPreview(existingAvatarUrl || "");
+
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = "";
+      }
+
+      toast.success("Selected avatar removed");
+      return;
+    }
+
+    if (!isEditMode) {
+      resetAvatar();
+      return;
+    }
+
+    if (!accessToken || !shopOwnerId) {
+      toast.error("Authentication or shop owner id missing");
+      return;
+    }
+
+    if (!existingAvatarUrl) {
+      setAvatarPreview("");
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = "";
+      }
+      return;
+    }
+
+    try {
+      setRemovingAvatar(true);
+
+      const response = await fetch(
+        `${baseURL}${SummaryApi.shopowner_admin_avatar_remove.url(shopOwnerId)}`,
+        {
+          method: SummaryApi.shopowner_admin_avatar_remove.method,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const result =
+        (await response.json().catch(() => ({}))) as ShopOwnerActionResponse;
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to remove avatar");
+      }
+
+      setAvatarFile(null);
+      setAvatarPreview("");
+      setExistingAvatarUrl("");
+
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = "";
+      }
+
+      toast.success("Avatar removed successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove avatar"
+      );
+    } finally {
+      setRemovingAvatar(false);
+    }
+  };
+
+  const handleRemoveIdProof = async () => {
+    if (idProofFile) {
+      if (idProofPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(idProofPreview);
+      }
+
+      setIdProofFile(null);
+      setIdProofPreview(
+        isImageAsset(existingIdProofUrl, existingIdProofMimeType)
+          ? existingIdProofUrl
+          : ""
+      );
+
+      if (idProofInputRef.current) {
+        idProofInputRef.current.value = "";
+      }
+
+      toast.success("Selected ID proof removed");
+      return;
+    }
+
+    if (!isEditMode) {
+      resetIdProof();
+      return;
+    }
+
+    if (!accessToken || !shopOwnerId) {
+      toast.error("Authentication or shop owner id missing");
+      return;
+    }
+
+    if (!existingIdProofUrl) {
+      setIdProofPreview("");
+      if (idProofInputRef.current) {
+        idProofInputRef.current.value = "";
+      }
+      return;
+    }
+
+    try {
+      setRemovingIdProof(true);
+
+      const response = await fetch(
+        `${baseURL}${SummaryApi.shopowner_admin_docs_remove.url(
+          shopOwnerId,
+          "idProof"
+        )}`,
+        {
+          method: SummaryApi.shopowner_admin_docs_remove.method,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const result =
+        (await response.json().catch(() => ({}))) as ShopOwnerActionResponse;
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to remove ID proof");
+      }
+
+      setIdProofFile(null);
+      setIdProofPreview("");
+      setExistingIdProofUrl("");
+      setExistingIdProofName("");
+      setExistingIdProofMimeType("");
+
+      if (idProofInputRef.current) {
+        idProofInputRef.current.value = "";
+      }
+
+      toast.success("ID proof removed successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove ID proof"
+      );
+    } finally {
+      setRemovingIdProof(false);
+    }
+  };
+
+  const validateForm = () => {
+    const nextErrors: FieldErrors = {};
+
+    if (!form.name.trim()) {
+      nextErrors.name = "Full name is required";
+    }
+
+    if (!form.username.trim()) {
+      nextErrors.username = "Username is required";
+    }
+
+    if (!form.email.trim()) {
+      nextErrors.email = "Email is required";
+    } else if (!isValidEmail(form.email)) {
+      nextErrors.email = "Enter a valid email";
+    }
+
+    if (!isEditMode && !form.pin.trim()) {
+      nextErrors.pin = "PIN is required";
+    } else if (form.pin.trim() && !isValidPin(form.pin)) {
+      nextErrors.pin = "PIN must be 4 to 8 digits";
+    }
+
+    if (!form.mobile.trim()) {
+      nextErrors.mobile = "Primary mobile is required";
+    } else if (!isValidIndianMobile(form.mobile)) {
+      nextErrors.mobile = "Enter a valid 10-digit mobile";
+    }
+
+    if (
+      form.secondaryMobile.trim() &&
+      !isValidIndianMobile(form.secondaryMobile)
+    ) {
+      nextErrors.secondaryMobile = "Enter a valid 10-digit secondary mobile";
+    }
+
+    if (
+      form.secondaryMobile.trim() &&
+      form.secondaryMobile === form.mobile
+    ) {
+      nextErrors.secondaryMobile =
+        "Secondary mobile must be different from primary mobile";
+    }
+
+    if (!form.state.trim()) nextErrors.state = "State is required";
+    if (!form.district.trim()) nextErrors.district = "District is required";
+    if (!form.taluk.trim()) nextErrors.taluk = "Taluk is required";
+    if (!form.area.trim()) nextErrors.area = "Area is required";
+    if (!form.street.trim()) nextErrors.street = "Street is required";
+
+    if (!form.pincode.trim()) {
+      nextErrors.pincode = "Pincode is required";
+    } else if (!isValidPincode(form.pincode)) {
+      nextErrors.pincode = "Pincode must be 6 digits";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleAutoUsername = () => {
+    if (!form.name.trim()) {
+      toast.error("Enter full name first");
+      return;
+    }
+
+    updateField("username", createUsernameFromName(form.name));
+  };
+
+  const uploadOwnerAvatar = async (ownerId: string) => {
+    if (!avatarFile || !accessToken) return;
+
+    const payload = new FormData();
+    payload.append("avatar", avatarFile);
+
+    const response = await fetch(
+      `${baseURL}${SummaryApi.shopowner_admin_avatar_upload.url(ownerId)}`,
+      {
+        method: SummaryApi.shopowner_admin_avatar_upload.method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: payload,
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || "Avatar upload failed");
+    }
+  };
+
+  const uploadOwnerIdProof = async (ownerId: string) => {
+    if (!idProofFile || !accessToken) return;
+
+    const payload = new FormData();
+    payload.append("idProof", idProofFile);
+
+    const response = await fetch(
+      `${baseURL}${SummaryApi.shopowner_admin_docs_upload.url(ownerId)}`,
+      {
+        method: SummaryApi.shopowner_admin_docs_upload.method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: payload,
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || "ID proof upload failed");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isLocationLoading) {
+      toast.error("Please wait until location data finishes loading");
+      return;
+    }
+
+    const valid = validateForm();
+
+    if (!valid) {
+      toast.error("Please fix the form errors before submitting");
+      return;
+    }
+
+    if (!accessToken) {
+      toast.error("Authentication token missing");
+      return;
+    }
+
+    let targetOwnerId = isEditMode ? shopOwnerId : "";
+
+    try {
+      setSubmitting(true);
+
+      const payload = {
+        name: toTitleCase(alphaSpaceOnly(form.name)),
+        username: form.username.trim().toLowerCase(),
+        email: form.email.trim().toLowerCase(),
+        mobile: form.mobile.trim(),
+        additionalNumber: form.secondaryMobile.trim() || "",
+        shopControl: form.shopControl,
+        ...buildAddressPayload(form),
+        ...(form.pin.trim() ? { pin: form.pin.trim() } : {}),
+      };
+
+      if (isEditMode) {
+        if (!shopOwnerId) {
+          toast.error("Invalid shop owner id");
+          return;
+        }
+
+        const response = await fetch(
+          `${baseURL}${SummaryApi.shopowner_update.url(shopOwnerId)}`,
+          {
+            method: SummaryApi.shopowner_update.method,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const result =
+          (await response.json().catch(() => ({}))) as CreateShopOwnerApiResponse;
+
+        if (!response.ok || !result?.success) {
+          toast.error(result?.message || "Failed to update shop owner");
+          return;
+        }
+      } else {
+        const response = await fetch(
+          `${baseURL}${SummaryApi.shopowner_create.url}`,
+          {
+            method: SummaryApi.shopowner_create.method,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const result =
+          (await response.json().catch(() => ({}))) as CreateShopOwnerApiResponse;
+
+        if (!response.ok || !result?.success) {
+          toast.error(result?.message || "Failed to create shop owner");
+          return;
+        }
+
+        targetOwnerId = String(result?.data?._id || "");
+
+        if (!targetOwnerId) {
+          toast.error("Shop owner created but missing owner id");
+          return;
+        }
+      }
+
+      await uploadOwnerAvatar(targetOwnerId);
+      await uploadOwnerIdProof(targetOwnerId);
+
+      toast.success(
+        isEditMode
+          ? "Shop owner account updated successfully"
+          : "Shop owner account created successfully"
+      );
+
+      if (!isEditMode) {
+        resetForm();
+      }
+
+      router.replace(listPath);
+    } catch (error) {
+      console.error(error);
+
+      if (!isEditMode && targetOwnerId) {
+        toast.error(
+          error instanceof Error
+            ? `Shop owner created, but ${error.message}`
+            : "Shop owner created, but file upload failed"
+        );
+        return;
+      }
+
+      toast.error(
+        isEditMode
+          ? "Something went wrong while updating the shop owner"
+          : "Something went wrong while creating the shop owner"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (pageLoading) {
+    return (
+      <div className="page-shell">
+        <div className="mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center">
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-sm">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading shop owner details...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditMode && (loadFailed || !shopOwnerId)) {
+    return (
+      <div className="page-shell">
+        <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-900">
+            Edit Shop Owner
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            A valid shop owner record could not be loaded for editing.
+          </p>
+
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => router.push(listPath)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to List
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-800">{value || "-"}</p>
+    <div className="page-shell">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
+          <div className="premium-grid-bg premium-bg-animate opacity-40" />
+          <div className="premium-bg-overlay" />
+
+          <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+                <Sparkles className="h-3.5 w-3.5" />
+                Shop Owner Management
+              </span>
+
+              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+                {isEditMode ? "Edit Shop Owner" : "Create Shop Owner"}
+              </h1>
+
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
+                {isEditMode
+                  ? "Update shop owner login details, mapped address, avatar, and ID proof in one single form."
+                  : "Add a shop owner account with login details, mapped address, avatar, and ID proof in one single form."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <InfoPill
+                label="Logged In As"
+                value={getRoleBadgeText(currentUserRole)}
+              />
+              <InfoPill
+                label={isEditMode ? "Editing Role" : "Creates Role"}
+                value="Shop Owner"
+              />
+              <InfoPill
+                label="Form Mode"
+                value={isEditMode ? "Single Page Edit" : "Single Page Create"}
+              />
+            </div>
+          </div>
+        </section>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <SectionHeader
+              icon={<User2 className="h-5 w-5" />}
+              title="Basic Information"
+              description={
+                isEditMode
+                  ? "Update owner identity, login details, contact information, and shop control mode."
+                  : "Enter owner identity, login details, contact information, and shop control mode."
+              }
+            />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FloatingInput
+                id="role"
+                label="Role"
+                value={getRoleBadgeText("SHOP_OWNER")}
+                onChange={() => undefined}
+                disabled
+              />
+
+              <FloatingSelect
+                id="shopControl"
+                label="Shop Control"
+                value={form.shopControl}
+                onChange={(e) =>
+                  updateField("shopControl", e.target.value as ShopControl)
+                }
+                options={SHOP_CONTROL_OPTIONS}
+                error={errors.shopControl}
+                required
+              />
+
+              <FloatingInput
+                id="name"
+                label="Full Name"
+                value={form.name}
+                onChange={(e) =>
+                  updateField("name", alphaSpaceOnly(e.target.value))
+                }
+                error={errors.name}
+                required
+              />
+
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_160px]">
+                  <FloatingInput
+                    id="username"
+                    label="Username"
+                    value={form.username}
+                    onChange={(e) =>
+                      updateField(
+                        "username",
+                        e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9_]/g, "")
+                          .slice(0, 30)
+                      )
+                    }
+                    error={errors.username}
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleAutoUsername}
+                    className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Auto Generate
+                  </button>
+                </div>
+              </div>
+
+              <FloatingInput
+                id="email"
+                label="Email Address"
+                type="email"
+                value={form.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                error={errors.email}
+                required
+              />
+
+              <FloatingInput
+                id="pin"
+                label={isEditMode ? "New PIN" : "PIN"}
+                type="password"
+                maxLength={8}
+                value={form.pin}
+                onChange={(e) =>
+                  updateField("pin", digitsOnly(e.target.value).slice(0, 8))
+                }
+                error={errors.pin}
+                required={!isEditMode}
+              />
+
+              <FloatingInput
+                id="mobile"
+                label="Primary Mobile"
+                type="tel"
+                maxLength={10}
+                value={form.mobile}
+                onChange={(e) =>
+                  updateField("mobile", digitsOnly(e.target.value).slice(0, 10))
+                }
+                error={errors.mobile}
+                required
+              />
+
+              <FloatingInput
+                id="secondaryMobile"
+                label="Secondary Mobile"
+                type="tel"
+                maxLength={10}
+                value={form.secondaryMobile}
+                onChange={(e) =>
+                  updateField(
+                    "secondaryMobile",
+                    digitsOnly(e.target.value).slice(0, 10)
+                  )
+                }
+                error={errors.secondaryMobile}
+              />
+            </div>
+          </section>
+
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <SectionHeader
+              icon={<MapPin className="h-5 w-5" />}
+              title="Address Details"
+              description="Search loaded address options or type your own custom values."
+            />
+
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Search the dropdown or type a value to add it as a custom address option.
+              {locationError ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  Location lookup note: {locationError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <SearchableSelect
+                id="state"
+                label={loadingStates ? "State (Loading...)" : "State"}
+                value={form.state}
+                onChange={(value) => {
+                  setLocationError("");
+                  setForm((prev) => ({
+                    ...prev,
+                    state: value,
+                    district: "",
+                    taluk: "",
+                    area: "",
+                  }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    state: undefined,
+                    district: undefined,
+                    taluk: undefined,
+                    area: undefined,
+                  }));
+                  setStates((prev) => appendOption(prev, value));
+                  resetDistrictTree();
+                }}
+                options={states}
+                disabled={loadingStates}
+                error={errors.state}
+                required
+                allowCustom
+                onCreateOption={(value) =>
+                  setStates((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a state"
+                searchPlaceholder="Search or type a state"
+                helperText="Choose from loaded states or add your own."
+              />
+
+              <SearchableSelect
+                id="district"
+                label={loadingDistricts ? "District (Loading...)" : "District"}
+                value={form.district}
+                onChange={(value) => {
+                  setLocationError("");
+                  setForm((prev) => ({
+                    ...prev,
+                    district: value,
+                    taluk: "",
+                    area: "",
+                  }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    district: undefined,
+                    taluk: undefined,
+                    area: undefined,
+                  }));
+                  setDistricts((prev) => appendOption(prev, value));
+                  resetTalukTree();
+                }}
+                options={districts}
+                disabled={!form.state || loadingDistricts}
+                error={errors.district}
+                required
+                allowCustom
+                onCreateOption={(value) =>
+                  setDistricts((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a district"
+                searchPlaceholder="Search or type a district"
+                helperText="Type a district if it is not in the loaded list."
+              />
+
+              <SearchableSelect
+                id="taluk"
+                label={loadingTaluks ? "Taluk (Loading...)" : "Taluk"}
+                value={form.taluk}
+                onChange={(value) => {
+                  setLocationError("");
+                  setForm((prev) => ({
+                    ...prev,
+                    taluk: value,
+                    area: "",
+                  }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    taluk: undefined,
+                    area: undefined,
+                  }));
+                  setTaluks((prev) => appendOption(prev, value));
+                  resetAreaTree();
+                }}
+                options={taluks}
+                disabled={!form.district || loadingTaluks}
+                error={errors.taluk}
+                required
+                allowCustom
+                onCreateOption={(value) =>
+                  setTaluks((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a taluk"
+                searchPlaceholder="Search or type a taluk"
+                helperText="Add a custom taluk value when needed."
+              />
+
+              <SearchableSelect
+                id="area"
+                label={loadingAreas ? "Area (Loading...)" : "Area"}
+                value={form.area}
+                onChange={(value) => {
+                  setLocationError("");
+                  updateField("area", value);
+                  setAreas((prev) => appendOption(prev, value));
+                }}
+                options={areas}
+                disabled={!form.taluk || loadingAreas}
+                error={errors.area}
+                required
+                allowCustom
+                onCreateOption={(value) =>
+                  setAreas((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type an area"
+                searchPlaceholder="Search or type an area"
+                helperText="Type a custom area if it is not listed."
+              />
+
+              <FloatingInput
+                id="street"
+                label="Street"
+                value={form.street}
+                onChange={(e) => updateField("street", e.target.value)}
+                error={errors.street}
+                required
+              />
+
+              <FloatingInput
+                id="pincode"
+                label="Pincode"
+                type="tel"
+                maxLength={6}
+                value={form.pincode}
+                onChange={(e) =>
+                  updateField("pincode", digitsOnly(e.target.value).slice(0, 6))
+                }
+                error={errors.pincode}
+                required
+              />
+            </div>
+          </section>
+
+          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <SectionHeader
+              icon={<ImagePlus className="h-5 w-5" />}
+              title="Profile & Documents"
+              description={
+                isEditMode
+                  ? "Update avatar and ID proof for the shop owner account."
+                  : "Upload avatar and ID proof for the shop owner account."
+              }
+            />
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <UploadCard
+                  title="Avatar"
+                  description="Upload a profile image for the shop owner."
+                  preview={avatarPreview}
+                  fileName={avatarFile?.name || (existingAvatarUrl ? "Uploaded avatar" : "")}
+                  onUpload={handleAvatarChange}
+                  onRemove={handleRemoveAvatar}
+                  inputRef={avatarInputRef}
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  buttonLabel={isEditMode ? "Change Avatar" : "Upload Avatar"}
+                  emptyIcon={<ImagePlus className="h-8 w-8" />}
+                  previewClassName="h-40 w-full max-w-[260px] rounded-2xl border border-slate-200 object-cover shadow-sm"
+                />
+
+                <UploadCard
+                  title="ID Proof"
+                  description="Upload Aadhaar"
+                  preview={idProofPreview}
+                  fileName={idProofFile?.name || existingIdProofName}
+                  onUpload={handleIdProofChange}
+                  onRemove={handleRemoveIdProof}
+                  inputRef={idProofInputRef}
+                  accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                  buttonLabel={isEditMode ? "Change ID Proof" : "Upload ID Proof"}
+                  emptyIcon={<UploadCloud className="h-8 w-8" />}
+                  previewClassName="h-40 w-full max-w-[260px] rounded-2xl border border-slate-200 object-cover shadow-sm"
+                />
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+                <h4 className="text-base font-bold text-slate-900">
+                  Review Summary
+                </h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  {isEditMode
+                    ? "Confirm updated details before saving this account."
+                    : "Confirm entered details before creating the account."}
+                </p>
+
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
+                  <ReviewItem label="Role" value="Shop Owner" />
+                  <ReviewItem label="Full Name" value={form.name} />
+                  <ReviewItem label="Username" value={form.username} />
+                  <ReviewItem label="Email" value={form.email} />
+                  <ReviewItem
+                    label="Email Status"
+                    value={emailVerified ? "Verified" : "Pending"}
+                  />
+                  <ReviewItem label="Primary Mobile" value={form.mobile} />
+                  <ReviewItem
+                    label="Secondary Mobile"
+                    value={form.secondaryMobile || "-"}
+                  />
+                  <ReviewItem
+                    label="Shop Control"
+                    value={
+                      SHOP_CONTROL_OPTIONS.find(
+                        (item) => item.value === form.shopControl
+                      )?.label || form.shopControl
+                    }
+                  />
+                  <ReviewItem label="State" value={form.state} />
+                  <ReviewItem label="District" value={form.district} />
+                  <ReviewItem label="Taluk" value={form.taluk} />
+                  <ReviewItem label="Area" value={form.area} />
+                  <ReviewItem label="Street" value={form.street} />
+                  <ReviewItem label="Pincode" value={form.pincode} />
+                  <ReviewItem
+                    label="Avatar"
+                    value={
+                      avatarFile
+                        ? avatarFile.name
+                        : avatarPreview
+                          ? isEditMode && !avatarFile && existingAvatarUrl
+                            ? "Uploaded image"
+                            : "Selected image"
+                          : "Not uploaded"
+                    }
+                  />
+                  <ReviewItem
+                    label="ID Proof"
+                    value={
+                      idProofFile
+                        ? idProofFile.name
+                        : existingIdProofName || "Not uploaded"
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex items-center gap-2 text-sm text-slate-500">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                {isEditMode
+                  ? "Single page edit form with basic, address, avatar, and ID proof."
+                  : "Single page create form with basic, address, avatar, and ID proof."}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(listPath)}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    submitting ||
+                    isLocationLoading ||
+                    removingAvatar ||
+                    removingIdProof
+                  }
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {isEditMode ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      {isEditMode ? "Update Shop Owner" : "Create Shop Owner"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
 export default function ShopOwnerCreatePage() {
-  const router = useRouter();
-  const shopSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [pin, setPin] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [additionalNumber, setAdditionalNumber] = useState("");
-  const [shopControl, setShopControl] = useState<ShopControl>("INVENTORY_ONLY");
-
-  const [stateName, setStateName] = useState("");
-  const [district, setDistrict] = useState("");
-  const [taluk, setTaluk] = useState("");
-  const [area, setArea] = useState("");
-  const [street, setStreet] = useState("");
-  const [pincode, setPincode] = useState("");
-
-  const [avatar, setAvatar] = useState<PickedFile | null>(null);
-  const [idProof, setIdProof] = useState<PickedFile | null>(null);
-
-  const [createdOwner, setCreatedOwner] = useState<OwnerResponse | null>(null);
-  const [shopName, setShopName] = useState("");
-  const [businessType, setBusinessType] = useState<BusinessType>("");
-  const [shopState, setShopState] = useState("");
-  const [shopDistrict, setShopDistrict] = useState("");
-  const [shopTaluk, setShopTaluk] = useState("");
-  const [shopArea, setShopArea] = useState("");
-  const [shopStreet, setShopStreet] = useState("");
-  const [shopPincode, setShopPincode] = useState("");
-  const [shopFrontImage, setShopFrontImage] = useState<PickedFile | null>(null);
-  const [shopGstCertificate, setShopGstCertificate] = useState<PickedFile | null>(null);
-  const [shopUdyamCertificate, setShopUdyamCertificate] = useState<PickedFile | null>(null);
-  const [shops, setShops] = useState<ShopResponse[]>([]);
-
-  const [savingOwner, setSavingOwner] = useState(false);
-  const [savingShop, setSavingShop] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const busy = savingOwner || savingShop;
-
-  const ownerAddress = useMemo(
-    () => ({
-      state: stateName,
-      district,
-      taluk,
-      area,
-      street,
-      pincode,
-    }),
-    [stateName, district, taluk, area, street, pincode]
-  );
-
-  const shopAddress = useMemo(
-    () => ({
-      state: shopState,
-      district: shopDistrict,
-      taluk: shopTaluk,
-      area: shopArea,
-      street: shopStreet,
-      pincode: shopPincode,
-    }),
-    [shopState, shopDistrict, shopTaluk, shopArea, shopStreet, shopPincode]
-  );
-
-  const resetOwnerForm = () => {
-    setName("");
-    setUsername("");
-    setEmail("");
-    setPin("");
-    setMobile("");
-    setAdditionalNumber("");
-    setShopControl("INVENTORY_ONLY");
-    setStateName("");
-    setDistrict("");
-    setTaluk("");
-    setArea("");
-    setStreet("");
-    setPincode("");
-    setAvatar(null);
-    setIdProof(null);
-    setStep(1);
-  };
-
-  const resetShopForm = () => {
-    setShopName("");
-    setBusinessType("");
-    setShopState("");
-    setShopDistrict("");
-    setShopTaluk("");
-    setShopArea("");
-    setShopStreet("");
-    setShopPincode("");
-    setShopFrontImage(null);
-    setShopGstCertificate(null);
-    setShopUdyamCertificate(null);
-  };
-
-  const pickImage = (
-    setter: (value: PickedFile | null) => void,
-    e: ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setter({ file, preview: URL.createObjectURL(file) });
-  };
-
-  const pickDoc = (
-    setter: (value: PickedFile | null) => void,
-    e: ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setter({ file });
-  };
-
-  const generateUsername = () => {
-    const clean = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "")
-      .slice(0, 10);
-
-    if (!clean) return;
-    setUsername(`${clean}${Math.floor(100 + Math.random() * 900)}`);
-  };
-
-  const validateOwnerStep1 = () => {
-    const n = name.trim();
-    const u = username.trim().toLowerCase();
-    const e = email.trim().toLowerCase();
-    const p = pin.trim();
-    const m = mobile.trim();
-    const a2 = additionalNumber.trim();
-
-    if (!n || !u || !e || !p) return "Enter name, username, email and PIN";
-    if (!isValidEmail(e)) return "Enter valid email";
-    if (!isValidPin(p)) return "PIN must be 4 to 8 digits";
-    if (!m) return "Enter primary mobile";
-    if (!isValidPhone(m)) return "Enter valid 10-digit primary mobile";
-    if (a2 && !isValidPhone(a2)) return "Enter valid 10-digit secondary mobile";
-    if (a2 && a2 === m) return "Primary and secondary mobile cannot be same";
-    return "";
-  };
-
-  const goToStep2 = () => {
-    const msg = validateOwnerStep1();
-    setError(msg);
-    setSuccess("");
-    if (!msg) setStep(2);
-  };
-
-  const goToStep3 = () => {
-    setError("");
-    setSuccess("");
-    setStep(3);
-  };
-
-  const uploadOwnerAvatarById = async (ownerId: string) => {
-    if (!avatar?.file) return null;
-
-    const endpoint = SummaryApi?.shopowner_admin_avatar_upload;
-    if (!endpoint?.url) return null;
-
-    const form = new FormData();
-    form.append("avatar", avatar.file);
-
-    const res = await fetch(buildApiUrl(endpoint.url(ownerId)), {
-      method: endpoint.method || "PUT",
-      headers: authHeaders(),
-      body: form,
-    });
-
-    const rr = await readResponse(res);
-    if (!res.ok || !rr.json?.success) return null;
-    return getOwnerFromJson(rr.json);
-  };
-
-  const uploadOwnerDocsById = async (ownerId: string) => {
-    if (!idProof?.file) return true;
-
-    const endpoint = SummaryApi?.shopowner_admin_docs_upload;
-    if (!endpoint?.url) return false;
-
-    const form = new FormData();
-    form.append("idProof", idProof.file);
-
-    const res = await fetch(buildApiUrl(endpoint.url(ownerId)), {
-      method: endpoint.method || "PUT",
-      headers: authHeaders(),
-      body: form,
-    });
-
-    const rr = await readResponse(res);
-    return !!(res.ok && rr.json?.success);
-  };
-
-  const uploadShopFrontById = async (shopId: string) => {
-    if (!shopFrontImage?.file) return true;
-
-    const endpoint = SummaryApi?.shop_front_upload_admin;
-    if (!endpoint?.url) return false;
-
-    const form = new FormData();
-    form.append("front", shopFrontImage.file);
-
-    const res = await fetch(buildApiUrl(endpoint.url(shopId)), {
-      method: endpoint.method || "POST",
-      headers: authHeaders(),
-      body: form,
-    });
-
-    const rr = await readResponse(res);
-    return !!(res.ok && rr.json?.success);
-  };
-
-  const uploadShopDocsById = async (shopId: string) => {
-    if (!shopGstCertificate?.file && !shopUdyamCertificate?.file) return true;
-
-    const endpoint = SummaryApi?.shop_docs_upload_admin;
-    if (!endpoint?.url) return false;
-
-    const form = new FormData();
-    if (shopGstCertificate?.file) form.append("gstCertificate", shopGstCertificate.file);
-    if (shopUdyamCertificate?.file) form.append("udyamCertificate", shopUdyamCertificate.file);
-
-    const res = await fetch(buildApiUrl(endpoint.url(shopId)), {
-      method: endpoint.method || "PUT",
-      headers: authHeaders(),
-      body: form,
-    });
-
-    const rr = await readResponse(res);
-    return !!(res.ok && rr.json?.success);
-  };
-
-  const submitOwner = async () => {
-    setError("");
-    setSuccess("");
-
-    const validationMessage = validateOwnerStep1();
-    if (validationMessage) {
-      setError(validationMessage);
-      setStep(1);
-      return;
-    }
-
-    const endpoint = SummaryApi?.shopowner_create;
-    if (!endpoint?.url) {
-      setError("ShopOwner create API missing in SummaryApi");
-      return;
-    }
-
-    try {
-      setSavingOwner(true);
-
-      const res = await fetch(buildApiUrl(endpoint.url), {
-        method: endpoint.method || "POST",
-        headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          name: name.trim(),
-          username: username.trim().toLowerCase(),
-          email: email.trim().toLowerCase(),
-          pin: pin.trim(),
-          mobile: mobile.trim(),
-          additionalNumber: additionalNumber.trim() || undefined,
-          shopControl,
-          state: stateName.trim() || undefined,
-          district: district.trim() || undefined,
-          taluk: taluk.trim() || undefined,
-          area: area.trim() || undefined,
-          street: street.trim() || undefined,
-          pincode: pincode.trim() || undefined,
-        }),
-      });
-
-      const rr = await readResponse(res);
-      const json = rr.json;
-
-      if (!res.ok || !json?.success) {
-        setError(
-          getApiErrorMessage(
-            json,
-            res.status === 409 ? "Duplicate data found" : `Create ShopOwner failed (HTTP ${res.status})`
-          )
-        );
-        return;
-      }
-
-      const created = getOwnerFromJson(json);
-      if (!created?._id) {
-        setError("Owner created but missing _id");
-        return;
-      }
-
-      const avatarUpdatedOwner = await uploadOwnerAvatarById(created._id);
-      await uploadOwnerDocsById(created._id);
-
-      const finalOwner = avatarUpdatedOwner || created;
-      setCreatedOwner(finalOwner);
-      setSuccess("Shop owner created successfully. Now add shop details below.");
-      resetOwnerForm();
-      setStep(1);
-
-      setTimeout(() => {
-        shopSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    } catch (error: any) {
-      setError(error?.message || "Network error");
-    } finally {
-      setSavingOwner(false);
-    }
-  };
-
-  const submitShop = async () => {
-    if (!createdOwner?._id) {
-      setError("Create ShopOwner first");
-      return;
-    }
-
-    if (!shopName.trim()) {
-      setError("Enter shop name");
-      return;
-    }
-
-    const endpoint = SummaryApi?.master_create_shop;
-    if (!endpoint?.url) {
-      setError("Shop create API missing in SummaryApi");
-      return;
-    }
-
-    try {
-      setSavingShop(true);
-      setError("");
-      setSuccess("");
-
-      const form = new FormData();
-      form.append("name", shopName.trim());
-      form.append("shopName", shopName.trim());
-      form.append("ownerId", createdOwner._id);
-      form.append("shopOwnerAccountId", createdOwner._id);
-      if (businessType) form.append("businessType", businessType);
-      if (shopState.trim()) form.append("state", shopState.trim());
-      if (shopDistrict.trim()) form.append("district", shopDistrict.trim());
-      if (shopTaluk.trim()) form.append("taluk", shopTaluk.trim());
-      if (shopArea.trim()) form.append("area", shopArea.trim());
-      if (shopStreet.trim()) form.append("street", shopStreet.trim());
-      if (shopPincode.trim()) form.append("pincode", shopPincode.trim());
-      if (shopFrontImage?.file) form.append("frontImage", shopFrontImage.file);
-
-      const res = await fetch(buildApiUrl(endpoint.url), {
-        method: endpoint.method || "POST",
-        headers: authHeaders(),
-        body: form,
-      });
-
-      const rr = await readResponse(res);
-      const json = rr.json;
-
-      if (!res.ok || !json?.success) {
-        setError(getApiErrorMessage(json, `Create Shop failed (HTTP ${res.status})`));
-        return;
-      }
-
-      const createdShop = getShopFromJson(json);
-      if (!createdShop?._id) {
-        setError("Shop created but missing _id");
-        return;
-      }
-
-      if (!shopFrontImage?.file && (shopGstCertificate?.file || shopUdyamCertificate?.file)) {
-        await uploadShopDocsById(createdShop._id);
-      } else if (shopFrontImage?.file) {
-        await uploadShopFrontById(createdShop._id);
-        await uploadShopDocsById(createdShop._id);
-      }
-
-      setShops((prev) => [createdShop, ...prev]);
-      setSuccess("Shop created successfully");
-      resetShopForm();
-    } catch (error: any) {
-      setError(error?.message || "Network error");
-    } finally {
-      setSavingShop(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Create ShopOwner & Shop</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Step 1 basic information, step 2 address details, step 3 uploads, then create shop for that owner.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StepBadge index={1} title="Basic Information" active={step === 1} />
-              <StepBadge index={2} title="Address Details" active={step === 2} />
-              <StepBadge index={3} title="Profile Uploads" active={step === 3} />
-            </div>
-          </div>
-        </div>
-
-        {(error || success) && (
-          <div
-            className={cls(
-              "rounded-2xl border px-4 py-3 text-sm font-medium",
-              error
-                ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700"
-            )}
-          >
-            {error || success}
-          </div>
-        )}
-
-        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          {step === 1 && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Basic Information</h2>
-                <p className="mt-1 text-sm text-slate-500">Enter role, identity, login details, and contact information.</p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Field label="Role">
-                  <TextInput value="SHOP_OWNER" disabled />
-                </Field>
-
-                <Field label="Full Name">
-                  <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter full name" />
-                </Field>
-
-                <div className="md:col-span-2 xl:col-span-2">
-                  <Field label="Username">
-                    <div className="flex gap-2">
-                      <TextInput
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                        placeholder="Enter username"
-                        className="flex-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={generateUsername}
-                        className="h-11 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white"
-                      >
-                        Auto Generate
-                      </button>
-                    </div>
-                  </Field>
-                </div>
-
-                <Field label="Email Address">
-                  <TextInput
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                    placeholder="Enter email"
-                  />
-                </Field>
-
-                <Field label="PIN">
-                  <TextInput
-                    type="password"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter PIN"
-                    maxLength={8}
-                  />
-                </Field>
-
-                <Field label="Primary Mobile">
-                  <TextInput
-                    value={mobile}
-                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter primary mobile"
-                    maxLength={10}
-                  />
-                </Field>
-
-                <Field label="Secondary Mobile">
-                  <TextInput
-                    value={additionalNumber}
-                    onChange={(e) => setAdditionalNumber(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter secondary mobile"
-                    maxLength={10}
-                  />
-                </Field>
-
-                <Field label="Shop Control">
-                  <Select value={shopControl} onChange={(e) => setShopControl(e.target.value as ShopControl)}>
-                    {SHOP_CONTROL_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={goToStep2}
-                  className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white"
-                >
-                  Next: Address Details
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Address Details</h2>
-                <p className="mt-1 text-sm text-slate-500">Enter mapped location and full address.</p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Field label="State">
-                  <TextInput value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="Enter state" />
-                </Field>
-                <Field label="District">
-                  <TextInput value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Enter district" />
-                </Field>
-                <Field label="Taluk">
-                  <TextInput value={taluk} onChange={(e) => setTaluk(e.target.value)} placeholder="Enter taluk" />
-                </Field>
-                <Field label="Area">
-                  <TextInput value={area} onChange={(e) => setArea(e.target.value)} placeholder="Enter area" />
-                </Field>
-                <Field label="Street / Door No">
-                  <TextInput value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Enter street / door no" />
-                </Field>
-                <Field label="Pincode">
-                  <TextInput value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))} placeholder="Enter pincode" maxLength={6} />
-                </Field>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={goToStep3}
-                  className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white"
-                >
-                  Next: Profile Uploads
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Profile Uploads</h2>
-                <p className="mt-1 text-sm text-slate-500">Upload avatar and ID proof, then review before final submit.</p>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-                <div className="space-y-4">
-                  <UploadCard
-                    title="Avatar"
-                    subtitle="Upload profile image"
-                    file={avatar}
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    image
-                    onPick={(e) => pickImage(setAvatar, e)}
-                    onClear={() => setAvatar(null)}
-                  />
-
-                  <UploadCard
-                    title="ID Proof"
-                    subtitle="Upload Aadhaar, PAN, or valid ID proof image/PDF"
-                    file={idProof}
-                    accept={DOC_ACCEPT}
-                    onPick={(e) => pickDoc(setIdProof, e)}
-                    onClear={() => setIdProof(null)}
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-base font-bold text-slate-900">Review Summary</h3>
-                  <p className="mt-1 text-sm text-slate-500">Confirm all details before creating the shop owner account.</p>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <SummaryItem label="Role" value="SHOP_OWNER" />
-                    <SummaryItem label="Full Name" value={name} />
-                    <SummaryItem label="Username" value={username} />
-                    <SummaryItem label="Email" value={email} />
-                    <SummaryItem label="Primary Mobile" value={mobile} />
-                    <SummaryItem label="Secondary Mobile" value={additionalNumber || "-"} />
-                    <SummaryItem label="Shop Control" value={shopControl} />
-                    <SummaryItem label="Address" value={formatAddress(ownerAddress)} />
-                    <SummaryItem label="Avatar" value={avatar?.file.name || "Not uploaded"} />
-                    <SummaryItem label="ID Proof" value={idProof?.file.name || "Not uploaded"} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
-                >
-                  Back
-                </button>
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={resetOwnerForm}
-                    className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
-                  >
-                    Clear Form
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submitOwner}
-                    disabled={busy}
-                    className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {savingOwner ? "Creating..." : "Create ShopOwner"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div ref={shopSectionRef} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Create Shop</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {createdOwner?._id
-                  ? `Owner: ${createdOwner.name} (${createdOwner.username})`
-                  : "Create shop owner first, then add shop."}
-              </p>
-            </div>
-
-            {createdOwner?._id && (
-              <button
-                type="button"
-                onClick={() => router.push("/master/shopowner/list")}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Go to Owner List
-              </button>
-            )}
-          </div>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Field label="Shop Name">
-              <TextInput value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Enter shop name" />
-            </Field>
-
-            <Field label="Business Type">
-              <Select value={businessType} onChange={(e) => setBusinessType(e.target.value as BusinessType)}>
-                {BUSINESS_OPTIONS.map((item) => (
-                  <option key={item || "empty"} value={item}>
-                    {item || "Select business type"}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Field label="State">
-              <TextInput value={shopState} onChange={(e) => setShopState(e.target.value)} placeholder="Enter state" />
-            </Field>
-            <Field label="District">
-              <TextInput value={shopDistrict} onChange={(e) => setShopDistrict(e.target.value)} placeholder="Enter district" />
-            </Field>
-            <Field label="Taluk">
-              <TextInput value={shopTaluk} onChange={(e) => setShopTaluk(e.target.value)} placeholder="Enter taluk" />
-            </Field>
-            <Field label="Area">
-              <TextInput value={shopArea} onChange={(e) => setShopArea(e.target.value)} placeholder="Enter area" />
-            </Field>
-            <Field label="Street / Door No">
-              <TextInput value={shopStreet} onChange={(e) => setShopStreet(e.target.value)} placeholder="Enter street / door no" />
-            </Field>
-            <Field label="Pincode">
-              <TextInput value={shopPincode} onChange={(e) => setShopPincode(e.target.value.replace(/\D/g, ""))} placeholder="Enter pincode" maxLength={6} />
-            </Field>
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            <UploadCard
-              title="Front Image"
-              subtitle="Select shop front image"
-              file={shopFrontImage}
-              image
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onPick={(e) => pickImage(setShopFrontImage, e)}
-              onClear={() => setShopFrontImage(null)}
-            />
-
-            <UploadCard
-              title="GST Certificate"
-              subtitle="Upload GST certificate image or PDF"
-              file={shopGstCertificate}
-              accept={DOC_ACCEPT}
-              onPick={(e) => pickDoc(setShopGstCertificate, e)}
-              onClear={() => setShopGstCertificate(null)}
-            />
-
-            <UploadCard
-              title="Udyam Certificate"
-              subtitle="Upload Udyam certificate image or PDF"
-              file={shopUdyamCertificate}
-              accept={DOC_ACCEPT}
-              onPick={(e) => pickDoc(setShopUdyamCertificate, e)}
-              onClear={() => setShopUdyamCertificate(null)}
-            />
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={resetShopForm}
-              className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
-            >
-              Clear Shop Form
-            </button>
-            <button
-              type="button"
-              onClick={submitShop}
-              disabled={!createdOwner?._id || busy}
-              className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {savingShop ? "Creating Shop..." : "Create Shop"}
-            </button>
-          </div>
-
-          {!!shops.length && (
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <h3 className="text-lg font-bold text-slate-900">Added Shops</h3>
-              <div className="mt-4 grid gap-3">
-                {shops.map((shop, index) => (
-                  <div key={shop._id || `${shop.name}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-sm font-bold text-slate-900">
-                      {index + 1}. {shop.name || shop.shopName || "Shop"}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Business Type: {Array.isArray(shop.businessType) ? shop.businessType.join(", ") : shop.businessType || "-"}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Address: {formatAddress((shop.shopAddress || shop.address) as Partial<Address>)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <ShopOwnerForm mode="create" />;
 }

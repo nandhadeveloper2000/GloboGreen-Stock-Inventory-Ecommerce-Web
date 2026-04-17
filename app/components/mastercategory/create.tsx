@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
+import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 
 type ImagePreview = {
   file: File | null;
@@ -243,7 +244,9 @@ export default function CreateMasterCategoryPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -288,27 +291,22 @@ export default function CreateMasterCategoryPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-5">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Master Category Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter master category name"
-                  className="premium-input"
-                />
-              </div>
+              <TopLabelInput
+                label="Master Category Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter master category name"
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
             </div>
           </section>
 

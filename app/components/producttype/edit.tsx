@@ -28,6 +28,11 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import {
+  TopLabelInput,
+  TopLabelNativeSelect,
+  TopLabelPanel,
+} from "@/components/ui/top-label-fields";
 
 type SubCategoryOption = {
   _id: string;
@@ -521,57 +526,47 @@ export default function EditProductTypePage() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="premium-label">
-                  Sub Category <span className="text-rose-500">*</span>
-                </label>
+                <TopLabelNativeSelect
+                  label="Sub Category"
+                  value={subCategoryId}
+                  onChange={(e) => setSubCategoryId(e.target.value)}
+                  disabled={loadingSubCategories || submitting}
+                  icon={Shapes}
+                  required
+                >
+                  <option value="">
+                    {loadingSubCategories
+                      ? "Loading sub categories..."
+                      : "Select sub category"}
+                  </option>
 
-                <div className="relative">
-                  <Shapes className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <select
-                    value={subCategoryId}
-                    onChange={(e) => setSubCategoryId(e.target.value)}
-                    disabled={loadingSubCategories || submitting}
-                    className="premium-select pl-11 disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <option value="">
-                      {loadingSubCategories
-                        ? "Loading sub categories..."
-                        : "Select sub category"}
+                  {subCategories.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.name}
                     </option>
-
-                    {subCategories.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  ))}
+                </TopLabelNativeSelect>
               </div>
 
-              <div>
-                <label className="premium-label">
-                  Product Type Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter product type name"
-                  disabled={submitting}
-                  className="premium-input disabled:cursor-not-allowed disabled:bg-slate-50"
-                />
-              </div>
+              <TopLabelInput
+                label="Product Type Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter product type name"
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="premium-label">Name Key Preview</label>
-                <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-300 bg-slate-50"
+                contentClassName="text-sm text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
 
               <div className="md:col-span-2">
-                <label className="premium-label">Status</label>
-                <div>
+                <TopLabelPanel label="Status">
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                       isActive
@@ -581,7 +576,7 @@ export default function EditProductTypePage() {
                   >
                     {isActive ? "Active" : "Inactive"}
                   </span>
-                </div>
+                </TopLabelPanel>
               </div>
             </div>
           </section>

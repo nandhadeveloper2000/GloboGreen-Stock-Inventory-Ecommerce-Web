@@ -489,7 +489,7 @@ export default function MasterDashboardPage() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <Card className="overflow-hidden rounded-[24px] border border-slate-200 bg-[#f8fafc] shadow-none">
+            <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-[#f8fafc] shadow-none">
               <CardContent className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-[1fr_220px]">
                 <div className="flex flex-col justify-between">
                   <div>
@@ -552,7 +552,7 @@ export default function MasterDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#202646_0%,#11182f_100%)] text-white shadow-none">
+            <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,#202646_0%,#11182f_100%)] text-white shadow-none">
               <CardContent className="h-full p-5">
                 <div className="rounded-[20px] bg-white/5 p-5 backdrop-blur-sm">
                   <Badge className="mb-4 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/10">

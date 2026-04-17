@@ -325,13 +325,7 @@ function SearchableSingleSelect({
   }, [open]);
 
   return (
-    <div className="space-y-2" ref={wrapperRef}>
-      {label ? (
-        <label className="premium-label">
-          {label} {required ? <span className="text-rose-500">*</span> : null}
-        </label>
-      ) : null}
-
+    <div className="space-y-1.5" ref={wrapperRef}>
       <div className={`relative ${open ? "z-9999" : "z-10"}`}>
         <button
           type="button"
@@ -343,13 +337,19 @@ function SearchableSingleSelect({
             setOpen((prev) => !prev);
             if (open) setSearch("");
           }}
-          className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-100"
+          className="flex h-14 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 pb-2 pt-6 text-left text-sm text-slate-900 shadow-sm outline-none transition focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
         >
           <span className={selected ? "text-slate-900" : "text-slate-400"}>
             {selected ? selected.name : placeholder}
           </span>
           <span className="text-slate-400">{open ? "▲" : "▼"}</span>
         </button>
+
+        {label ? (
+          <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
+            {label} {required ? <span className="text-rose-500">*</span> : null}
+          </label>
+        ) : null}
 
         {open ? (
           <div className="absolute left-0 right-0 top-full z-9999 mt-2 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -818,7 +818,9 @@ export default function ProductCompatibilityEditPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -906,13 +908,16 @@ export default function ProductCompatibilityEditPage() {
               <div className="mb-5">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={brandSearch}
-                    onChange={(e) => setBrandSearch(e.target.value)}
-                    placeholder="Search compatible brand name..."
-                    className="premium-input pl-11 pr-11"
-                  />
-                  {brandSearch ? (
+                <input
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  placeholder="Search compatible brand name"
+                  className="h-14 w-full rounded-2xl border border-slate-200 bg-white pb-2 pl-11 pr-11 pt-6 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-600 focus:ring-4 focus:ring-violet-100"
+                />
+                <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
+                  Compatibility Search
+                </label>
+                {brandSearch ? (
                     <button
                       type="button"
                       onClick={() => setBrandSearch("")}

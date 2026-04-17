@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 
 type BrandItem = {
   _id?: string;
@@ -500,29 +501,25 @@ export default function BrandEditPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <div>
-                <label className="premium-label">
-                  Brand Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Tag className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter brand name"
-                    disabled={submitting}
-                    className="premium-input pl-11 disabled:cursor-not-allowed disabled:bg-slate-50"
-                  />
-                </div>
-              </div>
+              <TopLabelInput
+                label="Brand Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter brand name"
+                icon={Tag}
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="premium-label">Name Key Preview</label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>
                   {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+                </span>
+              </TopLabelPanel>
             </div>
           </section>
 

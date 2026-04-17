@@ -33,12 +33,25 @@ const apiClient = axios.create({
   withCredentials: true,
   headers: {
     Accept: "application/json",
-    "Content-Type": "application/json",
   },
 });
 
 let isRefreshing = false;
 let failedQueue: FailedQueueItem[] = [];
+
+function clearContentTypeHeader(
+  headers: InternalAxiosRequestConfig["headers"] | undefined
+) {
+  if (!headers) return;
+
+  if (headers instanceof AxiosHeaders) {
+    headers.delete("Content-Type");
+    return;
+  }
+
+  delete (headers as Record<string, unknown>)["Content-Type"];
+  delete (headers as Record<string, unknown>)["content-type"];
+}
 
 function processQueue(error: unknown, token: string | null = null) {
   failedQueue.forEach((item) => {
@@ -101,9 +114,15 @@ async function callRefreshToken(): Promise<RefreshResponse> {
 apiClient.interceptors.request.use(
   (config) => {
     const token = tokenService.getAccessToken();
+    const isFormDataRequest =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
 
     if (!config.headers) {
       config.headers = new AxiosHeaders();
+    }
+
+    if (isFormDataRequest) {
+      clearContentTypeHeader(config.headers);
     }
 
     if (token) {

@@ -21,7 +21,6 @@ import {
   Sparkles,
   Shapes,
   Search,
-  ChevronDown,
   Check,
   UploadCloud,
 } from "lucide-react";
@@ -30,6 +29,11 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import {
+  TopLabelInput,
+  TopLabelPanel,
+  TopLabelSelectButton,
+} from "@/components/ui/top-label-fields";
 
 type MasterCategoryOption = {
   _id: string;
@@ -382,7 +386,9 @@ export default function CreateCategoryPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
@@ -444,36 +450,24 @@ export default function CreateCategoryPage() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Master Category <span className="text-rose-500">*</span>
-                </label>
-
                 <div ref={dropdownRef} className="relative">
-                  <button
-                    type="button"
+                  <TopLabelSelectButton
+                    label="Master Category"
+                    text={
+                      loadingMasterCategories
+                        ? "Loading..."
+                        : selectedMasterCategory?.name || "Select master category"
+                    }
+                    muted={!loadingMasterCategories && !selectedMasterCategory?.name}
+                    icon={Shapes}
+                    open={isMasterDropdownOpen}
+                    disabled={loadingMasterCategories || submitting}
+                    required
                     onClick={() => {
                       if (loadingMasterCategories || submitting) return;
                       setIsMasterDropdownOpen((prev) => !prev);
                     }}
-                    disabled={loadingMasterCategories || submitting}
-                    className="premium-input flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span className="truncate">
-                        {loadingMasterCategories
-                          ? "Loading..."
-                          : selectedMasterCategory?.name ||
-                            "Select Master Category"}
-                      </span>
-                    </div>
-
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
-                        isMasterDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                  />
 
                   {isMasterDropdownOpen && !loadingMasterCategories ? (
                     <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -529,28 +523,22 @@ export default function CreateCategoryPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Category Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter category name"
-                  disabled={submitting}
-                  className="premium-input disabled:cursor-not-allowed disabled:bg-slate-50"
-                />
-              </div>
+              <TopLabelInput
+                label="Category Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter category name"
+                disabled={submitting}
+                required
+              />
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Name Key Preview
-                </label>
-                <div className="flex min-h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
             </div>
           </section>
 

@@ -17,11 +17,7 @@ export function getLoginConfig(role: LoginRole): LoginConfig {
       return SummaryApi.master_login;
 
     case "MANAGER":
-      return SummaryApi.subadmin_login;
-
     case "SUPERVISOR":
-      return SummaryApi.supervisor_login;
-
     case "STAFF":
       return SummaryApi.staff_login;
 

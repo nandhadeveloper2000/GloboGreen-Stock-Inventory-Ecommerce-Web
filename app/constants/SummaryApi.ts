@@ -1,5 +1,5 @@
 // export const baseURL = "https://globogreen-server.onrender.com"; 
-export const baseURL = "http://localhost:4000"; 
+export const baseURL = "http://localhost:4000";
 const API_BASE = "/api";
 
 export const withQuery = (
@@ -53,69 +53,69 @@ const SummaryApi = {
     method: "DELETE",
     url: (id: string) => `${API_BASE}/master/${id}`,
   },
-/* ===================== STAFF AUTH ===================== */
-staff_login: { method: "POST", url: `${API_BASE}/staff/login` },
-staff_forgot_pin: { method: "POST", url: `${API_BASE}/staff/forgot-pin` },
-staff_verify_pin_otp: {
-  method: "POST",
-  url: `${API_BASE}/staff/verify-pin-otp`,
-},
-staff_reset_pin: { method: "POST", url: `${API_BASE}/staff/reset-pin` },
-staff_change_pin: {
-  method: "PUT",
-  url: `${API_BASE}/staff/me/change-pin`,
-},
+  /* ===================== STAFF AUTH ===================== */
+  staff_login: { method: "POST", url: `${API_BASE}/staff/login` },
+  staff_forgot_pin: { method: "POST", url: `${API_BASE}/staff/forgot-pin` },
+  staff_verify_pin_otp: {
+    method: "POST",
+    url: `${API_BASE}/staff/verify-pin-otp`,
+  },
+  staff_reset_pin: { method: "POST", url: `${API_BASE}/staff/reset-pin` },
+  staff_change_pin: {
+    method: "PUT",
+    url: `${API_BASE}/staff/me/change-pin`,
+  },
 
-/* ===================== STAFF SELF ===================== */
-staff_me: { method: "GET", url: `${API_BASE}/staff/me` },
-staff_update_me: { method: "PUT", url: `${API_BASE}/staff/me` },
+  /* ===================== STAFF SELF ===================== */
+  staff_me: { method: "GET", url: `${API_BASE}/staff/me` },
+  staff_update_me: { method: "PUT", url: `${API_BASE}/staff/me` },
 
-staff_avatar_upload_me: {
-  method: "POST",
-  url: `${API_BASE}/staff/me/avatar`,
-},
-staff_avatar_remove_me: {
-  method: "DELETE",
-  url: `${API_BASE}/staff/me/avatar`,
-},
+  staff_avatar_upload_me: {
+    method: "POST",
+    url: `${API_BASE}/staff/me/avatar`,
+  },
+  staff_avatar_remove_me: {
+    method: "DELETE",
+    url: `${API_BASE}/staff/me/avatar`,
+  },
 
-staff_idproof_upload_me: {
-  method: "POST",
-  url: `${API_BASE}/staff/me/idproof`,
-},
-staff_idproof_remove_me: {
-  method: "DELETE",
-  url: `${API_BASE}/staff/me/idproof`,
-},
+  staff_idproof_upload_me: {
+    method: "POST",
+    url: `${API_BASE}/staff/me/idproof`,
+  },
+  staff_idproof_remove_me: {
+    method: "DELETE",
+    url: `${API_BASE}/staff/me/idproof`,
+  },
 
-/* ===================== STAFF CRUD ===================== */
-staff_create: { method: "POST", url: `${API_BASE}/staff` },
-staff_list: { method: "GET", url: `${API_BASE}/staff` },
-staff_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/staff/${id}`,
-},
-staff_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/staff/${id}`,
-},
-staff_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/staff/${id}`,
-},
+  /* ===================== STAFF CRUD ===================== */
+  staff_create: { method: "POST", url: `${API_BASE}/staff` },
+  staff_list: { method: "GET", url: `${API_BASE}/staff` },
+  staff_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/staff/${id}`,
+  },
+  staff_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/staff/${id}`,
+  },
+  staff_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/staff/${id}`,
+  },
 
-staff_remove_avatar: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/staff/${id}/avatar`,
-},
-staff_remove_idproof: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/staff/${id}/idproof`,
-},
-staff_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/staff/${id}/activate`,
-},
+  staff_remove_avatar: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/staff/${id}/avatar`,
+  },
+  staff_remove_idproof: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/staff/${id}/idproof`,
+  },
+  staff_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/staff/${id}/activate`,
+  },
 
 
   /* ===================== SHOP OWNER AUTH ===================== */
@@ -166,7 +166,7 @@ staff_toggle_active: {
     url: (id: string) => `${API_BASE}/shopowners/${id}`,
   },
   shopowner_admin_avatar_upload: {
-    method: "POST",
+    method: "PUT",
     url: (id: string) => `${API_BASE}/shopowners/${id}/avatar`,
   },
   shopowner_admin_avatar_remove: {
@@ -174,7 +174,7 @@ staff_toggle_active: {
     url: (id: string) => `${API_BASE}/shopowners/${id}/avatar`,
   },
   shopowner_admin_docs_upload: {
-    method: "POST",
+    method: "PUT",
     url: (id: string) => `${API_BASE}/shopowners/${id}/docs`,
   },
   shopowner_admin_docs_remove: {
@@ -203,8 +203,8 @@ staff_toggle_active: {
   },
 
   shop_docs_upload_admin: {
-    method: "POST",
-    url: (id: string) => `${API_BASE}/shops/${id}/docs`,
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/shops/${id}/docs/admin`,
   },
   shop_docs_remove_admin: {
     method: "DELETE",
@@ -236,198 +236,198 @@ staff_toggle_active: {
   location_villages: { method: "GET", url: `${API_BASE}/locations/villages` },
 
   /* ===================== MASTER CATALOG ===================== */
-master_category_create: { method: "POST", url: `${API_BASE}/master-categories` },
-master_category_list: { method: "GET", url: `${API_BASE}/master-categories` },
-master_category_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/master-categories/${id}`,
-},
-master_category_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/master-categories/${id}`,
-},
-master_category_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/master-categories/${id}`,
-},
-master_category_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/master-categories/${id}/active`,
-},
-master_category_image_upload: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
-},
-master_category_image_remove: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
-},
+  master_category_create: { method: "POST", url: `${API_BASE}/master-categories` },
+  master_category_list: { method: "GET", url: `${API_BASE}/master-categories` },
+  master_category_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/master-categories/${id}`,
+  },
+  master_category_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/master-categories/${id}`,
+  },
+  master_category_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/master-categories/${id}`,
+  },
+  master_category_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/master-categories/${id}/active`,
+  },
+  master_category_image_upload: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
+  },
+  master_category_image_remove: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/master-categories/${id}/image`,
+  },
 
-/* ---------- CATEGORY ---------- */
-category_create: { method: "POST", url: `${API_BASE}/categories` },
+  /* ---------- CATEGORY ---------- */
+  category_create: { method: "POST", url: `${API_BASE}/categories` },
 
-category_list: { method: "GET", url: `${API_BASE}/categories` },
+  category_list: { method: "GET", url: `${API_BASE}/categories` },
 
-category_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/categories/${id}`,
-},
+  category_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/categories/${id}`,
+  },
 
-category_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/categories/${id}`,
-},
+  category_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/categories/${id}`,
+  },
 
-category_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/categories/${id}`,
-},
+  category_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/categories/${id}`,
+  },
 
-category_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/categories/${id}/active`,
-},
+  category_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/categories/${id}/active`,
+  },
 
-category_image_upload: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/categories/${id}/image`,
-},
+  category_image_upload: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/categories/${id}/image`,
+  },
 
-category_image_remove: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/categories/${id}/image`,
-},
+  category_image_remove: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/categories/${id}/image`,
+  },
 
-/* ---------- SUB CATEGORY ---------- */
-sub_category_create: { method: "POST", url: `${API_BASE}/sub-categories` },
-sub_category_list: { method: "GET", url: `${API_BASE}/sub-categories` },
-sub_category_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
-},
-sub_category_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
-},
-sub_category_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}`,
-},
-sub_category_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}/active`,
-},
-sub_category_image_upload: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
-},
-sub_category_image_remove: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
-},
+  /* ---------- SUB CATEGORY ---------- */
+  sub_category_create: { method: "POST", url: `${API_BASE}/sub-categories` },
+  sub_category_list: { method: "GET", url: `${API_BASE}/sub-categories` },
+  sub_category_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+  },
+  sub_category_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+  },
+  sub_category_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}`,
+  },
+  sub_category_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}/active`,
+  },
+  sub_category_image_upload: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
+  },
+  sub_category_image_remove: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/sub-categories/${id}/image`,
+  },
 
-/* ---------- PRODUCT TYPE ---------- */
-product_type_create: { method: "POST", url: `${API_BASE}/product-types` },
-product_type_list: { method: "GET", url: `${API_BASE}/product-types` },
-product_type_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/product-types/${id}`,
-},
-product_type_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/product-types/${id}`,
-},
-product_type_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/product-types/${id}`,
-},
-product_type_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/product-types/${id}/active`,
-},
-product_type_image_upload: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/product-types/${id}/image`,
-},
-product_type_image_remove: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/product-types/${id}/image`,
-},
+  /* ---------- PRODUCT TYPE ---------- */
+  product_type_create: { method: "POST", url: `${API_BASE}/product-types` },
+  product_type_list: { method: "GET", url: `${API_BASE}/product-types` },
+  product_type_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/product-types/${id}`,
+  },
+  product_type_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/product-types/${id}`,
+  },
+  product_type_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/product-types/${id}`,
+  },
+  product_type_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/product-types/${id}/active`,
+  },
+  product_type_image_upload: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/product-types/${id}/image`,
+  },
+  product_type_image_remove: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/product-types/${id}/image`,
+  },
 
-/* ---------- BRAND ---------- */
-brand_create: { method: "POST", url: `${API_BASE}/brands` },
-brand_list: { method: "GET", url: `${API_BASE}/brands` },
-brand_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/brands/${id}`,
-},
-brand_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/brands/${id}`,
-},
-brand_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/brands/${id}`,
-},
-brand_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/brands/${id}/active`,
-},
-brand_image_upload: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/brands/${id}/image`,
-},
-brand_image_remove: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/brands/${id}/image`,
-},
+  /* ---------- BRAND ---------- */
+  brand_create: { method: "POST", url: `${API_BASE}/brands` },
+  brand_list: { method: "GET", url: `${API_BASE}/brands` },
+  brand_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/brands/${id}`,
+  },
+  brand_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/brands/${id}`,
+  },
+  brand_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/brands/${id}`,
+  },
+  brand_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/brands/${id}/active`,
+  },
+  brand_image_upload: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/brands/${id}/image`,
+  },
+  brand_image_remove: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/brands/${id}/image`,
+  },
 
-model_create: { method: "POST", url: `${API_BASE}/models` },
-model_list: { method: "GET", url: `${API_BASE}/models` },
-model_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/models/${id}`,
-},
-model_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/models/${id}`,
-},
-model_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/models/${id}`,
-},
-model_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/models/${id}/active`,
-},
-
-
-/* ---------- COMPATIBLE ---------- */
-compatible_create: { method: "POST", url: `${API_BASE}/compatibles` },
-compatible_list: { method: "GET", url: `${API_BASE}/compatibles` },
-
-compatible_get: {
-  method: "GET",
-  url: (id: string) => `${API_BASE}/compatibles/${id}`,
-},
-
-compatible_update: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/compatibles/${id}`,
-},
-
-compatible_delete: {
-  method: "DELETE",
-  url: (id: string) => `${API_BASE}/compatibles/${id}`,
-},
-
-compatible_toggle_active: {
-  method: "PUT",
-  url: (id: string) => `${API_BASE}/compatibles/${id}/active`,
-},
+  model_create: { method: "POST", url: `${API_BASE}/models` },
+  model_list: { method: "GET", url: `${API_BASE}/models` },
+  model_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/models/${id}`,
+  },
+  model_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/models/${id}`,
+  },
+  model_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/models/${id}`,
+  },
+  model_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/models/${id}/active`,
+  },
 
 
- /* ---------------- CREATE ---------------- */
+  /* ---------- COMPATIBLE ---------- */
+  compatible_create: { method: "POST", url: `${API_BASE}/compatibles` },
+  compatible_list: { method: "GET", url: `${API_BASE}/compatibles` },
+
+  compatible_get: {
+    method: "GET",
+    url: (id: string) => `${API_BASE}/compatibles/${id}`,
+  },
+
+  compatible_update: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/compatibles/${id}`,
+  },
+
+  compatible_delete: {
+    method: "DELETE",
+    url: (id: string) => `${API_BASE}/compatibles/${id}`,
+  },
+
+  compatible_toggle_active: {
+    method: "PUT",
+    url: (id: string) => `${API_BASE}/compatibles/${id}/active`,
+  },
+
+
+  /* ---------------- CREATE ---------------- */
   product_compatibility_create: {
     method: "POST",
     url: `${API_BASE}/productcompatibility`,
@@ -464,7 +464,12 @@ compatible_toggle_active: {
   },
 
 
-   product_list: {
+  product_create: {
+    method: "POST",
+    url: `${API_BASE}/product`,
+  },
+
+  product_list: {
     method: "GET",
     url: `${API_BASE}/product`,
   },
@@ -474,17 +479,7 @@ compatible_toggle_active: {
     url: (id: string) => `${API_BASE}/product/${id}`,
   },
 
-  product_create: {
-    method: "POST",
-    url: `${API_BASE}/product`,
-  },
-
   product_update: {
-    method: "PUT",
-    url: (id: string) => `${API_BASE}/product/${id}`,
-  },
-
-  product_patch: {
     method: "PUT",
     url: (id: string) => `${API_BASE}/product/${id}`,
   },
@@ -493,30 +488,30 @@ compatible_toggle_active: {
     method: "DELETE",
     url: (id: string) => `${API_BASE}/product/${id}`,
   },
-// /* ---------- SERIES ---------- */
-// series_create: { method: "POST", url: `${API_BASE}/series` },
+  // /* ---------- SERIES ---------- */
+  // series_create: { method: "POST", url: `${API_BASE}/series` },
 
-// series_list: { method: "GET", url: `${API_BASE}/series` },
+  // series_list: { method: "GET", url: `${API_BASE}/series` },
 
-// series_get: {
-//   method: "GET",
-//   url: (id: string) => `${API_BASE}/series/${id}`,
-// },
+  // series_get: {
+  //   method: "GET",
+  //   url: (id: string) => `${API_BASE}/series/${id}`,
+  // },
 
-// series_update: {
-//   method: "PUT",
-//   url: (id: string) => `${API_BASE}/series/${id}`,
-// },
+  // series_update: {
+  //   method: "PUT",
+  //   url: (id: string) => `${API_BASE}/series/${id}`,
+  // },
 
-// series_delete: {
-//   method: "DELETE",
-//   url: (id: string) => `${API_BASE}/series/${id}`,
-// },
+  // series_delete: {
+  //   method: "DELETE",
+  //   url: (id: string) => `${API_BASE}/series/${id}`,
+  // },
 
-// series_toggle_active: {
-//   method: "PUT",
-//   url: (id: string) => `${API_BASE}/series/${id}/active`,
-// },
+  // series_toggle_active: {
+  //   method: "PUT",
+  //   url: (id: string) => `${API_BASE}/series/${id}/active`,
+  // },
 };
 
 export default SummaryApi;

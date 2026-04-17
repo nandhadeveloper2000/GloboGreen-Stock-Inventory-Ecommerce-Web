@@ -13,7 +13,6 @@ import {
 import { useRouter } from "next/navigation";
 import {
   Check,
-  ChevronDown,
   FolderTree,
   ImagePlus,
   Loader2,
@@ -27,6 +26,11 @@ import { toast } from "sonner";
 
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
+import {
+  TopLabelInput,
+  TopLabelPanel,
+  TopLabelSelectButton,
+} from "@/components/ui/top-label-fields";
 
 type ApiImage = {
   url?: string;
@@ -318,7 +322,9 @@ export default function CreateProductTypePage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -362,35 +368,24 @@ export default function CreateProductTypePage() {
 
             <div className="grid grid-cols-1 gap-5">
               <div>
-                <label className="premium-label">
-                  Sub Category <span className="text-rose-500">*</span>
-                </label>
-
                 <div ref={dropdownRef} className="relative">
-                  <button
-                    type="button"
+                  <TopLabelSelectButton
+                    label="Sub Category"
+                    text={
+                      loadingOptions
+                        ? "Loading sub categories..."
+                        : selectedSubCategory?.name || "Select sub category"
+                    }
+                    muted={!loadingOptions && !selectedSubCategory?.name}
+                    icon={FolderTree}
+                    open={isDropdownOpen}
+                    disabled={loadingOptions || submitting}
+                    required
                     onClick={() => {
                       if (loadingOptions || submitting) return;
                       setIsDropdownOpen((prev) => !prev);
                     }}
-                    disabled={loadingOptions || submitting}
-                    className="premium-select flex items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <FolderTree className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span className="truncate">
-                        {loadingOptions
-                          ? "Loading sub categories..."
-                          : selectedSubCategory?.name || "Select sub category"}
-                      </span>
-                    </div>
-
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
-                        isDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                  />
 
                   {isDropdownOpen && !loadingOptions ? (
                     <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
@@ -446,26 +441,22 @@ export default function CreateProductTypePage() {
               </div>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <div>
-                  <label className="premium-label">
-                    Product Type Name <span className="text-rose-500">*</span>
-                  </label>
+                <TopLabelInput
+                  label="Product Type Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter product type name"
+                  disabled={submitting}
+                  required
+                />
 
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter product type name"
-                    className="premium-input"
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="premium-label">Name Key Preview</label>
-                  <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                    {nameKeyPreview}
-                  </div>
-                </div>
+                <TopLabelPanel
+                  label="Name Key Preview"
+                  className="border-dashed border-slate-300 bg-slate-50"
+                  contentClassName="text-sm font-medium text-slate-500"
+                >
+                  <span>{nameKeyPreview}</span>
+                </TopLabelPanel>
               </div>
             </div>
           </section>

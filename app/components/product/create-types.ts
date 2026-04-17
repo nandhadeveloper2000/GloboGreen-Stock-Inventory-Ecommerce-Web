@@ -22,13 +22,24 @@ export type ModelItem = {
       };
 };
 
-export type ProductImageItem = {
+export type ProductMediaItem = {
   id: string;
-  file: File;
+  file?: File | null;
   previewUrl: string;
   name: string;
   size: number;
+  publicId?: string;
+  isExisting?: boolean;
 };
+
+export type ProductImageItem = ProductMediaItem;
+export type ProductVideoItem = ProductMediaItem;
+
+export type CategoryMappingMode =
+  | "variant"
+  | "variantCompatibility"
+  | "productMediaInfoCompatibility"
+  | "productMediaInfo";
 
 export type ProductPresetSection = {
   title: string;
@@ -74,11 +85,13 @@ export type VariantItem = {
   title: string;
   attributes: VariantAttribute[];
   images: ProductImageItem[];
+  videos: ProductVideoItem[];
   productInformation: ProductInformationSection[];
   isActive: boolean;
 };
 
 export type ProductPayload = {
+  configurationMode: CategoryMappingMode;
   itemName: string;
   itemModelNumber: string;
   itemKey: string;
@@ -89,6 +102,14 @@ export type ProductPayload = {
   productTypeId: string;
   brandId: string;
   modelId: string;
+  images: Array<{
+    url: string;
+    publicId?: string;
+  }>;
+  videos: Array<{
+    url: string;
+    publicId?: string;
+  }>;
   compatible: Array<{
     brandId: string;
     modelId: string[];
@@ -102,6 +123,10 @@ export type ProductPayload = {
       value: string;
     }>;
     images: Array<{
+      url: string;
+      publicId?: string;
+    }>;
+    videos: Array<{
       url: string;
       publicId?: string;
     }>;
@@ -178,5 +203,21 @@ export type ModelCheckboxSelectorProps = {
 export type VariantImageGroupPayload = {
   variantIndex: number;
   imageField: string;
+  fileNames: string[];
+};
+
+export type VariantVideoGroupPayload = {
+  variantIndex: number;
+  videoField: string;
+  fileNames: string[];
+};
+
+export type ProductImageGroupPayload = {
+  imageField: string;
+  fileNames: string[];
+};
+
+export type ProductVideoGroupPayload = {
+  videoField: string;
   fileNames: string[];
 };

@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   BadgePlus,
   Box,
-  ChevronDown,
   Loader2,
   RefreshCw,
   Save,
@@ -19,6 +18,11 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
+import {
+  TopLabelInput,
+  TopLabelNativeSelect,
+  TopLabelPanel,
+} from "@/components/ui/top-label-fields";
 
 type BrandItem = {
   _id: string;
@@ -357,67 +361,47 @@ export default function ModelEditPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <div>
-                <label className="premium-label">
-                  Model Name <span className="text-rose-500">*</span>
-                </label>
+              <TopLabelInput
+                label="Model Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter model name"
+                icon={Tag}
+                required
+              />
 
-                <div className="group flex h-12 items-center rounded-2xl border border-slate-200 bg-white px-4 transition focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-100">
-                  <Tag className="mr-3 h-4 w-4 text-slate-400 group-focus-within:text-violet-600" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter model name"
-                    className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="premium-label">Name Key Preview</label>
-
-                <div className="flex h-12 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500">
-                  {nameKeyPreview || "auto-generated-from-name"}
-                </div>
-              </div>
+              <TopLabelPanel
+                label="Name Key Preview"
+                className="border-dashed border-slate-200 bg-slate-50"
+                contentClassName="text-sm font-medium text-slate-500"
+              >
+                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
+              </TopLabelPanel>
 
               <div className="md:col-span-2">
-                <label className="premium-label">
-                  Brand <span className="text-rose-500">*</span>
-                </label>
-
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
-                    <Shapes className="h-4 w-4 text-slate-400" />
-                  </div>
-
-                  <select
-                    value={brandId}
-                    onChange={(e) => setBrandId(e.target.value)}
-                    disabled={brandsLoading || brands.length === 0 || submitting}
-                    className="premium-select pl-11 pr-11 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-                  >
-                    {brandsLoading ? (
-                      <option value="">Loading brands...</option>
-                    ) : brands.length === 0 ? (
-                      <option value="">No brands available</option>
-                    ) : (
-                      <>
-                        <option value="">Select brand</option>
-                        {brands.map((brand) => (
-                          <option key={brand._id} value={brand._id}>
-                            {brand.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-
-                  <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </div>
-                </div>
+                <TopLabelNativeSelect
+                  label="Brand"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  disabled={brandsLoading || brands.length === 0 || submitting}
+                  icon={Shapes}
+                  required
+                >
+                  {brandsLoading ? (
+                    <option value="">Loading brands...</option>
+                  ) : brands.length === 0 ? (
+                    <option value="">No brands available</option>
+                  ) : (
+                    <>
+                      <option value="">Select brand</option>
+                      {brands.map((brand) => (
+                        <option key={brand._id} value={brand._id}>
+                          {brand.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </TopLabelNativeSelect>
               </div>
             </div>
           </section>

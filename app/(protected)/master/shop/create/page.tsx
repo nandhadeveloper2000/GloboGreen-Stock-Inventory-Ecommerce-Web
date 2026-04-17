@@ -1,11 +1,5 @@
-import MasterPageWrapper from "@/components/common/MasterPageWrapper";
+import CreateShopPage from "@/components/shop/create";
 
 export default function ShopCreatePage() {
-  return (
-    <MasterPageWrapper title="Create Shop">
-      <div className="rounded-xl border p-4">
-        Shop form here
-      </div>
-    </MasterPageWrapper>
-  );
+  return <CreateShopPage />;
 }

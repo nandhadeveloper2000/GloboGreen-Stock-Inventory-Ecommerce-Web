@@ -2,6 +2,10 @@ import type {
   ModelItem,
   OptionItem,
   PresetValueOption,
+  ProductImageGroupPayload,
+  ProductImageItem,
+  ProductVideoGroupPayload,
+  ProductVideoItem,
   ProductInformationField,
   ProductInformationSection,
   ProductPayload,
@@ -10,6 +14,7 @@ import type {
   ResolvedProductTypePreset,
   VariantAttribute,
   VariantImageGroupPayload,
+  VariantVideoGroupPayload,
   VariantItem,
 } from "./create-types";
 
@@ -17,12 +22,22 @@ export const ROWS_PER_PAGE = 5;
 export const PRODUCT_IMAGE_ACCEPT =
   "image/png,image/jpeg,image/jpg,image/webp";
 export const PRODUCT_IMAGE_MAX_SIZE = 3 * 1024 * 1024;
+export const PRODUCT_VIDEO_ACCEPT =
+  "video/mp4,video/webm,video/quicktime,.mov";
+export const PRODUCT_MEDIA_ACCEPT = `${PRODUCT_IMAGE_ACCEPT},${PRODUCT_VIDEO_ACCEPT}`;
+export const PRODUCT_VIDEO_MAX_SIZE = 25 * 1024 * 1024;
 
 const PRODUCT_IMAGE_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/jpg",
   "image/webp",
+]);
+
+const PRODUCT_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
 ]);
 
 const ITEM_TYPE_NAME_OPTIONS = [
@@ -426,6 +441,23 @@ export function keyOf(value: string) {
     .replace(/\s/g, "-");
 }
 
+export function buildAutoModelNumber(itemName: string) {
+  const base = keyOf(itemName);
+
+  if (!base) {
+    return "";
+  }
+
+  let hash = 0;
+
+  for (let index = 0; index < base.length; index += 1) {
+    hash = base.charCodeAt(index) + ((hash << 5) - hash);
+  }
+
+  const suffix = String((Math.abs(hash) % 9000) + 1000);
+  return `${base}-${suffix}`;
+}
+
 function normalizeRole(value?: string | null) {
   return String(value ?? "").trim().toUpperCase();
 }
@@ -486,6 +518,7 @@ export function createVariantItem(attributeLabels: string[] = []): VariantItem {
       ? attributeLabels.map((label) => createVariantAttribute(label, ""))
       : [createVariantAttribute()],
     images: [],
+    videos: [],
     productInformation: [{ ...initialProductInfoSection }],
     isActive: true,
   };
@@ -537,6 +570,18 @@ export function validateProductImageFile(file: File) {
   return null;
 }
 
+export function validateProductVideoFile(file: File) {
+  if (!PRODUCT_VIDEO_TYPES.has(file.type)) {
+    return "Only MP4, MOV, and WEBM videos are allowed";
+  }
+
+  if (file.size > PRODUCT_VIDEO_MAX_SIZE) {
+    return "Each video must be 25MB or smaller";
+  }
+
+  return null;
+}
+
 export function formatFileSize(bytes: number) {
   if (bytes >= 1024 * 1024) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -551,13 +596,37 @@ export function formatFileSize(bytes: number) {
 
 export function buildProductFormData(
   payload: ProductPayload,
-  variantItems: VariantItem[]
+  variantItems: VariantItem[],
+  productImages: ProductImageItem[],
+  productVideos: ProductVideoItem[]
 ) {
   const formData = new FormData();
+
+  const newVariantItems = variantItems.map((item) => ({
+    ...item,
+    images: item.images.filter(
+      (image): image is ProductImageItem & { file: File } =>
+        image.file instanceof File
+    ),
+    videos: item.videos.filter(
+      (video): video is ProductVideoItem & { file: File } =>
+        video.file instanceof File
+    ),
+  }));
+
+  const newProductImages = productImages.filter(
+    (image): image is ProductImageItem & { file: File } =>
+      image.file instanceof File
+  );
+  const newProductVideos = productVideos.filter(
+    (video): video is ProductVideoItem & { file: File } =>
+      video.file instanceof File
+  );
 
   formData.append("itemName", payload.itemName);
   formData.append("itemModelNumber", payload.itemModelNumber);
   formData.append("itemKey", payload.itemKey);
+  formData.append("configurationMode", payload.configurationMode);
   formData.append("masterCategoryId", payload.masterCategoryId);
   formData.append("categoryId", payload.categoryId);
   formData.append("subcategoryId", payload.subcategoryId);
@@ -565,6 +634,8 @@ export function buildProductFormData(
   formData.append("brandId", payload.brandId);
   formData.append("modelId", payload.modelId);
   formData.append("searchKeys", JSON.stringify(payload.searchKeys));
+  formData.append("images", JSON.stringify(payload.images));
+  formData.append("videos", JSON.stringify(payload.videos));
   formData.append("compatible", JSON.stringify(payload.compatible));
   formData.append("variant", JSON.stringify(payload.variant));
   formData.append(
@@ -573,7 +644,7 @@ export function buildProductFormData(
   );
   formData.append("isActive", String(payload.isActive));
 
-  const variantImageGroups: VariantImageGroupPayload[] = variantItems
+  const variantImageGroups: VariantImageGroupPayload[] = newVariantItems
     .map((item, index) => ({
       variantIndex: index,
       imageField: `variantImages[${index}]`,
@@ -582,13 +653,87 @@ export function buildProductFormData(
     .filter((item) => item.fileNames.length > 0);
 
   if (variantImageGroups.length > 0) {
-    formData.append("variantImageGroups", JSON.stringify(variantImageGroups));
+    formData.append(
+      "variantImageGroups",
+      JSON.stringify(
+        variantImageGroups.map((item) => ({
+          variantIndex: item.variantIndex,
+          fieldName: item.imageField,
+          fileNames: item.fileNames,
+        }))
+      )
+    );
   }
 
-  variantItems.forEach((item, index) => {
+  newVariantItems.forEach((item, index) => {
     item.images.forEach((image) => {
       formData.append(`variantImages[${index}]`, image.file);
     });
+  });
+
+  const variantVideoGroups: VariantVideoGroupPayload[] = newVariantItems
+    .map((item, index) => ({
+      variantIndex: index,
+      videoField: `variantVideos[${index}]`,
+      fileNames: item.videos.map((video) => video.name),
+    }))
+    .filter((item) => item.fileNames.length > 0);
+
+  if (variantVideoGroups.length > 0) {
+    formData.append(
+      "variantVideoGroups",
+      JSON.stringify(
+        variantVideoGroups.map((item) => ({
+          variantIndex: item.variantIndex,
+          fieldName: item.videoField,
+          fileNames: item.fileNames,
+        }))
+      )
+    );
+  }
+
+  newVariantItems.forEach((item, index) => {
+    item.videos.forEach((video) => {
+      formData.append(`variantVideos[${index}]`, video.file);
+    });
+  });
+
+  const productImageGroup: ProductImageGroupPayload | null =
+    newProductImages.length > 0
+      ? {
+          imageField: "productImages",
+          fileNames: newProductImages.map((image) => image.name),
+        }
+      : null;
+
+  if (productImageGroup) {
+    formData.append("productImageGroup", JSON.stringify(productImageGroup));
+  }
+
+  newProductImages.forEach((image) => {
+    formData.append("productImages", image.file);
+  });
+
+  const productVideoGroup: ProductVideoGroupPayload | null =
+    newProductVideos.length > 0
+      ? {
+          videoField: "productVideos",
+          fileNames: newProductVideos.map((video) => video.name),
+        }
+      : null;
+
+  if (productVideoGroup) {
+    formData.append(
+      "productVideoGroup",
+      JSON.stringify({
+        fieldName: productVideoGroup.videoField,
+        fileNames: productVideoGroup.fileNames,
+      })
+    );
+  }
+
+  newProductVideos.forEach((video) => {
+    formData.append("productVideos", video.file);
   });
 
   return formData;
@@ -596,76 +741,22 @@ export function buildProductFormData(
 
 export function buildAutoSearchKeys({
   itemName,
-  itemModelNumber,
   productTypeName,
   brandName,
   modelName,
-  compatibleItems,
-  variantItems,
 }: {
   itemName: string;
-  itemModelNumber: string;
   productTypeName: string;
   brandName: string;
   modelName: string;
-  compatibleItems: Array<{
-    brandName: string;
-    models: string[];
-  }>;
-  variantItems: Array<{
-    title: string;
-    attributes: Array<{ label: string; value: string }>;
-  }>;
 }) {
-  const baseCandidates = [
-    itemName,
-    itemModelNumber,
-    productTypeName,
-    brandName,
-    modelName,
-    itemName && itemModelNumber ? `${itemName} ${itemModelNumber}` : "",
-    brandName && itemName ? `${brandName} ${itemName}` : "",
-    brandName && itemModelNumber ? `${brandName} ${itemModelNumber}` : "",
-    brandName && modelName ? `${brandName} ${modelName}` : "",
-    productTypeName && brandName ? `${productTypeName} ${brandName}` : "",
-    productTypeName && modelName ? `${productTypeName} ${modelName}` : "",
-  ];
-
-  const compatibilityCandidates = compatibleItems.flatMap((item) => {
-    const safeBrandName = item.brandName.trim();
-    const safeModels = item.models.map((model) => model.trim()).filter(Boolean);
-
-    return [
-      safeBrandName,
-      ...safeModels,
-      ...safeModels.map((model) =>
-        safeBrandName ? `${safeBrandName} ${model}` : model
-      ),
-    ];
-  });
-
-  const variantCandidates = variantItems.flatMap((item) => {
-    const title = item.title.trim();
-    const attrValues = item.attributes.flatMap((attribute) => [
-      attribute.label.trim(),
-      attribute.value.trim(),
-    ]);
-
-    const attrOnlyValues = item.attributes
-      .map((attribute) => attribute.value.trim())
-      .filter(Boolean);
-
-    return [
-      title,
-      ...attrValues,
-      ...attrOnlyValues,
-      attrOnlyValues.length ? `${itemName} ${attrOnlyValues.join(" ")}` : "",
-      attrOnlyValues.length ? `${brandName} ${attrOnlyValues.join(" ")}` : "",
-    ];
-  });
-
   return normalizeSearchKeys(
-    [...baseCandidates, ...compatibilityCandidates, ...variantCandidates]
+    [
+      itemName,
+      brandName,
+      modelName,
+      productTypeName,
+    ]
       .map((item) => item.trim())
       .filter(Boolean)
       .join(",")

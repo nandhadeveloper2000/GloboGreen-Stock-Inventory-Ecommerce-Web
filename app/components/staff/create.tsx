@@ -5,11 +5,15 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
+  ChevronsUpDown,
   ImagePlus,
   Loader2,
   MapPin,
+  Plus,
   Save,
+  Search,
   Sparkles,
   UploadCloud,
   User2,
@@ -93,6 +97,25 @@ function toTitleCase(value: string) {
       part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : ""
     )
     .join(" ");
+}
+
+function normalizeOptionText(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function appendOption(options: Option[], rawValue: string) {
+  const value = normalizeOptionText(rawValue);
+
+  if (!value) return options;
+
+  const exists = options.some(
+    (option) =>
+      normalizeOptionText(option.value).toLowerCase() === value.toLowerCase()
+  );
+
+  if (exists) return options;
+
+  return [...options, { label: value, value }];
 }
 
 function createUsernameFromName(name: string) {
@@ -341,6 +364,233 @@ function FloatingSelect({
         >
           <path d="M6 8l4 4 4-4" />
         </svg>
+      </div>
+
+      {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function SearchableSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+  error,
+  required,
+  placeholder,
+  searchPlaceholder,
+  helperText,
+  allowCustom = false,
+  onCreateOption,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Option[];
+  disabled?: boolean;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  helperText?: string;
+  allowCustom?: boolean;
+  onCreateOption?: (value: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const selectedLabel = useMemo(() => {
+    const matched = options.find((option) => option.value === value);
+    return matched?.label || value;
+  }, [options, value]);
+
+  const normalizedQuery = normalizeOptionText(query);
+  const loweredQuery = normalizedQuery.toLowerCase();
+
+  const filteredOptions = useMemo(() => {
+    if (!loweredQuery) return options;
+
+    return options.filter((option) => {
+      const haystack = `${option.label} ${option.value}`.toLowerCase();
+      return haystack.includes(loweredQuery);
+    });
+  }, [options, loweredQuery]);
+
+  const canCreate =
+    allowCustom &&
+    Boolean(normalizedQuery) &&
+    !options.some((option) => {
+      const optionLabel = normalizeOptionText(option.label).toLowerCase();
+      const optionValue = normalizeOptionText(option.value).toLowerCase();
+      return optionLabel === loweredQuery || optionValue === loweredQuery;
+    });
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  const handleSelect = (nextValue: string) => {
+    onChange(normalizeOptionText(nextValue));
+    setOpen(false);
+    setQuery("");
+  };
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+
+    onCreateOption?.(normalizedQuery);
+    handleSelect(normalizedQuery);
+  };
+
+  return (
+    <div ref={containerRef} className="space-y-1.5">
+      <div className="relative">
+        <button
+          id={id}
+          type="button"
+          disabled={disabled}
+          onClick={() => setOpen((prev) => !prev)}
+          className={classNames(
+            "peer flex h-12 w-full items-center justify-between rounded-2xl border bg-white px-4 pt-5 text-left text-sm text-slate-900 outline-none transition shadow-sm",
+            error
+              ? "border-rose-300 focus:border-rose-500"
+              : "border-slate-200 focus:border-violet-600 focus:ring-4 focus:ring-violet-100",
+            disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
+          )}
+        >
+          <span
+            className={classNames(
+              "truncate",
+              selectedLabel ? "text-slate-900" : "text-slate-400"
+            )}
+          >
+            {selectedLabel || placeholder || `Select ${label.toLowerCase()}`}
+          </span>
+
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400" />
+        </button>
+
+        <label
+          htmlFor={id}
+          className={classNames(
+            "pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 bg-white px-1 text-sm transition-all",
+            (value || open) ? "top-0 text-[11px]" : "",
+            error ? "text-rose-500" : "text-slate-500"
+          )}
+        >
+          {label} {required ? "*" : ""}
+        </label>
+
+        {open ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+            <div className="border-b border-slate-100 p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setOpen(false);
+                    }
+
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+
+                      if (canCreate) {
+                        handleCreate();
+                        return;
+                      }
+
+                      if (filteredOptions.length === 1) {
+                        handleSelect(filteredOptions[0].value);
+                      }
+                    }
+                  }}
+                  placeholder={
+                    searchPlaceholder ||
+                    (allowCustom
+                      ? "Search or type a new value"
+                      : "Search options")
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-violet-500 focus:bg-white"
+                />
+              </div>
+
+              {helperText ? (
+                <p className="mt-2 text-xs text-slate-500">{helperText}</p>
+              ) : null}
+            </div>
+
+            <div className="max-h-64 overflow-y-auto p-2">
+              {canCreate ? (
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-violet-700 transition hover:bg-violet-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Use &quot;{normalizedQuery}&quot;
+                </button>
+              ) : null}
+
+              {filteredOptions.length ? (
+                filteredOptions.map((option) => {
+                  const selected = option.value === value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleSelect(option.value)}
+                      className={classNames(
+                        "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition",
+                        selected
+                          ? "bg-violet-50 font-semibold text-violet-700"
+                          : "text-slate-700 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {selected ? <Check className="h-4 w-4 shrink-0" /> : null}
+                    </button>
+                  );
+                })
+              ) : canCreate ? null : (
+                <p className="px-3 py-3 text-sm text-slate-500">
+                  No matching options found.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {error ? <p className="px-1 text-xs text-rose-500">{error}</p> : null}
@@ -939,7 +1189,9 @@ export default function CreateStaffPage() {
 
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+
+
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -1098,22 +1350,25 @@ export default function CreateStaffPage() {
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
-              description="Select mapped location details and enter street address."
+              description="Search loaded address options or type your own custom values."
             />
 
-            {locationError ? (
-              <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                {locationError}
-              </div>
-            ) : null}
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Search the dropdown or type a value to add it as a custom address option.
+              {locationError ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  Location lookup note: {locationError}
+                </p>
+              ) : null}
+            </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FloatingSelect
+              <SearchableSelect
                 id="state"
                 label={loadingStates ? "State (Loading...)" : "State"}
                 value={form.state}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
+                  setLocationError("");
                   setForm((prev) => ({
                     ...prev,
                     state: value,
@@ -1128,20 +1383,28 @@ export default function CreateStaffPage() {
                     taluk: undefined,
                     area: undefined,
                   }));
+                  setStates((prev) => appendOption(prev, value));
                   resetDistrictTree();
                 }}
                 options={states}
                 disabled={loadingStates}
                 error={errors.state}
                 required
+                allowCustom
+                onCreateOption={(value) =>
+                  setStates((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a state"
+                searchPlaceholder="Search or type a state"
+                helperText="Choose from loaded states or add your own."
               />
 
-              <FloatingSelect
+              <SearchableSelect
                 id="district"
                 label={loadingDistricts ? "District (Loading...)" : "District"}
                 value={form.district}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
+                  setLocationError("");
                   setForm((prev) => ({
                     ...prev,
                     district: value,
@@ -1154,20 +1417,28 @@ export default function CreateStaffPage() {
                     taluk: undefined,
                     area: undefined,
                   }));
+                  setDistricts((prev) => appendOption(prev, value));
                   resetTalukTree();
                 }}
                 options={districts}
                 disabled={!form.state || loadingDistricts}
                 error={errors.district}
                 required
+                allowCustom
+                onCreateOption={(value) =>
+                  setDistricts((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a district"
+                searchPlaceholder="Search or type a district"
+                helperText="Type a district if it is not in the loaded list."
               />
 
-              <FloatingSelect
+              <SearchableSelect
                 id="taluk"
                 label={loadingTaluks ? "Taluk (Loading...)" : "Taluk"}
                 value={form.taluk}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
+                  setLocationError("");
                   setForm((prev) => ({
                     ...prev,
                     taluk: value,
@@ -1178,23 +1449,42 @@ export default function CreateStaffPage() {
                     taluk: undefined,
                     area: undefined,
                   }));
+                  setTaluks((prev) => appendOption(prev, value));
                   resetAreaTree();
                 }}
                 options={taluks}
                 disabled={!form.district || loadingTaluks}
                 error={errors.taluk}
                 required
+                allowCustom
+                onCreateOption={(value) =>
+                  setTaluks((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type a taluk"
+                searchPlaceholder="Search or type a taluk"
+                helperText="Add a custom taluk value when needed."
               />
 
-              <FloatingSelect
+              <SearchableSelect
                 id="area"
                 label={loadingAreas ? "Area (Loading...)" : "Area"}
                 value={form.area}
-                onChange={(e) => updateField("area", e.target.value)}
+                onChange={(value) => {
+                  setLocationError("");
+                  updateField("area", value);
+                  setAreas((prev) => appendOption(prev, value));
+                }}
                 options={areas}
                 disabled={!form.taluk || loadingAreas}
                 error={errors.area}
                 required
+                allowCustom
+                onCreateOption={(value) =>
+                  setAreas((prev) => appendOption(prev, value))
+                }
+                placeholder="Select or type an area"
+                searchPlaceholder="Search or type an area"
+                helperText="Type a custom area if it is not listed."
               />
 
               <FloatingInput
