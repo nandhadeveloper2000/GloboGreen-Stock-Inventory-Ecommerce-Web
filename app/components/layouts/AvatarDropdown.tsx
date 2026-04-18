@@ -3,7 +3,13 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  ChevronDown,
+  KeyRound,
+  LockKeyhole,
+  LogOut,
+  UserCircle2,
+} from "lucide-react";
 
 import { useAuth } from "@/context/auth/AuthProvider";
 import {
@@ -16,19 +22,46 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import type { UserRole } from "@/constants/navigation";
-import { getRoleLabel } from "@/utils/getLoginConfig";
-import { getDashboardRouteByRole, getLoginRoute } from "@/utils/redirect";
 
 type AvatarDropdownProps = {
   role: UserRole;
 };
 
+function getRolePaths(role: UserRole) {
+  switch (role) {
+    case "MASTER_ADMIN":
+      return {
+        appBasePath: "/master",
+        loginPath: "/master-login",
+      };
+    case "MANAGER":
+      return {
+        appBasePath: "/subadmin",
+        loginPath: "/subadmin-login",
+      };
+    case "SUPERVISOR":
+      return {
+        appBasePath: "/supervisor",
+        loginPath: "/supervisor-login",
+      };
+    case "STAFF":
+      return {
+        appBasePath: "/staff",
+        loginPath: "/staff-login",
+      };
+    default:
+      return {
+        appBasePath: "/",
+        loginPath: "/",
+      };
+  }
+}
+
 export default function AvatarDropdown({ role }: AvatarDropdownProps) {
   const router = useRouter();
   const { user, clearAuth } = useAuth();
 
-  const dashboardPath = useMemo(() => getDashboardRouteByRole(role), [role]);
-  const roleLabel = useMemo(() => getRoleLabel(role), [role]);
+  const paths = useMemo(() => getRolePaths(role), [role]);
 
   const displayName =
     typeof user?.name === "string" && user.name.trim()
@@ -49,7 +82,8 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
 
   const handleLogout = async () => {
     await clearAuth();
-    router.replace(getLoginRoute());
+    window.alert("Logged out successfully.");
+    router.replace(paths.loginPath);
   };
 
   return (
@@ -96,19 +130,32 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
             {displayName}
           </div>
           <div className="text-xs text-slate-500">{displayEmail}</div>
-          <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-            {roleLabel}
-          </div>
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onClick={() => router.push(dashboardPath)}
+          onClick={() => router.push(`${paths.appBasePath}/profile`)}
           className="cursor-pointer rounded-xl px-3 py-2.5"
         >
-          <LayoutDashboard className="mr-2 h-4 w-4" />
-          Dashboard
+          <UserCircle2 className="mr-2 h-4 w-4" />
+          Profile
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => router.push(`${paths.appBasePath}/change-pin`)}
+          className="cursor-pointer rounded-xl px-3 py-2.5"
+        >
+          <KeyRound className="mr-2 h-4 w-4" />
+          Change PIN
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => router.push(`${paths.appBasePath}/forgot-pin`)}
+          className="cursor-pointer rounded-xl px-3 py-2.5"
+        >
+          <LockKeyhole className="mr-2 h-4 w-4" />
+          Forgot PIN
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
