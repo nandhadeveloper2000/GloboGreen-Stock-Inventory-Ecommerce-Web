@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +19,11 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { SIDEBAR_MENU, type NavItem, type UserRole } from "@/constants/navigation";
+import {
+  SIDEBAR_MENU,
+  type NavItem,
+  type UserRole,
+} from "@/constants/navigation";
 
 type AppSidebarProps = {
   role: UserRole;
@@ -43,21 +48,16 @@ function isPathActive(pathname: string, href: string) {
 }
 
 function isParentActive(pathname: string, item: NavItem) {
-  if (item.href) {
-    return isPathActive(pathname, item.href);
-  }
-
+  if (item.href) return isPathActive(pathname, item.href);
   if (item.children?.length) {
     return item.children.some((child) => isPathActive(pathname, child.href));
   }
-
   return false;
 }
 
 export default function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const items = SIDEBAR_MENU[role] ?? [];
+  const items = useMemo(() => SIDEBAR_MENU[role] ?? [], [role]);
 
   const defaultOpenMenu = useMemo(() => {
     const activeItem = items.find(
@@ -68,29 +68,40 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
   const [openMenu, setOpenMenu] = useState<string | null>(defaultOpenMenu);
 
+  useEffect(() => {
+    setOpenMenu(defaultOpenMenu);
+  }, [defaultOpenMenu]);
+
   function toggleMenu(label: string) {
     setOpenMenu((prev) => (prev === label ? null : label));
   }
 
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 border-r border-white/10 bg-slate-950 text-white lg:flex lg:flex-col">
-      <div className="border-b border-white/10 px-6 py-5">
+    <aside className="premium-sidebar hidden min-h-screen w-72 shrink-0 lg:flex lg:flex-col">
+      <div className="border-b border-token px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500 to-green-700 text-lg font-bold text-white shadow-lg">
-            G
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-token bg-white shadow-sm">
+            <Image
+              src="/favicon.png"
+              alt="GloboGreen"
+              width={44}
+              height={44}
+              className="h-full w-full object-contain p-1"
+              priority
+            />
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-wide text-white">
+            <p className="truncate text-sm font-semibold tracking-wide text-heading">
               GloboGreen
             </p>
-            <p className="text-xs text-slate-400">Enterprise Panel</p>
+            <p className="text-xs text-secondary-text">Enterprise Panel</p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <div className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-text">
           Navigation
         </div>
 
@@ -109,16 +120,16 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                   className={cn(
                     "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200",
                     parentActive
-                      ? "bg-linear-to-rrom-emerald-600 to-green-700 text-white shadow-[0_10px_30px_rgba(16,185,129,0.28)]"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(236,6,119,0.18)]"
+                      : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
                   )}
                 >
                   <span
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                       parentActive
-                        ? "bg-white/15"
-                        : "bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white"
+                        ? "bg-white/15 text-white"
+                        : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -137,16 +148,16 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                   className={cn(
                     "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition-all duration-200",
                     parentActive || isOpen
-                      ? "bg-white/5 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                      : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
                   )}
                 >
                   <span
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                       parentActive || isOpen
-                        ? "bg-emerald-500/15 text-emerald-300"
-                        : "bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white"
+                        ? "bg-white text-[var(--primary)] shadow-sm"
+                        : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -156,29 +167,41 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200",
+                      "h-4 w-4 shrink-0 text-muted-text transition-transform duration-200",
                       isOpen ? "rotate-180" : ""
                     )}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="ml-5 mt-2 space-y-1 border-l border-white/10 pl-4">
+                  <div className="ml-5 mt-2 space-y-1 border-l border-token pl-4">
                     {item.children?.map((child) => {
                       const childActive = isPathActive(pathname, child.href);
+                      const ChildIcon = getIcon(child.label);
 
                       return (
                         <Link
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "block rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                            "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                             childActive
-                              ? "bg-linear-to-r from-emerald-600 to-green-700 font-semibold text-white shadow-[0_8px_24px_rgba(16,185,129,0.22)]"
-                              : "text-slate-400 hover:bg-white/5 hover:text-white"
+                              ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(236,6,119,0.16)]"
+                              : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
                           )}
                         >
-                          {child.label}
+                          <span
+                            className={cn(
+                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
+                              childActive
+                                ? "bg-white/15 text-white"
+                                : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                            )}
+                          >
+                            <ChildIcon className="h-4 w-4" />
+                          </span>
+
+                          <span className="line-clamp-1">{child.label}</span>
                         </Link>
                       );
                     })}
@@ -190,12 +213,12 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         </nav>
       </div>
 
-      <div className="border-t border-white/10 px-4 py-4">
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
+      <div className="border-t border-token px-4 py-4">
+        <div className="rounded-2xl border border-[rgba(46,49,146,0.12)] bg-[var(--primary-soft)] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]">
             Secure Access
           </p>
-          <p className="mt-1 text-xs leading-5 text-slate-300">
+          <p className="mt-1 text-xs leading-5 text-secondary-text">
             Role-based navigation enabled for your current account.
           </p>
         </div>

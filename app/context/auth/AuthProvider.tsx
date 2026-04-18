@@ -13,19 +13,8 @@ import {
   getAuthSession,
   setAuthSession,
 } from "@/lib/auth-storage";
+import type { AuthUser } from "@/types/auth";
 import { normalizeRole } from "@/utils/permissions";
-
-type AuthUser = {
-  _id?: string;
-  id?: string;
-  name?: string;
-  username?: string;
-  email?: string;
-  avatarUrl?: string;
-  role?: string;
-  roles?: string[];
-  [key: string]: unknown;
-};
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -37,7 +26,8 @@ type AuthContextType = {
   setAuth: (
     user: AuthUser,
     accessToken: string,
-    refreshToken?: string | null
+    refreshToken?: string | null,
+    explicitRole?: string | null
   ) => Promise<void>;
   updateUser: (nextUser: AuthUser) => Promise<void>;
   clearAuth: () => Promise<void>;
@@ -83,9 +73,10 @@ export function AuthProvider({
     async (
       nextUser: AuthUser,
       nextAccessToken: string,
-      nextRefreshToken?: string | null
+      nextRefreshToken?: string | null,
+      explicitRole?: string | null
     ) => {
-      const nextRole = resolveUserRole(nextUser, null);
+      const nextRole = resolveUserRole(nextUser, explicitRole || null);
 
       setAuthSession({
         user: nextUser,

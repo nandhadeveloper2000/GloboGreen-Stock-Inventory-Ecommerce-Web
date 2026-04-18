@@ -1,28 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/context/auth/AuthProvider";
 import AppSidebar from "@/components/layouts/AppSidebar";
 import AppTopbar from "@/components/layouts/AppTopbar";
 import MobileSidebarDrawer from "@/components/layouts/MobileSidebarDrawer";
-import { ROLES, type UserRole } from "@/constants/navigation";
+import type { UserRole } from "@/constants/navigation";
+import { normalizeRole } from "@/utils/permissions";
+import {
+  getAppBasePathByRole,
+  getDashboardRouteByRole,
+  getLoginRoute,
+} from "@/utils/redirect";
 
 type AppShellProps = {
   children: React.ReactNode;
 };
-
-function normalizeLayoutRole(role?: string | null): UserRole | null {
-  const value = String(role ?? "").trim().toUpperCase();
-
-  if (value === ROLES.MASTER_ADMIN) return ROLES.MASTER_ADMIN;
-  if (value === ROLES.MANAGER) return ROLES.MANAGER;
-  if (value === ROLES.SUPERVISOR) return ROLES.SUPERVISOR;
-  if (value === ROLES.STAFF) return ROLES.STAFF;
-
-  return null;
-}
 
 function getTitleFromPath(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
@@ -34,12 +29,34 @@ function getTitleFromPath(pathname: string) {
 }
 
 export default function AppShell({ children }: AppShellProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const { role, isReady, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
 
-  const currentRole = useMemo(() => normalizeLayoutRole(role), [role]);
+  const currentRole = useMemo<UserRole | null>(() => normalizeRole(role), [role]);
+  const currentBasePath = useMemo(
+    () => getAppBasePathByRole(currentRole),
+    [currentRole]
+  );
   const title = useMemo(() => getTitleFromPath(pathname), [pathname]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    if (!isAuthenticated || !currentRole) {
+      router.replace(getLoginRoute());
+      return;
+    }
+
+    if (
+      currentBasePath &&
+      pathname !== currentBasePath &&
+      !pathname.startsWith(`${currentBasePath}/`)
+    ) {
+      router.replace(getDashboardRouteByRole(currentRole));
+    }
+  }, [currentBasePath, currentRole, isAuthenticated, isReady, pathname, router]);
 
   if (!isReady) {
     return (
@@ -56,7 +73,7 @@ export default function AppShell({ children }: AppShellProps) {
       <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
         <div className="rounded-2xl border border-red-200 bg-white px-6 py-4 shadow-sm">
           <p className="text-sm font-medium text-red-600">
-            Session not available. Please login again.
+            Redirecting to login...
           </p>
         </div>
       </div>

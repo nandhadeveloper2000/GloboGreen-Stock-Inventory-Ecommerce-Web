@@ -1,14 +1,6 @@
-export type StoredAuthUser = {
-  _id?: string;
-  id?: string;
-  name?: string;
-  username?: string;
-  email?: string;
-  avatarUrl?: string;
-  role?: string;
-  roles?: string[];
-  [key: string]: unknown;
-};
+import type { AuthUser } from "@/types/auth";
+
+export type StoredAuthUser = AuthUser;
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
 const REFRESH_TOKEN_KEY = "auth_refresh_token";

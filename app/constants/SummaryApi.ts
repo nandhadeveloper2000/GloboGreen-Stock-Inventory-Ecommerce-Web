@@ -402,31 +402,7 @@ const SummaryApi = {
   },
 
 
-  /* ---------- COMPATIBLE ---------- */
-  compatible_create: { method: "POST", url: `${API_BASE}/compatibles` },
-  compatible_list: { method: "GET", url: `${API_BASE}/compatibles` },
-
-  compatible_get: {
-    method: "GET",
-    url: (id: string) => `${API_BASE}/compatibles/${id}`,
-  },
-
-  compatible_update: {
-    method: "PUT",
-    url: (id: string) => `${API_BASE}/compatibles/${id}`,
-  },
-
-  compatible_delete: {
-    method: "DELETE",
-    url: (id: string) => `${API_BASE}/compatibles/${id}`,
-  },
-
-  compatible_toggle_active: {
-    method: "PUT",
-    url: (id: string) => `${API_BASE}/compatibles/${id}/active`,
-  },
-
-
+ 
   /* ---------------- CREATE ---------------- */
   product_compatibility_create: {
     method: "POST",

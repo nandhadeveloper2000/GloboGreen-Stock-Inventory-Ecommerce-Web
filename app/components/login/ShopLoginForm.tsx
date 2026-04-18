@@ -8,7 +8,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
-  ShieldCheck,
+  MailCheck,
   Sparkles,
   UserCircle2,
 } from "lucide-react";
@@ -20,6 +20,7 @@ import type { AuthResponse, LoginRole } from "@/types/auth";
 import {
   getActiveState,
   getAuthUserRole,
+  getEmailVerificationState,
   isAuthUser,
   pickAuthPayload,
 } from "@/utils/authUser";
@@ -63,7 +64,14 @@ function getErrorMessage(error: unknown): string {
   return "Unable to sign in";
 }
 
-function getBlockedAccountMessage(isActive: boolean | null) {
+function getBlockedAccountMessage(
+  emailVerified: boolean | null,
+  isActive: boolean | null
+) {
+  if (emailVerified === false) {
+    return "Your email is not verified yet. Please verify your email before signing in.";
+  }
+
   if (isActive === false) {
     return "Your account is inactive or deactivated. Please contact support.";
   }
@@ -71,19 +79,19 @@ function getBlockedAccountMessage(isActive: boolean | null) {
   return "";
 }
 
-export default function MasterLoginForm() {
+export default function ShopLoginForm() {
   const router = useRouter();
   const { setAuth } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<LoginRole>(
-    getDefaultLoginRole("MASTER")
+    getDefaultLoginRole("SHOP")
   );
   const [loginId, setLoginId] = useState("");
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const availableRoles = getLoginRoles("MASTER");
+  const availableRoles = getLoginRoles("SHOP");
 
   const validateForm = (): boolean => {
     if (!loginId.trim() && !pin.trim()) {
@@ -153,12 +161,16 @@ export default function MasterLoginForm() {
       const resolvedRole = getAuthUserRole(user) || selectedRole;
       const resolvedAccountType = getRoleAccountType(resolvedRole);
 
-      if (!resolvedAccountType || resolvedAccountType !== "MASTER") {
-        throw new Error("This account does not belong to the master login area");
+      if (!resolvedAccountType || resolvedAccountType !== "SHOP") {
+        throw new Error("This account does not belong to the shop login area");
       }
 
+      const emailVerified = getEmailVerificationState(user);
       const isActive = getActiveState(user);
-      const blockedMessage = getBlockedAccountMessage(isActive);
+      const blockedMessage = getBlockedAccountMessage(
+        emailVerified,
+        isActive
+      );
 
       if (blockedMessage) {
         throw new Error(blockedMessage);
@@ -226,7 +238,7 @@ export default function MasterLoginForm() {
           </h1>
 
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/75">
-            Secure sign in for master dashboard access.
+            Shop login requires verified email access and an active account status.
           </p>
         </div>
 
@@ -237,10 +249,10 @@ export default function MasterLoginForm() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle className="text-2xl font-semibold tracking-tight text-heading">
-                  Master login
+                  Shop login
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm text-secondary-text">
-                  Admin, manager, supervisor, and staff panel access.
+                  Shop-side login with email verification and active checks.
                 </CardDescription>
               </div>
 
@@ -258,7 +270,7 @@ export default function MasterLoginForm() {
                 </label>
 
                 <div className="relative">
-                  <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <MailCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <select
                     id="role"
                     value={selectedRole}

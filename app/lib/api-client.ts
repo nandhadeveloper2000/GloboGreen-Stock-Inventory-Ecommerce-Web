@@ -5,6 +5,9 @@ import axios, {
 } from "axios";
 import SummaryApi, { baseURL } from "@/constants/SummaryApi";
 import { tokenService } from "./token-service";
+import type { AuthUser } from "@/types/auth";
+import { getRefreshConfig } from "@/utils/getLoginConfig";
+import { getAuthUserRole } from "@/utils/authUser";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -90,11 +93,12 @@ function redirectToLogin() {
 
 async function callRefreshToken(): Promise<RefreshResponse> {
   const refreshToken = tokenService.getRefreshToken();
+  const refreshConfig = getRefreshConfig(tokenService.getRole());
 
   const refreshUrl =
-    typeof SummaryApi.master_refresh.url === "string"
-      ? SummaryApi.master_refresh.url
-      : "/api/master/refresh";
+    typeof refreshConfig.url === "string"
+      ? refreshConfig.url
+      : SummaryApi.master_refresh.url;
 
   const response = await axios.post<RefreshResponse>(
     `${baseURL}${refreshUrl}`,
@@ -144,10 +148,11 @@ apiClient.interceptors.response.use(
     }
 
     const status = error.response?.status;
+    const refreshConfig = getRefreshConfig(tokenService.getRole());
 
     const refreshUrl =
-      typeof SummaryApi.master_refresh.url === "string"
-        ? SummaryApi.master_refresh.url
+      typeof refreshConfig.url === "string"
+        ? refreshConfig.url
         : "";
 
     const originalUrl = originalRequest.url || "";
@@ -184,6 +189,9 @@ apiClient.interceptors.response.use(
       const newRefreshToken =
         getRefreshTokenFromRefreshPayload(refreshPayload);
       const refreshedUser = getUserFromRefreshPayload(refreshPayload);
+      const nextRole =
+        getAuthUserRole(refreshedUser as AuthUser | null) ||
+        tokenService.getRole();
 
       if (!newAccessToken) {
         throw new Error(refreshPayload?.message || "Unable to refresh session");
@@ -194,6 +202,7 @@ apiClient.interceptors.response.use(
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
           user: refreshedUser ?? tokenService.getUser(),
+          role: nextRole,
         });
       } else {
         tokenService.updateAccessToken(newAccessToken);

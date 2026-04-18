@@ -60,19 +60,19 @@ export function getDefaultRouteByRole(role?: string | null) {
       return "/staff/dashboard";
 
     case ROLES.SHOP_OWNER:
-      return "/shop-owner/dashboard";
+      return "/shopowner/dashboard";
 
     case ROLES.SHOP_MANAGER:
-      return "/shop-manager/dashboard";
+      return "/shopmanager/dashboard";
 
     case ROLES.SHOP_SUPERVISOR:
-      return "/shop-supervisor/dashboard";
+      return "/shopsupervisor/dashboard";
 
     case ROLES.EMPLOYEE:
       return "/employee/dashboard";
 
     default:
-      return "/";
+      return "/login";
   }
 }
 

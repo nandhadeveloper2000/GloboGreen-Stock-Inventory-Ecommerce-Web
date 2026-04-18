@@ -5,6 +5,10 @@ export const tokenService = {
     return authStorage.getAccessToken();
   },
 
+  getRole(): string | null {
+    return authStorage.getRole();
+  },
+
   getRefreshToken(): string | null {
     return authStorage.getRefreshToken();
   },
@@ -17,12 +21,17 @@ export const tokenService = {
     accessToken: string;
     refreshToken: string;
     user?: StoredAuthUser | null;
+    role?: string | null;
   }): void {
     authStorage.setAccessToken(params.accessToken);
     authStorage.setRefreshToken(params.refreshToken);
 
     if (params.user) {
       authStorage.setUser(params.user);
+    }
+
+    if (params.role) {
+      authStorage.setRole(params.role);
     }
   },
 

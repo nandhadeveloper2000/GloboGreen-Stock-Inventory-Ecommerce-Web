@@ -3,8 +3,11 @@ import axios, {
   AxiosHeaders,
   InternalAxiosRequestConfig,
 } from "axios";
-import SummaryApi, { baseURL } from "@/constants/SummaryApi";
+import { baseURL } from "@/constants/SummaryApi";
 import { tokenService } from "./token-service";
+import type { AuthUser } from "@/types/auth";
+import { getRefreshConfig } from "@/utils/getLoginConfig";
+import { getAuthUserRole } from "@/utils/authUser";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -82,9 +85,10 @@ function redirectToLogin() {
 
 async function callRefreshToken(): Promise<RefreshResponse> {
   const refreshToken = tokenService.getRefreshToken();
+  const refreshConfig = getRefreshConfig(tokenService.getRole());
 
   const response = await axios.post<RefreshResponse>(
-    `${baseURL}${SummaryApi.master_refresh.url}`,
+    `${baseURL}${refreshConfig.url}`,
     { refreshToken },
     {
       withCredentials: true,
@@ -125,9 +129,10 @@ apiClient.interceptors.response.use(
     }
 
     const status = error.response?.status;
+    const refreshConfig = getRefreshConfig(tokenService.getRole());
 
     const isRefreshCall =
-      originalRequest.url?.includes(SummaryApi.master_refresh.url) ?? false;
+      originalRequest.url?.includes(refreshConfig.url) ?? false;
 
     if (status !== 401 || originalRequest._retry || isRefreshCall) {
       return Promise.reject(error);
@@ -158,6 +163,9 @@ apiClient.interceptors.response.use(
       const newAccessToken = getAccessTokenFromRefreshPayload(refreshPayload);
       const newRefreshToken = getRefreshTokenFromRefreshPayload(refreshPayload);
       const refreshedUser = getUserFromRefreshPayload(refreshPayload);
+      const nextRole =
+        getAuthUserRole(refreshedUser as AuthUser | null) ||
+        tokenService.getRole();
 
       if (!newAccessToken) {
         throw new Error(refreshPayload?.message || "Unable to refresh session");
@@ -170,6 +178,7 @@ apiClient.interceptors.response.use(
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
           user: refreshedUser ?? tokenService.getUser(),
+          role: nextRole,
         });
       }
 
