@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/context/auth/AuthProvider";
 import {
@@ -32,7 +33,7 @@ function getRolePaths(role: UserRole) {
     case "MASTER_ADMIN":
       return {
         appBasePath: "/master",
-        loginPath: "/master-login",
+        loginPath: "/masterlogin",
       };
     case "MANAGER":
       return {
@@ -48,6 +49,26 @@ function getRolePaths(role: UserRole) {
       return {
         appBasePath: "/staff",
         loginPath: "/staff-login",
+      };
+    case "SHOP_OWNER":
+      return {
+        appBasePath: "/shopowner",
+        loginPath: "/shoplogin",
+      };
+    case "SHOP_MANAGER":
+      return {
+        appBasePath: "/shopmanager",
+        loginPath: "/shoplogin",
+      };
+    case "SHOP_SUPERVISOR":
+      return {
+        appBasePath: "/shopsupervisor",
+        loginPath: "/shoplogin",
+      };
+    case "EMPLOYEE":
+      return {
+        appBasePath: "/employee",
+        loginPath: "/shoplogin",
       };
     default:
       return {
@@ -82,7 +103,7 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
 
   const handleLogout = async () => {
     await clearAuth();
-    window.alert("Logged out successfully.");
+    toast.success("Logged out successfully");
     router.replace(paths.loginPath);
   };
 

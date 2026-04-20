@@ -69,11 +69,11 @@ function getBlockedAccountMessage(
   isActive: boolean | null
 ) {
   if (emailVerified === false) {
-    return "Your email is not verified yet. Please verify your email before signing in.";
+    return "EMAIL_NOT_VERIFIED";
   }
 
   if (isActive === false) {
-    return "Your account is inactive or deactivated. Please contact support.";
+    return "ACCOUNT_INACTIVE";
   }
 
   return "";
@@ -167,13 +167,28 @@ export default function ShopLoginForm() {
 
       const emailVerified = getEmailVerificationState(user);
       const isActive = getActiveState(user);
-      const blockedMessage = getBlockedAccountMessage(
-        emailVerified,
-        isActive
-      );
+      const blockedState = getBlockedAccountMessage(emailVerified, isActive);
 
-      if (blockedMessage) {
-        throw new Error(blockedMessage);
+      if (blockedState === "EMAIL_NOT_VERIFIED") {
+        await setAuth(user, accessToken, refreshToken, resolvedRole);
+
+        appToast.warning(
+          "Email verification required",
+          "Your email is not verified yet. Please verify your email to continue."
+        );
+
+        router.replace(
+          `/email/request?role=${encodeURIComponent(
+            resolvedRole
+          )}&login=${encodeURIComponent(loginId.trim())}`
+        );
+        return;
+      }
+
+      if (blockedState === "ACCOUNT_INACTIVE") {
+        throw new Error(
+          "Your account is inactive or deactivated. Please contact support."
+        );
       }
 
       await setAuth(user, accessToken, refreshToken, resolvedRole);
@@ -183,7 +198,7 @@ export default function ShopLoginForm() {
         `Welcome back, ${user.name || getRoleLabel(resolvedRole)}.`
       );
 
-      router.push(getDashboardRouteByRole(resolvedRole));
+      router.replace(getDashboardRouteByRole(resolvedRole));
     } catch (error: unknown) {
       appToast.error("Login failed", getErrorMessage(error));
     } finally {

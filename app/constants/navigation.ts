@@ -95,6 +95,39 @@ const MASTER_ADMIN_MENU: NavItem[] = [
   },
 ];
 
+const SHOP_OWNER_MENU: NavItem[] = [
+  { label: "Dashboard", href: "/shopowner/dashboard" },
+  {
+    label: "Shop Staff Management",
+    children: [
+      { label: "Create Shop Staff", href: "/shopowner/shopstaff/create" },
+      { label: "Shop Staff List", href: "/shopowner/shopstaff/list" },
+    ],
+  },
+];
+
+const SHOP_MANAGER_MENU: NavItem[] = [
+  { label: "Dashboard", href: "/shopmanager/dashboard" },
+  {
+    label: "Shop Staff Management",
+    children: [
+      { label: "Create Shop Staff", href: "/shopmanager/shopstaff/create" },
+      { label: "Shop Staff List", href: "/shopmanager/shopstaff/list" },
+    ],
+  },
+];
+
+const SHOP_SUPERVISOR_MENU: NavItem[] = [
+  { label: "Dashboard", href: "/shopsupervisor/dashboard" },
+  {
+    label: "Shop Staff Management",
+    children: [
+      { label: "Create Shop Staff", href: "/shopsupervisor/shopstaff/create" },
+      { label: "Shop Staff List", href: "/shopsupervisor/shopstaff/list" },
+    ],
+  },
+];
+
 function buildDashboardOnlyMenu(basePath: string): NavItem[] {
   return [{ label: "Dashboard", href: `${basePath}/dashboard` }];
 }
@@ -104,8 +137,9 @@ export const SIDEBAR_MENU: Record<UserRole, NavItem[]> = {
   [ROLES.MANAGER]: buildDashboardOnlyMenu("/manager"),
   [ROLES.SUPERVISOR]: buildDashboardOnlyMenu("/supervisor"),
   [ROLES.STAFF]: buildDashboardOnlyMenu("/staff"),
-  [ROLES.SHOP_OWNER]: buildDashboardOnlyMenu("/shopowner"),
-  [ROLES.SHOP_MANAGER]: buildDashboardOnlyMenu("/shopmanager"),
-  [ROLES.SHOP_SUPERVISOR]: buildDashboardOnlyMenu("/shopsupervisor"),
+
+  [ROLES.SHOP_OWNER]: SHOP_OWNER_MENU,
+  [ROLES.SHOP_MANAGER]: SHOP_MANAGER_MENU,
+  [ROLES.SHOP_SUPERVISOR]: SHOP_SUPERVISOR_MENU,
   [ROLES.EMPLOYEE]: buildDashboardOnlyMenu("/employee"),
 };

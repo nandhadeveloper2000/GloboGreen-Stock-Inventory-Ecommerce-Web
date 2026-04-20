@@ -16,6 +16,7 @@ import {
   Package2,
   ShieldAlert,
   ChevronDown,
+  Building2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,10 +25,78 @@ import {
   type NavItem,
   type UserRole,
 } from "@/constants/navigation";
+import { useAuth } from "@/context/auth/AuthProvider";
+import SummaryApi, { baseURL } from "@/constants/SummaryApi";
 
 type AppSidebarProps = {
   role: UserRole;
 };
+
+type Address = {
+  state?: string;
+  district?: string;
+  taluk?: string;
+  area?: string;
+  street?: string;
+  pincode?: string;
+};
+
+type PrimitiveIdObject = {
+  _id?: string;
+  id?: string;
+  $oid?: string;
+};
+
+type ShopOwnerAccount =
+  | string
+  | {
+      _id?: string;
+      name?: string;
+      email?: string;
+    };
+
+type ShopItem = {
+  _id: string;
+  name?: string;
+  businessType?: string;
+  frontImageUrl?: string;
+  isActive?: boolean;
+  shopAddress?: Address;
+  shopOwnerAccountId?: ShopOwnerAccount;
+};
+
+type AuthUser = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  mobile?: string;
+  role?: string;
+  shopIds?: (string | PrimitiveIdObject)[];
+  shopId?: string | PrimitiveIdObject;
+  avatarUrl?: string;
+  verifyEmail?: boolean;
+  isActive?: boolean;
+  shopControl?: string;
+};
+
+type ApiJson = {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
+  user?: unknown;
+  shops?: unknown[];
+};
+
+type SummaryApiEntry = {
+  url: string | ((id: string) => string);
+  method: string;
+};
+
+const SELECTED_SHOP_KEY = "selected_shop_id_web";
+const SELECTED_SHOP_NAME_KEY = "selected_shop_name_web";
+const SELECTED_SHOP_IMAGE_KEY = "selected_shop_image_web";
 
 function getIcon(label: string) {
   if (label.includes("Dashboard")) return LayoutDashboard;
@@ -55,8 +124,105 @@ function isParentActive(pathname: string, item: NavItem) {
   return false;
 }
 
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toUpperCase();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getId(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+
+  if (isRecord(value)) {
+    if (typeof value._id === "string") return value._id;
+    if (typeof value.id === "string") return value.id;
+    if (typeof value.$oid === "string") return value.$oid;
+  }
+
+  return "";
+}
+
+function apiUrl(path: string) {
+  return `${baseURL}${path}`;
+}
+
+function getSummaryEntry(key: string): SummaryApiEntry | null {
+  const source = SummaryApi as unknown as Record<string, unknown>;
+  const entry = source[key];
+
+  if (!isRecord(entry)) return null;
+  if (typeof entry.method !== "string") return null;
+  if (typeof entry.url !== "string" && typeof entry.url !== "function") {
+    return null;
+  }
+
+  return entry as SummaryApiEntry;
+}
+
+function resolveDynamicUrl(entry: SummaryApiEntry, id: string) {
+  return typeof entry.url === "function" ? entry.url(id) : entry.url;
+}
+
+function readShopList(json: ApiJson): ShopItem[] {
+  if (Array.isArray(json.data)) return json.data as ShopItem[];
+  if (Array.isArray(json.shops)) return json.shops as ShopItem[];
+  return [];
+}
+
+function readSingleShop(json: ApiJson): ShopItem | null {
+  if (
+    isRecord(json.data) &&
+    isRecord((json.data as Record<string, unknown>).shop)
+  ) {
+    return (json.data as Record<string, unknown>).shop as ShopItem;
+  }
+
+  if (isRecord(json.data) && typeof json.data._id === "string") {
+    return json.data as ShopItem;
+  }
+
+  return null;
+}
+
+function readSelfData(json: ApiJson): AuthUser | null {
+  if (
+    isRecord(json.data) &&
+    isRecord((json.data as Record<string, unknown>).user)
+  ) {
+    return (json.data as Record<string, unknown>).user as AuthUser;
+  }
+
+  if (isRecord(json.user)) {
+    return json.user as AuthUser;
+  }
+
+  if (isRecord(json.data)) {
+    return json.data as AuthUser;
+  }
+
+  return null;
+}
+
+function readStoredShop() {
+  if (typeof window === "undefined") {
+    return { id: "", name: "", image: "" };
+  }
+
+  return {
+    id: window.localStorage.getItem(SELECTED_SHOP_KEY) || "",
+    name: window.localStorage.getItem(SELECTED_SHOP_NAME_KEY) || "",
+    image: window.localStorage.getItem(SELECTED_SHOP_IMAGE_KEY) || "",
+  };
+}
+
 export default function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
+  const { user, accessToken } = useAuth();
+
+  const authUser = (user ?? {}) as AuthUser;
   const items = useMemo(() => SIDEBAR_MENU[role] ?? [], [role]);
 
   const defaultOpenMenu = useMemo(() => {
@@ -67,35 +233,300 @@ export default function AppSidebar({ role }: AppSidebarProps) {
   }, [items, pathname]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(defaultOpenMenu);
+  const [selectedShop, setSelectedShop] = useState<ShopItem | null>(null);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+
+  const currentRole = normalizeRole(authUser.role || role);
+
+  const isShopRole = [
+    "SHOP_OWNER",
+    "SHOP_MANAGER",
+    "SHOP_SUPERVISOR",
+    "EMPLOYEE",
+  ].includes(currentRole);
 
   useEffect(() => {
     setOpenMenu(defaultOpenMenu);
   }, [defaultOpenMenu]);
 
+  async function readResponse(res: Response) {
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as ApiJson;
+    } catch {
+      return {} as ApiJson;
+    }
+  }
+
+  function syncSidebarFromStorage() {
+    if (!isShopRole || typeof window === "undefined") return;
+
+    const stored = readStoredShop();
+
+    if (!stored.id && !stored.name && !stored.image) return;
+
+    setSelectedShop((prev) => ({
+      _id: stored.id || prev?._id || "",
+      name: stored.name || prev?.name || "",
+      frontImageUrl: stored.image || prev?.frontImageUrl || "",
+      businessType: prev?.businessType || "",
+      isActive: prev?.isActive,
+      shopAddress: prev?.shopAddress,
+      shopOwnerAccountId: prev?.shopOwnerAccountId,
+    }));
+  }
+
+  useEffect(() => {
+    syncSidebarFromStorage();
+  }, [isShopRole]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchSelectedShopForSidebar() {
+      if (!isShopRole) {
+        if (!ignore) {
+          setSelectedShop(null);
+          setSidebarLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (!ignore) setSidebarLoading(true);
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+
+        if (typeof accessToken === "string" && accessToken.trim()) {
+          headers.Authorization = `Bearer ${accessToken}`;
+        }
+
+        const meEntry =
+          currentRole === "SHOP_OWNER"
+            ? getSummaryEntry("shopowner_me")
+            : getSummaryEntry("shopstaff_me");
+
+        let selfUser: AuthUser | null = null;
+
+        if (meEntry) {
+          const meRes = await fetch(apiUrl(resolveDynamicUrl(meEntry, "")), {
+            method: meEntry.method,
+            headers,
+            cache: "no-store",
+            credentials: "include",
+          });
+
+          if (meRes.ok) {
+            const meJson = await readResponse(meRes);
+            selfUser = readSelfData(meJson);
+          }
+        }
+
+        const stored = readStoredShop();
+
+        if (stored.id) {
+          const shopGetEntry = getSummaryEntry("shop_get");
+
+          if (shopGetEntry) {
+            const shopRes = await fetch(
+              apiUrl(resolveDynamicUrl(shopGetEntry, stored.id)),
+              {
+                method: shopGetEntry.method,
+                headers,
+                cache: "no-store",
+                credentials: "include",
+              }
+            );
+
+            if (shopRes.ok) {
+              const shopJson = await readResponse(shopRes);
+              const shop = readSingleShop(shopJson);
+
+              if (!ignore && shop?._id) {
+                setSelectedShop(shop);
+                setSidebarLoading(false);
+                return;
+              }
+            }
+          }
+        }
+
+        const shopListEntry = getSummaryEntry("shop_list");
+
+        if (!shopListEntry) {
+          if (!ignore) {
+            setSidebarLoading(false);
+          }
+          return;
+        }
+
+        const shopListRes = await fetch(
+          apiUrl(resolveDynamicUrl(shopListEntry, "")),
+          {
+            method: shopListEntry.method,
+            headers,
+            cache: "no-store",
+            credentials: "include",
+          }
+        );
+
+        if (!shopListRes.ok) {
+          if (!ignore) {
+            setSidebarLoading(false);
+          }
+          return;
+        }
+
+        const shopListJson = await readResponse(shopListRes);
+        let shops = readShopList(shopListJson);
+
+        const ownerId = getId(selfUser?._id) || getId(selfUser?.id);
+        const allowedShopIds = Array.isArray(selfUser?.shopIds)
+          ? selfUser.shopIds.map((item) => getId(item)).filter(Boolean)
+          : [];
+
+        if (currentRole === "SHOP_OWNER") {
+          shops = shops.filter((shop) => {
+            const shopOwnerId =
+              typeof shop.shopOwnerAccountId === "string"
+                ? shop.shopOwnerAccountId
+                : shop.shopOwnerAccountId?._id || "";
+
+            const shopId = String(shop._id || "");
+
+            if (ownerId && shopOwnerId && String(shopOwnerId) === String(ownerId)) {
+              return true;
+            }
+
+            if (allowedShopIds.length && allowedShopIds.includes(shopId)) {
+              return true;
+            }
+
+            return false;
+          });
+        } else {
+          const currentShopId =
+            getId(selfUser?.shopId) || getId(authUser.shopId);
+          shops = currentShopId
+            ? shops.filter((shop) => String(shop._id) === String(currentShopId))
+            : [];
+        }
+
+        if (!ignore) {
+          const storedId = stored.id;
+
+          if (storedId) {
+            const matched = shops.find(
+              (shop) => String(shop._id) === String(storedId)
+            );
+
+            if (matched) {
+              setSelectedShop(matched);
+              setSidebarLoading(false);
+              return;
+            }
+          }
+
+          const fallbackShop = shops[0] ?? null;
+          setSelectedShop(fallbackShop);
+        }
+      } catch {
+        if (!ignore) {
+          syncSidebarFromStorage();
+        }
+      } finally {
+        if (!ignore) {
+          setSidebarLoading(false);
+        }
+      }
+    }
+
+    void fetchSelectedShopForSidebar();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, authUser.shopId, currentRole, isShopRole]);
+
+  useEffect(() => {
+    function handleShopSelectionChanged() {
+      syncSidebarFromStorage();
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        "shop-selection-changed",
+        handleShopSelectionChanged
+      );
+      window.addEventListener("storage", handleShopSelectionChanged);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          "shop-selection-changed",
+          handleShopSelectionChanged
+        );
+        window.removeEventListener("storage", handleShopSelectionChanged);
+      }
+    };
+  }, [isShopRole]);
+
   function toggleMenu(label: string) {
     setOpenMenu((prev) => (prev === label ? null : label));
   }
+
+  const sidebarTitle = isShopRole
+    ? selectedShop?.name || authUser.name || authUser.username || "Shop Panel"
+    : "GloboGreen";
+
+  const sidebarSubtitle = isShopRole
+    ? selectedShop?.businessType || "Selected Shop"
+    : "Enterprise Panel";
+
+  const sidebarImage = isShopRole
+    ? selectedShop?.frontImageUrl || authUser.avatarUrl || ""
+    : "";
 
   return (
     <aside className="premium-sidebar hidden min-h-screen w-72 shrink-0 lg:flex lg:flex-col">
       <div className="border-b border-token px-6 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-token bg-white shadow-sm">
-            <Image
-              src="/favicon.png"
-              alt="GloboGreen"
-              width={44}
-              height={44}
-              className="h-full w-full object-contain p-1"
-              priority
-            />
+            {sidebarImage ? (
+              <Image
+                src={sidebarImage}
+                alt={sidebarTitle}
+                width={44}
+                height={44}
+                className="h-full w-full object-cover"
+                priority
+              />
+            ) : isShopRole ? (
+              <div className="flex h-full w-full items-center justify-center bg-[var(--primary-soft)] text-[var(--primary)]">
+                <Building2 className="h-5 w-5" />
+              </div>
+            ) : (
+              <Image
+                src="/favicon.png"
+                alt="GloboGreen"
+                width={44}
+                height={44}
+                className="h-full w-full object-contain p-1"
+                priority
+              />
+            )}
           </div>
 
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold tracking-wide text-heading">
-              GloboGreen
+              {sidebarLoading && isShopRole ? "Loading..." : sidebarTitle}
             </p>
-            <p className="text-xs text-secondary-text">Enterprise Panel</p>
+            <p className="truncate text-xs text-secondary-text">
+              {sidebarSubtitle}
+            </p>
           </div>
         </div>
       </div>

@@ -419,7 +419,7 @@ textarea {
 .premium-bg-overlay {
   position: absolute;
   inset: 0;
-  background:
+  background: 
     radial-gradient(600px 250px at 10% 0%, rgba(46,49,146,0.18), transparent 70%),
     radial-gradient(600px 250px at 90% 0%, rgba(236,6,119,0.16), transparent 70%);
 }

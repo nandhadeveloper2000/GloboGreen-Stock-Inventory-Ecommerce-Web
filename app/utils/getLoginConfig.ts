@@ -43,13 +43,21 @@ export function getDefaultLoginRole(accountType: AuthAccountType): LoginRole {
 }
 
 export function getLoginConfig(role: LoginRole): AuthConfig {
-  const accountType = getRoleAccountType(role);
+  const normalized = normalizeRole(role);
 
-  if (accountType === "SHOP") {
+  if (normalized === ROLES.SHOP_OWNER) {
     return SummaryApi.shopowner_login;
   }
 
-  if (role === ROLES.MASTER_ADMIN) {
+  if (
+    normalized === ROLES.SHOP_MANAGER ||
+    normalized === ROLES.SHOP_SUPERVISOR ||
+    normalized === ROLES.EMPLOYEE
+  ) {
+    return SummaryApi.shopstaff_login;
+  }
+
+  if (normalized === ROLES.MASTER_ADMIN) {
     return SummaryApi.master_login;
   }
 
@@ -57,10 +65,57 @@ export function getLoginConfig(role: LoginRole): AuthConfig {
 }
 
 export function getRefreshConfig(role?: string | null): AuthConfig {
-  const accountType = getRoleAccountType(role);
-  return accountType === "SHOP"
-    ? SummaryApi.shopowner_refresh
-    : SummaryApi.master_refresh;
+  const normalized = normalizeRole(role);
+
+  if (normalized === ROLES.SHOP_OWNER) {
+    return SummaryApi.shopowner_refresh;
+  }
+
+  if (
+    normalized === ROLES.SHOP_MANAGER ||
+    normalized === ROLES.SHOP_SUPERVISOR ||
+    normalized === ROLES.EMPLOYEE
+  ) {
+    return SummaryApi.shopstaff_refresh;
+  }
+
+  return SummaryApi.master_refresh;
+}
+
+export function getRequestEmailOtpConfig(role: LoginRole): AuthConfig {
+  const normalized = normalizeRole(role);
+
+  if (normalized === ROLES.SHOP_OWNER) {
+    return SummaryApi.shopowner_request_email_otp;
+  }
+
+  if (
+    normalized === ROLES.SHOP_MANAGER ||
+    normalized === ROLES.SHOP_SUPERVISOR ||
+    normalized === ROLES.EMPLOYEE
+  ) {
+    return SummaryApi.shopstaff_request_email_otp;
+  }
+
+  throw new Error("Email OTP request is only supported for shop roles");
+}
+
+export function getVerifyEmailOtpConfig(role: LoginRole): AuthConfig {
+  const normalized = normalizeRole(role);
+
+  if (normalized === ROLES.SHOP_OWNER) {
+    return SummaryApi.shopowner_verify_email_otp;
+  }
+
+  if (
+    normalized === ROLES.SHOP_MANAGER ||
+    normalized === ROLES.SHOP_SUPERVISOR ||
+    normalized === ROLES.EMPLOYEE
+  ) {
+    return SummaryApi.shopstaff_verify_email_otp;
+  }
+
+  throw new Error("Email OTP verification is only supported for shop roles");
 }
 
 export function getRoleLabel(role?: string | null): string {

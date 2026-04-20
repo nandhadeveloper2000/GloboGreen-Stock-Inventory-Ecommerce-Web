@@ -33,9 +33,15 @@ function parseBooleanLike(value: unknown): boolean | null {
     const normalized = value.trim().toLowerCase();
 
     if (
-      ["true", "1", "yes", "verified", "active", "enabled", "approved"].includes(
-        normalized
-      )
+      [
+        "true",
+        "1",
+        "yes",
+        "verified",
+        "active",
+        "enabled",
+        "approved",
+      ].includes(normalized)
     ) {
       return true;
     }
@@ -61,7 +67,9 @@ function parseBooleanLike(value: unknown): boolean | null {
   return null;
 }
 
-export function getEmailVerificationState(user?: AuthUser | null): boolean | null {
+export function getEmailVerificationState(
+  user?: AuthUser | null
+): boolean | null {
   const candidates = [
     user?.verifyEmail,
     user?.emailVerified,
