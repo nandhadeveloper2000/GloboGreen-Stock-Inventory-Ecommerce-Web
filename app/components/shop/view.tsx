@@ -306,7 +306,7 @@ export default function ShopViewPage() {
         const result = (await response.json().catch(() => ({}))) as ApiResponse;
 
         if (!response.ok || !result?.success || !result?.data) {
-          throw new Error(result?.message || "Failed to load shop details");
+          throw  new Error(result?.message || "Failed to load shop details");
         }
 
         setData(result.data);

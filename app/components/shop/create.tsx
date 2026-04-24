@@ -43,6 +43,8 @@ type ShopType =
   | "RETAIL_BRANCH_SHOP"
   | "WHOLESALE_SHOP";
 
+type ShopBillingType = "" | "GST" | "NON_GST";
+
 type Option = {
   label: string;
   value: string;
@@ -59,6 +61,7 @@ type FormState = {
   ownerId: string;
   shopName: string;
   shopType: ShopType;
+  billingType: ShopBillingType;
   businessType: BusinessType;
   mobile: string;
   gstNumber: string;
@@ -147,6 +150,7 @@ const INITIAL: FormState = {
   ownerId: "",
   shopName: "",
   shopType: "",
+  billingType: "GST",
   businessType: "",
   mobile: "",
   gstNumber: "",
@@ -179,6 +183,11 @@ const SHOP_TYPE_OPTIONS: Option[] = [
     value: "WHOLESALE_SHOP",
     searchText: "wholesale shop wholesale",
   },
+];
+
+const GST_BILLING_OPTIONS: Option[] = [
+  { label: "GST", value: "GST" },
+  { label: "NON GST", value: "NON_GST" },
 ];
 
 function classNames(...arr: Array<string | false | null | undefined>) {
@@ -296,6 +305,22 @@ function getShopTypeLabel(shopType?: string) {
 
   if (shopType === "WHOLESALE_SHOP") {
     return "Wholesale Shop";
+  }
+
+  return "-";
+}
+
+function getBillingTypeLabel(billingType?: string) {
+  if (billingType === "NON_GST") {
+    return "NON GST";
+  }
+
+  if (billingType === "GST") {
+    return "GST";
+  }
+
+  if (billingType === "BOTH") {
+    return "Both";
   }
 
   return "-";
@@ -858,6 +883,16 @@ export function ShopForm({
     () => String(role || "").toUpperCase() as AppRole,
     [role]
   );
+  const isShopOwnerSide = useMemo(
+    () =>
+      [
+        "SHOP_OWNER",
+        "SHOP_MANAGER",
+        "SHOP_SUPERVISOR",
+        "EMPLOYEE",
+      ].includes(currentUserRole),
+    [currentUserRole]
+  );
   const listPath = useMemo(
     () => getShopListPath(currentUserRole),
     [currentUserRole]
@@ -1235,6 +1270,10 @@ export function ShopForm({
           ownerId,
           shopName: shop.name || "",
           shopType: shop.shopType || "",
+          billingType:
+            shop.enableGSTBilling === false || shop.billingType === "NON_GST"
+              ? "NON_GST"
+              : "GST",
           businessType: shop.businessType || "",
           mobile: digitsOnly(String(shop.mobile || "")).slice(0, 10),
           gstNumber: normalizeGstNumber(String(shop.gstNumber || "")),
@@ -1736,6 +1775,10 @@ export function ShopForm({
       nextErrors.shopType = "Shop type is required";
     }
 
+    if (isShopOwnerSide && !form.billingType.trim()) {
+      nextErrors.billingType = "GST billing selection is required";
+    }
+
     if (!form.mobile.trim()) {
       nextErrors.mobile = "Shop mobile number is required";
     } else if (!isValidIndianMobile(form.mobile)) {
@@ -1743,7 +1786,10 @@ export function ShopForm({
     }
 
     const cleanGst = normalizeGstNumber(form.gstNumber);
-    if (cleanGst && !isValidGST(cleanGst)) {
+    const shouldValidateGstNumber =
+      !isShopOwnerSide || form.billingType === "GST";
+
+    if (shouldValidateGstNumber && cleanGst && !isValidGST(cleanGst)) {
       nextErrors.gstNumber = "GST number must be 15 characters";
     }
 
@@ -1862,6 +1908,21 @@ export function ShopForm({
       const cleanShopName = toTitleCase(form.shopName);
       const cleanMobile = digitsOnly(form.mobile).slice(0, 10);
       const cleanGstNumber = normalizeGstNumber(form.gstNumber);
+      const resolvedBillingType = isShopOwnerSide
+        ? form.billingType === "NON_GST"
+          ? "NON_GST"
+          : "GST"
+        : form.shopType === "WHOLESALE_SHOP"
+          ? "GST"
+          : "BOTH";
+      const enableGSTBilling = isShopOwnerSide
+        ? resolvedBillingType === "GST"
+        : form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
+          form.shopType === "WHOLESALE_SHOP";
+      const gstNumberForSubmit =
+        isShopOwnerSide && resolvedBillingType === "NON_GST"
+          ? ""
+          : cleanGstNumber;
 
       if (isEditMode) {
         if (!shopId) {
@@ -1883,13 +1944,11 @@ export function ShopForm({
               name: cleanShopName,
               shopType: form.shopType,
               isMainWarehouse: form.shopType === "WAREHOUSE_RETAIL_SHOP",
-              billingType: form.shopType === "WHOLESALE_SHOP" ? "GST" : "BOTH",
-              enableGSTBilling:
-                form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
-                form.shopType === "WHOLESALE_SHOP",
+              billingType: resolvedBillingType,
+              enableGSTBilling,
               businessType: form.businessType,
               mobile: cleanMobile,
-              gstNumber: cleanGstNumber,
+              gstNumber: gstNumberForSubmit,
               state: address.state,
               district: address.district,
               taluk: address.taluk,
@@ -1917,25 +1976,16 @@ export function ShopForm({
         payload.append("shopOwnerAccountId", form.ownerId);
         payload.append("shopType", form.shopType);
         payload.append("mobile", cleanMobile);
-        payload.append("gstNumber", cleanGstNumber);
+        payload.append("gstNumber", gstNumberForSubmit);
 
         payload.append(
           "isMainWarehouse",
           String(form.shopType === "WAREHOUSE_RETAIL_SHOP")
         );
 
-        payload.append(
-          "billingType",
-          form.shopType === "WHOLESALE_SHOP" ? "GST" : "BOTH"
-        );
+        payload.append("billingType", resolvedBillingType);
 
-        payload.append(
-          "enableGSTBilling",
-          String(
-            form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
-              form.shopType === "WHOLESALE_SHOP"
-          )
-        );
+        payload.append("enableGSTBilling", String(enableGSTBilling));
 
         if (form.businessType) {
           payload.append("businessType", form.businessType);
@@ -2176,6 +2226,34 @@ export function ShopForm({
                 helperText="Choose a main warehouse, branch shop, or wholesale shop."
               />
 
+              {isShopOwnerSide ? (
+                <FloatingSelect
+                  id="billingType"
+                  label="GST Billing"
+                  value={form.billingType}
+                  onChange={(e) => {
+                    const nextBillingType = e.target.value as ShopBillingType;
+
+                    setForm((prev) => ({
+                      ...prev,
+                      billingType: nextBillingType,
+                    }));
+                    setErrors((prev) => ({
+                      ...prev,
+                      billingType: undefined,
+                      gstNumber:
+                        nextBillingType === "NON_GST"
+                          ? undefined
+                          : prev.gstNumber,
+                    }));
+                  }}
+                  options={GST_BILLING_OPTIONS}
+                  placeholder="Select GST billing"
+                  error={errors.billingType}
+                  required
+                />
+              ) : null}
+
               <FloatingInput
                 id="shopName"
                 label="Shop Name"
@@ -2206,6 +2284,7 @@ export function ShopForm({
                 onChange={(e) =>
                   updateField("gstNumber", normalizeGstNumber(e.target.value))
                 }
+                disabled={isShopOwnerSide && form.billingType === "NON_GST"}
                 error={errors.gstNumber}
               />
             </div>
@@ -2477,9 +2556,19 @@ export function ShopForm({
                   />
                   <ReviewItem label="Shop Name" value={form.shopName} />
                   <ReviewItem label="Shop Mobile" value={form.mobile} />
+                  {isShopOwnerSide ? (
+                    <ReviewItem
+                      label="GST Billing"
+                      value={getBillingTypeLabel(form.billingType)}
+                    />
+                  ) : null}
                   <ReviewItem
                     label="GST Number"
-                    value={form.gstNumber || "Optional / Not added"}
+                    value={
+                      isShopOwnerSide && form.billingType === "NON_GST"
+                        ? "Not required for NON GST"
+                        : form.gstNumber || "Optional / Not added"
+                    }
                   />
                   <ReviewItem
                     label="Business Type"
