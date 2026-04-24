@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Eye,
   EyeOff,
@@ -330,6 +332,23 @@ export default function MasterLoginForm() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-[var(--primary)] transition hover:text-[var(--accent)]"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Link>
+
+                <Link
+                  href={`/forgot-pin?role=${encodeURIComponent(selectedRole)}`}
+                  className="text-sm font-medium text-[var(--primary)] transition hover:text-[var(--accent)]"
+                >
+                  Forgot PIN?
+                </Link>
               </div>
 
               <Button

@@ -271,12 +271,15 @@ export function PresetValueDropdown({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const normalizedValue = value.trim().toLowerCase();
 
   const selectedOption =
     options.find(
-      (option) => option.value.toLowerCase() === value.trim().toLowerCase()
+      (option) =>
+        option.value.toLowerCase() === normalizedValue ||
+        option.label.toLowerCase() === normalizedValue
     ) ||
-    (allowCustom && resolveCustomOption ? resolveCustomOption(value) : null);
+    (resolveCustomOption ? resolveCustomOption(value) : null);
 
   const filteredOptions = query.trim()
     ? options.filter((option) =>
@@ -356,7 +359,8 @@ export function PresetValueDropdown({
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => {
                 const isSelected =
-                  option.value.toLowerCase() === value.trim().toLowerCase();
+                  option.value.toLowerCase() ===
+                  (selectedOption?.value.toLowerCase() || normalizedValue);
 
                 return (
                   <button
@@ -852,6 +856,9 @@ export function VariantProductInformationEditor({
   onAddField,
   onRemoveField,
   onChangeField,
+  resolveOptions,
+  allowCustomValue,
+  resolveCustomValueOption,
 }: {
   sections: ProductInformationSection[];
   disabled?: boolean;
@@ -866,6 +873,12 @@ export function VariantProductInformationEditor({
     key: "label" | "value",
     value: string
   ) => void;
+  resolveOptions?: (label: string) => PresetValueOption[];
+  allowCustomValue?: (label: string) => boolean;
+  resolveCustomValueOption?: (
+    label: string,
+    value: string
+  ) => PresetValueOption | null;
 }) {
   return (
     <div className="space-y-4">
@@ -907,41 +920,79 @@ export function VariantProductInformationEditor({
           </div>
 
           <div className="space-y-3">
-            {section.fields.map((field, fieldIndex) => (
-              <div
-                key={`${field.label}-${fieldIndex}`}
-                className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]"
-              >
-                <input
-                  value={field.label}
-                  onChange={(e) =>
-                    onChangeField(sectionIndex, fieldIndex, "label", e.target.value)
-                  }
-                  placeholder="Field label"
-                  className="premium-input"
-                  disabled={disabled}
-                />
+            {section.fields.map((field, fieldIndex) => {
+              const presetOptions = resolveOptions ? resolveOptions(field.label) : [];
+              const canUsePresetDropdown = presetOptions.length > 0;
+              const canUseCustom = allowCustomValue
+                ? allowCustomValue(field.label)
+                : false;
 
-                <input
-                  value={field.value}
-                  onChange={(e) =>
-                    onChangeField(sectionIndex, fieldIndex, "value", e.target.value)
-                  }
-                  placeholder="Field value"
-                  className="premium-input"
-                  disabled={disabled}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => onRemoveField(sectionIndex, fieldIndex)}
-                  disabled={disabled}
-                  className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-rose-600 transition hover:bg-rose-100"
+              return (
+                <div
+                  key={`${field.label}-${fieldIndex}`}
+                  className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+                  <input
+                    value={field.label}
+                    onChange={(e) =>
+                      onChangeField(
+                        sectionIndex,
+                        fieldIndex,
+                        "label",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Field label"
+                    className="premium-input"
+                    disabled={disabled}
+                  />
+
+                  {canUsePresetDropdown ? (
+                    <PresetValueDropdown
+                      options={presetOptions}
+                      value={field.value}
+                      onChange={(value) =>
+                        onChangeField(sectionIndex, fieldIndex, "value", value)
+                      }
+                      placeholder={`Select ${
+                        field.label.toLowerCase() || "field value"
+                      }`}
+                      disabled={disabled}
+                      allowCustom={canUseCustom}
+                      resolveCustomOption={(value) =>
+                        resolveCustomValueOption
+                          ? resolveCustomValueOption(field.label, value)
+                          : null
+                      }
+                    />
+                  ) : (
+                    <input
+                      value={field.value}
+                      onChange={(e) =>
+                        onChangeField(
+                          sectionIndex,
+                          fieldIndex,
+                          "value",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Field value"
+                      className="premium-input"
+                      disabled={disabled}
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => onRemoveField(sectionIndex, fieldIndex)}
+                    disabled={disabled}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-rose-600 transition hover:bg-rose-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

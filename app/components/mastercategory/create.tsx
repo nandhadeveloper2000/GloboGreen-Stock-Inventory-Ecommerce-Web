@@ -1,9 +1,9 @@
 "use client";
 
-import React, {
-  ChangeEvent,
-  DragEvent,
-  FormEvent,
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
   useEffect,
   useMemo,
   useRef,
@@ -12,45 +12,49 @@ import React, {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  Loader2,
   ImagePlus,
-  Tag,
-  Trash2,
+  Loader2,
   Save,
   Sparkles,
+  Tag,
+  Trash2,
   UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
-import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 
 type ImagePreview = {
   file: File | null;
   url: string;
+  isExisting?: boolean;
 };
 
-type CreateMasterCategoryResponse = {
+type MasterCategoryItem = {
+  _id: string;
+  name: string;
+  nameKey?: string;
+  isActive?: boolean;
+  image?: {
+    url?: string;
+    publicId?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type MasterCategoryResponse = {
   success?: boolean;
   message?: string;
-  data?: {
-    _id: string;
-    name: string;
-    nameKey: string;
-    isActive: boolean;
-    image?: {
-      url?: string;
-      publicId?: string;
-    };
-    createdAt?: string;
-    updatedAt?: string;
-  };
+  data?: MasterCategoryItem;
 };
 
 const initialPreview: ImagePreview = {
   file: null,
   url: "",
+  isExisting: false,
 };
 
 function getErrorMessage(error: unknown): string {
@@ -75,14 +79,41 @@ function getErrorMessage(error: unknown): string {
   return "Something went wrong";
 }
 
-export default function CreateMasterCategoryPage() {
+export default function CreateMasterCategoryPage({
+  mode = "create",
+  masterCategoryId = "",
+}: {
+  mode?: "create" | "edit";
+  masterCategoryId?: string;
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isEditMode = mode === "edit";
 
   const [name, setName] = useState("");
   const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(isEditMode);
+  const [removingImage, setRemovingImage] = useState(false);
+  const [initialData, setInitialData] = useState({
+    name: "",
+    imageUrl: "",
+  });
+
+  const pageTitle = isEditMode
+    ? "Edit Master Category"
+    : "Create Master Category";
+  const pageDescription = isEditMode
+    ? "Update your master category details and keep the catalog naming and image clean."
+    : "Add a premium, well-structured master category for your catalog. Keep naming clean and upload an optional category image.";
+  const basicInfoDescription = isEditMode
+    ? "Update the master category name. The key preview updates automatically."
+    : "Enter the master category name. The key preview will be generated automatically.";
+  const imageDescription = isEditMode
+    ? "Replace or remove the current category image."
+    : "Upload or drag and drop an optional category image.";
+  const submitLabel = isEditMode ? "Update Master Category" : "Create Master Category";
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -93,11 +124,98 @@ export default function CreateMasterCategoryPage() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview.url) {
+      if (imagePreview.url && !imagePreview.isExisting) {
         URL.revokeObjectURL(imagePreview.url);
       }
     };
-  }, [imagePreview.url]);
+  }, [imagePreview.url, imagePreview.isExisting]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setLoadingExisting(false);
+      return;
+    }
+
+    if (!masterCategoryId.trim()) {
+      toast.error("Invalid master category id");
+      setLoadingExisting(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadMasterCategory = async () => {
+      try {
+        setLoadingExisting(true);
+
+        const response = await apiClient.get<MasterCategoryResponse>(
+          SummaryApi.master_category_get.url(masterCategoryId),
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        const result = response.data;
+
+        if (!result?.success || !result.data) {
+          throw new Error(result?.message || "Failed to load master category");
+        }
+
+        if (!active) return;
+
+        const resolvedName = String(result.data.name || "");
+        const resolvedImageUrl = String(result.data.image?.url || "").trim();
+
+        setName(resolvedName);
+        setInitialData({
+          name: resolvedName,
+          imageUrl: resolvedImageUrl,
+        });
+        setImagePreview(
+          resolvedImageUrl
+            ? {
+                file: null,
+                url: resolvedImageUrl,
+                isExisting: true,
+              }
+            : initialPreview
+        );
+      } catch (error: unknown) {
+        if (!active) return;
+        toast.error(getErrorMessage(error));
+      } finally {
+        if (active) {
+          setLoadingExisting(false);
+        }
+      }
+    };
+
+    void loadMasterCategory();
+
+    return () => {
+      active = false;
+    };
+  }, [isEditMode, masterCategoryId]);
+
+  const clearFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const buildInitialPreview = (): ImagePreview => {
+    if (initialData.imageUrl) {
+      return {
+        file: null,
+        url: initialData.imageUrl,
+        isExisting: true,
+      };
+    }
+
+    return initialPreview;
+  };
 
   const validateAndSetImage = (file: File | null) => {
     if (!file) return;
@@ -105,29 +223,26 @@ export default function CreateMasterCategoryPage() {
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      clearFileInput();
       return;
     }
 
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      clearFileInput();
       return;
     }
 
     setImagePreview((prev) => {
-      if (prev.url) {
+      if (prev.url && !prev.isExisting) {
         URL.revokeObjectURL(prev.url);
       }
 
       return {
         file,
         url: URL.createObjectURL(file),
+        isExisting: false,
       };
     });
   };
@@ -160,26 +275,71 @@ export default function CreateMasterCategoryPage() {
     e.stopPropagation();
     setDragActive(false);
 
+    if (submitting || removingImage) return;
+
     const file = e.dataTransfer.files?.[0] || null;
     validateAndSetImage(file);
   };
 
-  const removeImage = () => {
-    setImagePreview((prev) => {
-      if (prev.url) {
-        URL.revokeObjectURL(prev.url);
-      }
-      return initialPreview;
-    });
+  const removeImage = async () => {
+    const hasSelectedLocalImage = Boolean(imagePreview.file && !imagePreview.isExisting);
+    const hasExistingImage = Boolean(
+      isEditMode && imagePreview.isExisting && initialData.imageUrl
+    );
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (hasSelectedLocalImage) {
+      setImagePreview((prev) => {
+        if (prev.url && !prev.isExisting) {
+          URL.revokeObjectURL(prev.url);
+        }
+
+        return buildInitialPreview();
+      });
+
+      clearFileInput();
+      toast.success(initialData.imageUrl ? "Selected image cleared" : "Image removed");
+      return;
+    }
+
+    if (!hasExistingImage) {
+      setImagePreview(initialPreview);
+      clearFileInput();
+      return;
+    }
+
+    try {
+      setRemovingImage(true);
+
+      await apiClient.delete(SummaryApi.master_category_image_remove.url(masterCategoryId));
+
+      setImagePreview(initialPreview);
+      setInitialData((prev) => ({
+        ...prev,
+        imageUrl: "",
+      }));
+      clearFileInput();
+
+      toast.success("Image removed successfully");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setRemovingImage(false);
     }
   };
 
   const resetForm = () => {
-    setName("");
-    removeImage();
+    setDragActive(false);
+
+    setImagePreview((prev) => {
+      if (prev.url && !prev.isExisting) {
+        URL.revokeObjectURL(prev.url);
+      }
+
+      return isEditMode ? buildInitialPreview() : initialPreview;
+    });
+
+    setName(isEditMode ? initialData.name : "");
+    clearFileInput();
   };
 
   const validateForm = () => {
@@ -206,6 +366,46 @@ export default function CreateMasterCategoryPage() {
     try {
       setSubmitting(true);
 
+      if (isEditMode) {
+        const updateResponse = await apiClient.put<MasterCategoryResponse>(
+          SummaryApi.master_category_update.url(masterCategoryId),
+          {
+            name: name.trim(),
+          }
+        );
+
+        if (!updateResponse.data?.success) {
+          throw new Error(
+            updateResponse.data?.message || "Failed to update master category"
+          );
+        }
+
+        if (imagePreview.file) {
+          const formData = new FormData();
+          formData.append("image", imagePreview.file);
+
+          const imageResponse = await apiClient.put<MasterCategoryResponse>(
+            SummaryApi.master_category_image_upload.url(masterCategoryId),
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          if (!imageResponse.data?.success) {
+            throw new Error(
+              imageResponse.data?.message || "Failed to upload category image"
+            );
+          }
+        }
+
+        toast.success("Master category updated successfully");
+        router.push("/master/mastercategory/list");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("name", name.trim());
 
@@ -213,7 +413,7 @@ export default function CreateMasterCategoryPage() {
         formData.append("image", imagePreview.file);
       }
 
-      const response = await apiClient.post<CreateMasterCategoryResponse>(
+      const response = await apiClient.post<MasterCategoryResponse>(
         SummaryApi.master_category_create.url,
         formData,
         {
@@ -223,10 +423,8 @@ export default function CreateMasterCategoryPage() {
         }
       );
 
-      const data = response.data;
-
-      if (!data?.success) {
-        throw new Error(data?.message || "Failed to create master category");
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to create master category");
       }
 
       toast.success("Master category created successfully");
@@ -242,11 +440,22 @@ export default function CreateMasterCategoryPage() {
     }
   };
 
+  if (loadingExisting) {
+    return (
+      <div className="page-shell">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+            <span className="text-sm font-medium">Loading master category...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-shell">
-            <div className="mx-auto w-full max-w-7xl space-y-5">
-
-
+      <div className="mx-auto w-full max-w-7xl space-y-5">
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -260,12 +469,10 @@ export default function CreateMasterCategoryPage() {
 
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                  Create Master Category
+                  {pageTitle}
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                  Add a premium, well-structured master category for your
-                  catalog. Keep naming clean and upload an optional category
-                  image.
+                  {pageDescription}
                 </p>
               </div>
             </div>
@@ -283,10 +490,7 @@ export default function CreateMasterCategoryPage() {
                 <h2 className="text-xl font-bold text-slate-900">
                   Basic Information
                 </h2>
-                <p className="text-sm text-slate-500">
-                  Enter the master category name. The key preview will be
-                  generated automatically.
-                </p>
+                <p className="text-sm text-slate-500">{basicInfoDescription}</p>
               </div>
             </div>
 
@@ -296,7 +500,7 @@ export default function CreateMasterCategoryPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter master category name"
-                disabled={submitting}
+                disabled={submitting || removingImage}
                 required
               />
 
@@ -320,9 +524,7 @@ export default function CreateMasterCategoryPage() {
                 <h2 className="text-xl font-bold text-slate-900">
                   Category Image
                 </h2>
-                <p className="text-sm text-slate-500">
-                  Upload or drag and drop an optional category image.
-                </p>
+                <p className="text-sm text-slate-500">{imageDescription}</p>
               </div>
             </div>
 
@@ -338,7 +540,7 @@ export default function CreateMasterCategoryPage() {
                     dragActive
                       ? "border-violet-500 bg-violet-50 shadow-sm"
                       : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
-                  }`}
+                  } ${submitting || removingImage ? "pointer-events-none opacity-70" : ""}`}
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
                     {dragActive ? (
@@ -349,7 +551,11 @@ export default function CreateMasterCategoryPage() {
                   </div>
 
                   <p className="text-base font-semibold text-slate-800">
-                    {dragActive ? "Drop image here" : "Click to upload image"}
+                    {dragActive
+                      ? "Drop image here"
+                      : isEditMode
+                        ? "Click to replace image"
+                        : "Click to upload image"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
                     Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
@@ -362,14 +568,13 @@ export default function CreateMasterCategoryPage() {
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     onChange={handleImageChange}
                     className="hidden"
+                    disabled={submitting || removingImage}
                   />
                 </label>
               </div>
 
               <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-sm font-semibold text-slate-700">
-                  Preview
-                </p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">Preview</p>
 
                 <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {imagePreview.url ? (
@@ -387,16 +592,32 @@ export default function CreateMasterCategoryPage() {
                   )}
                 </div>
 
-                {imagePreview.url && (
+                {imagePreview.url ? (
                   <button
                     type="button"
-                    onClick={removeImage}
-                    className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
+                    onClick={() => {
+                      void removeImage();
+                    }}
+                    disabled={submitting || removingImage}
+                    className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Remove Image
+                    {removingImage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Removing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        {imagePreview.file && !imagePreview.isExisting
+                          ? initialData.imageUrl
+                            ? "Clear Selected Image"
+                            : "Remove Image"
+                          : "Remove Image"}
+                      </>
+                    )}
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
           </section>
@@ -406,7 +627,7 @@ export default function CreateMasterCategoryPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                disabled={submitting}
+                disabled={submitting || removingImage}
                 className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
@@ -414,18 +635,18 @@ export default function CreateMasterCategoryPage() {
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || removingImage}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
+                    {isEditMode ? "Updating..." : "Creating..."}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    Create Master Category
+                    {submitLabel}
                   </>
                 )}
               </button>

@@ -72,7 +72,7 @@ export function getDefaultRouteByRole(role?: string | null) {
       return "/employee/dashboard";
 
     default:
-      return "/login";
+      return "/masterlogin";
   }
 }
 

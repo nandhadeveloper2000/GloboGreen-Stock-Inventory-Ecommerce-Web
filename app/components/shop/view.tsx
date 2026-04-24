@@ -34,6 +34,8 @@ type ShopAddress = {
 
 type ShopDocument = {
   url?: string;
+  publicId?: string;
+  public_id?: string;
   mimeType?: string;
   fileName?: string;
   bytes?: number;
@@ -47,15 +49,35 @@ type ShopOwnerRef = {
   mobile?: string;
 };
 
+type AppRole =
+  | "MASTER_ADMIN"
+  | "MANAGER"
+  | "SUPERVISOR"
+  | "STAFF"
+  | "SHOP_OWNER"
+  | "SHOP_MANAGER"
+  | "SHOP_SUPERVISOR"
+  | "EMPLOYEE";
+
 type ShopDetails = {
   _id: string;
   name?: string;
+  shopType?: string;
   businessType?: string;
   isActive?: boolean;
   createdAt?: string;
+
+  enableGSTBilling?: boolean;
+  billingType?: string;
+  gstNumber?: string;
+
   shopAddress?: ShopAddress;
+
   frontImageUrl?: string;
+  frontImagePublicId?: string;
+
   shopOwnerAccountId?: string | ShopOwnerRef;
+
   gstCertificate?: ShopDocument;
   udyamCertificate?: ShopDocument;
 };
@@ -82,11 +104,27 @@ function formatDate(value?: string | null) {
   }).format(date);
 }
 
-function formatBytes(bytes?: number) {
-  if (!bytes || bytes <= 0) return "-";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function normalizeRole(role?: string | null): AppRole {
+  const value = String(role || "").trim().toUpperCase();
+
+  if (value === "MASTER_ADMIN") return "MASTER_ADMIN";
+  if (value === "MANAGER") return "MANAGER";
+  if (value === "SUPERVISOR") return "SUPERVISOR";
+  if (value === "SHOP_OWNER") return "SHOP_OWNER";
+  if (value === "SHOP_MANAGER") return "SHOP_MANAGER";
+  if (value === "SHOP_SUPERVISOR") return "SHOP_SUPERVISOR";
+  if (value === "EMPLOYEE") return "EMPLOYEE";
+
+  return "STAFF";
+}
+
+function getShopBasePath(role: AppRole) {
+  if (role === "MASTER_ADMIN") return "/master/shop";
+  if (role === "MANAGER") return "/manager/shop";
+  if (role === "SUPERVISOR") return "/supervisor/shop";
+  if (role === "SHOP_OWNER") return "/shopowner/shopprofile";
+
+  return "/master/shop";
 }
 
 function isImageAsset(url?: string | null, mimeType?: string | null) {
@@ -97,6 +135,7 @@ function isImageAsset(url?: string | null, mimeType?: string | null) {
   }
 
   const normalizedUrl = String(url || "").trim().toLowerCase();
+
   return /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(normalizedUrl);
 }
 
@@ -106,33 +145,9 @@ function DetailCard({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value || "-"}</p>
-    </div>
-  );
-}
-
-function LinkCard({ label, href }: { label: string; href?: string | null }) {
-  const url = String(href || "").trim();
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-        {label}
+      <p className="mt-1 text-sm font-semibold text-slate-900">
+        {value || "-"}
       </p>
-
-      {url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 inline-flex items-start gap-2 text-sm font-semibold text-slate-900 transition hover:text-violet-700"
-        >
-          <span className="break-all">{url}</span>
-          <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
-        </a>
-      ) : (
-        <p className="mt-1 text-sm font-semibold text-slate-900">-</p>
-      )}
     </div>
   );
 }
@@ -170,11 +185,95 @@ function SectionHeader({
   );
 }
 
+function ImageOnlyCard({
+  title,
+  url,
+  alt,
+  mimeType,
+}: {
+  title: string;
+  url?: string | null;
+  alt: string;
+  mimeType?: string | null;
+}) {
+  const imageUrl = String(url || "").trim();
+  const isImage = isImageAsset(imageUrl, mimeType);
+
+  return (
+    <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-bold text-slate-900">{title}</p>
+
+        {imageUrl ? (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+            title={`Open ${title}`}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        ) : null}
+      </div>
+
+      {imageUrl ? (
+        isImage ? (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="relative block h-[220px] w-full overflow-hidden rounded-3xl border border-slate-200 bg-white"
+          >
+            <Image
+              src={imageUrl}
+              alt={alt}
+              fill
+              sizes="(max-width: 768px) 100vw, 360px"
+              className="object-contain p-2"
+              unoptimized
+            />
+          </a>
+        ) : (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-[220px] w-full flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white px-4 text-center"
+          >
+            {String(mimeType || "").toLowerCase().includes("pdf") ? (
+              <FileText className="h-10 w-10 text-slate-400" />
+            ) : (
+              <FileImage className="h-10 w-10 text-slate-400" />
+            )}
+
+            <p className="mt-3 text-sm font-semibold text-slate-700">
+              Open uploaded document
+            </p>
+            <p className="mt-1 text-xs text-slate-500">Preview in new tab</p>
+          </a>
+        )
+      ) : (
+        <div className="flex h-[220px] w-full items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white px-4 text-center">
+          <p className="text-sm font-medium text-slate-500">
+            No image uploaded.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ShopViewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
   const accessToken = auth?.accessToken ?? null;
+  const currentRole = normalizeRole(
+    (auth as { role?: string | null; user?: { role?: string | null } })?.role ||
+      (auth as { user?: { role?: string | null } })?.user?.role
+  );
+  const shopBasePath = getShopBasePath(currentRole);
 
   const shopId = String(searchParams.get("id") || "").trim();
 
@@ -193,9 +292,9 @@ export default function ShopViewPage() {
         setLoading(true);
 
         const response = await fetch(
-          `${baseURL}${SummaryApi.master_get_shop.url(shopId)}`,
+          `${baseURL}${SummaryApi.shop_get.url(shopId)}`,
           {
-            method: SummaryApi.master_get_shop.method,
+            method: SummaryApi.shop_get.method,
             headers: {
               Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
@@ -233,6 +332,12 @@ export default function ShopViewPage() {
 
     return null;
   }, [data]);
+  const ownerViewHref =
+    currentRole === "SHOP_OWNER"
+      ? "/shopowner/profile"
+      : owner?._id
+        ? `/master/shopowner/view?id=${owner._id}`
+        : "";
 
   if (loading) {
     return (
@@ -260,6 +365,7 @@ export default function ShopViewPage() {
       <div className="page-shell">
         <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-slate-900">Shop View</h1>
+
           <p className="mt-2 text-sm text-slate-500">
             A valid shop id was not found, or the details could not be loaded.
           </p>
@@ -267,7 +373,7 @@ export default function ShopViewPage() {
           <div className="mt-5">
             <button
               type="button"
-              onClick={() => router.push("/master/shop/list")}
+              onClick={() => router.push(`${shopBasePath}/list`)}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -299,6 +405,7 @@ export default function ShopViewPage() {
                 <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                   {data.name || "Shop"}
                 </h1>
+
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
                   View complete shop details, linked owner information, address,
                   front image, and uploaded documents.
@@ -330,7 +437,7 @@ export default function ShopViewPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={() => router.push("/master/shop/list")}
+            onClick={() => router.push(`${shopBasePath}/list`)}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -338,7 +445,7 @@ export default function ShopViewPage() {
           </button>
 
           <Link
-            href={`/master/shop/edit/${data._id}`}
+            href={`${shopBasePath}/edit/${data._id}`}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
             Edit Shop
@@ -355,10 +462,16 @@ export default function ShopViewPage() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <DetailCard label="Shop Name" value={String(data.name || "-")} />
             <DetailCard
+              label="Shop Type"
+              value={String(data.shopType || "-")}
+            />
+            <DetailCard
               label="Business Type"
               value={String(data.businessType || "-")}
             />
             <DetailCard label="Status" value={isActive ? "Active" : "Inactive"} />
+            <DetailCard label="Billing Type" value={String(data.billingType || "-")} />
+            <DetailCard label="GST Number" value={String(data.gstNumber || "-")} />
             <DetailCard label="Created On" value={formatDate(data.createdAt)} />
           </div>
         </section>
@@ -383,10 +496,10 @@ export default function ShopViewPage() {
           {owner?._id ? (
             <div className="mt-4">
               <Link
-                href={`/master/shopowner/view?id=${owner._id}`}
+                href={ownerViewHref}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                View Shop Owner
+                {currentRole === "SHOP_OWNER" ? "View Profile" : "View Shop Owner"}
               </Link>
             </div>
           ) : null}
@@ -400,14 +513,26 @@ export default function ShopViewPage() {
           />
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <DetailCard label="State" value={String(data.shopAddress?.state || "-")} />
+            <DetailCard
+              label="State"
+              value={String(data.shopAddress?.state || "-")}
+            />
             <DetailCard
               label="District"
               value={String(data.shopAddress?.district || "-")}
             />
-            <DetailCard label="Taluk" value={String(data.shopAddress?.taluk || "-")} />
-            <DetailCard label="Area" value={String(data.shopAddress?.area || "-")} />
-            <DetailCard label="Street" value={String(data.shopAddress?.street || "-")} />
+            <DetailCard
+              label="Taluk"
+              value={String(data.shopAddress?.taluk || "-")}
+            />
+            <DetailCard
+              label="Area"
+              value={String(data.shopAddress?.area || "-")}
+            />
+            <DetailCard
+              label="Street"
+              value={String(data.shopAddress?.street || "-")}
+            />
             <DetailCard
               label="Pincode"
               value={String(data.shopAddress?.pincode || "-")}
@@ -415,127 +540,46 @@ export default function ShopViewPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
-            <SectionHeader
-              icon={<ShieldCheck className="h-5 w-5" />}
+        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <SectionHeader
+            icon={<ShieldCheck className="h-5 w-5" />}
+            title="Front Image"
+            description="Primary visual identity for the shop."
+          />
+
+          <div className="max-w-md">
+            <ImageOnlyCard
               title="Front Image"
-              description="Primary visual identity for the shop."
+              url={data.frontImageUrl}
+              alt={data.name || "Shop front image"}
+              mimeType="image/*"
+            />
+          </div>
+        </section>
+
+        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <SectionHeader
+            icon={<FileBadge2 className="h-5 w-5" />}
+            title="Documents"
+            description="GST and Udyam documents uploaded for this shop."
+          />
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <ImageOnlyCard
+              title="GST Certificate"
+              url={data.gstCertificate?.url}
+              alt={data.gstCertificate?.fileName || "GST Certificate"}
+              mimeType={data.gstCertificate?.mimeType}
             />
 
-            <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-              {data.frontImageUrl ? (
-                <div className="space-y-4">
-                  <div className="relative mx-auto h-56 w-full max-w-[280px] overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                    <Image
-                      src={data.frontImageUrl}
-                      alt={data.name || "Shop front image"}
-                      fill
-                      sizes="280px"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-
-                  <LinkCard label="Front Image URL" href={data.frontImageUrl} />
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">No front image uploaded.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
-            <SectionHeader
-              icon={<FileBadge2 className="h-5 w-5" />}
-              title="Documents"
-              description="GST and Udyam documents uploaded for this shop."
+            <ImageOnlyCard
+              title="Udyam Certificate"
+              url={data.udyamCertificate?.url}
+              alt={data.udyamCertificate?.fileName || "Udyam Certificate"}
+              mimeType={data.udyamCertificate?.mimeType}
             />
-
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {[
-                {
-                  key: "GST Certificate",
-                  document: data.gstCertificate,
-                },
-                {
-                  key: "Udyam Certificate",
-                  document: data.udyamCertificate,
-                },
-              ].map((item) => {
-                const url = String(item.document?.url || "").trim();
-                const isImage = isImageAsset(url, item.document?.mimeType);
-
-                return (
-                  <div
-                    key={item.key}
-                    className="rounded-[26px] border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <p className="text-sm font-bold text-slate-900">{item.key}</p>
-
-                    {url ? (
-                      <div className="mt-4 space-y-3">
-                        {isImage ? (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="relative block h-48 overflow-hidden rounded-3xl border border-slate-200 bg-white"
-                          >
-                            <Image
-                              src={url}
-                              alt={item.document?.fileName || item.key}
-                              fill
-                              sizes="320px"
-                              className="object-cover"
-                              unoptimized
-                            />
-                          </a>
-                        ) : (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex h-48 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white px-4 text-center"
-                          >
-                            {String(item.document?.mimeType || "")
-                              .toLowerCase()
-                              .includes("pdf") ? (
-                              <FileText className="h-10 w-10 text-slate-400" />
-                            ) : (
-                              <FileImage className="h-10 w-10 text-slate-400" />
-                            )}
-                            <p className="mt-3 text-sm font-semibold text-slate-700">
-                              {item.document?.fileName || "Open uploaded document"}
-                            </p>
-                          </a>
-                        )}
-
-                        <DetailCard
-                          label="File Name"
-                          value={String(item.document?.fileName || "-")}
-                        />
-                        <DetailCard
-                          label="File Type"
-                          value={String(item.document?.mimeType || "-")}
-                        />
-                        <DetailCard
-                          label="File Size"
-                          value={formatBytes(item.document?.bytes)}
-                        />
-                        <LinkCard label={`${item.key} URL`} href={url} />
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-sm text-slate-500">
-                        No document uploaded.
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </div>
   );

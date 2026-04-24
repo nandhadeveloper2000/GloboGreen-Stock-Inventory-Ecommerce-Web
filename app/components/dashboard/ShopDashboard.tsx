@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 const SELECTED_SHOP_KEY = "selected_shop_id_web";
 const SELECTED_SHOP_NAME_KEY = "selected_shop_name_web";
 const SELECTED_SHOP_IMAGE_KEY = "selected_shop_image_web";
+const SELECTED_SHOP_TYPE_KEY = "selected_shop_type_web";
 
 type Address = {
   state?: string;
@@ -55,11 +56,32 @@ type ShopOwnerAccount =
 type ShopItem = {
   _id: string;
   name?: string;
+  shopType?: string;
   businessType?: string;
+  isMainWarehouse?: boolean;
   frontImageUrl?: string;
+  frontImagePublicId?: string;
   isActive?: boolean;
+  enableGSTBilling?: boolean;
+  billingType?: string;
+  gstNumber?: string;
+  mobile?: string;
   shopAddress?: Address;
   shopOwnerAccountId?: ShopOwnerAccount;
+  gstCertificate?: {
+    url?: string;
+    publicId?: string;
+    mimeType?: string;
+    fileName?: string;
+    bytes?: number;
+  };
+  udyamCertificate?: {
+    url?: string;
+    publicId?: string;
+    mimeType?: string;
+    fileName?: string;
+    bytes?: number;
+  };
 };
 
 type AuthUser = {
@@ -100,9 +122,11 @@ type SummaryApiEntry = {
 };
 
 function normalizeRole(role?: string | null) {
-  return String(role || "")
-    .trim()
-    .toUpperCase();
+  return String(role || "").trim().toUpperCase();
+}
+
+function normalizeValue(value?: string | null) {
+  return String(value || "").trim().toUpperCase();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -132,6 +156,7 @@ function getSummaryEntry(key: string): SummaryApiEntry | null {
 
   if (!isRecord(entry)) return null;
   if (typeof entry.method !== "string") return null;
+
   if (typeof entry.url !== "string" && typeof entry.url !== "function") {
     return null;
   }
@@ -150,8 +175,8 @@ function readShopList(json: ApiJson): ShopItem[] {
 }
 
 function readSelfData(json: ApiJson): AuthUser | null {
-  if (isRecord(json.data) && isRecord((json.data as Record<string, unknown>).user)) {
-    return (json.data as Record<string, unknown>).user as AuthUser;
+  if (isRecord(json.data) && isRecord(json.data.user)) {
+    return json.data.user as AuthUser;
   }
 
   if (isRecord(json.user)) {
@@ -182,6 +207,25 @@ function formatRoleLabel(role?: string | null) {
   }
 }
 
+function formatShopType(value?: string | null) {
+  const normalized = normalizeValue(value);
+
+  switch (normalized) {
+    case "WAREHOUSE_RETAIL_SHOP":
+      return "Warehouse Retail Shop";
+    case "RETAIL_BRANCH_SHOP":
+      return "Retail Branch Shop";
+    case "BRANCH_RETAIL_SHOP":
+      return "Retail Branch Shop";
+    case "WHOLESALE_SHOP":
+      return "Wholesale Shop";
+    case "WAREHOUSE_SHOP":
+      return "Warehouse Shop";
+    default:
+      return value || "Shop";
+  }
+}
+
 function getFullAddress(shop?: ShopItem | null) {
   if (!shop?.shopAddress) return "";
 
@@ -204,6 +248,7 @@ function syncSelectedShopToStorage(shop: ShopItem | null) {
     window.localStorage.removeItem(SELECTED_SHOP_KEY);
     window.localStorage.removeItem(SELECTED_SHOP_NAME_KEY);
     window.localStorage.removeItem(SELECTED_SHOP_IMAGE_KEY);
+    window.localStorage.removeItem(SELECTED_SHOP_TYPE_KEY);
     window.dispatchEvent(new Event("shop-selection-changed"));
     return;
   }
@@ -211,7 +256,12 @@ function syncSelectedShopToStorage(shop: ShopItem | null) {
   window.localStorage.setItem(SELECTED_SHOP_KEY, shop._id || "");
   window.localStorage.setItem(SELECTED_SHOP_NAME_KEY, shop.name || "");
   window.localStorage.setItem(SELECTED_SHOP_IMAGE_KEY, shop.frontImageUrl || "");
+  window.localStorage.setItem(SELECTED_SHOP_TYPE_KEY, shop.shopType || "");
   window.dispatchEvent(new Event("shop-selection-changed"));
+}
+
+function isWarehouseRetailShop(shop?: ShopItem | null) {
+  return normalizeValue(shop?.shopType) === "WAREHOUSE_RETAIL_SHOP";
 }
 
 function resolveInitialSelectedShop(shopList: ShopItem[]) {
@@ -223,8 +273,21 @@ function resolveInitialSelectedShop(shopList: ShopItem[]) {
     const matchedStoredShop = shopList.find(
       (shop) => String(shop._id) === String(storedShopId)
     );
+
     if (matchedStoredShop) return matchedStoredShop;
   }
+
+  const warehouseRetailShop = shopList.find((shop) =>
+    isWarehouseRetailShop(shop)
+  );
+
+  if (warehouseRetailShop) return warehouseRetailShop;
+
+  const mainWarehouseShop = shopList.find((shop) =>
+    Boolean(shop.isMainWarehouse)
+  );
+
+  if (mainWarehouseShop) return mainWarehouseShop;
 
   return shopList[0];
 }
@@ -241,22 +304,20 @@ function StatCard({
   subtext?: string;
 }) {
   return (
-    <div className="rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white px-5 py-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)]">
+    <div className="rounded-[22px] border border-[rgba(15,23,42,0.08)] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]">
         <Icon className="h-5 w-5" />
       </div>
 
-      <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500">
+      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
         {label}
       </p>
 
-      <h3 className="mt-3 text-2xl font-extrabold tracking-tight text-slate-900">
+      <h3 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900">
         {value}
       </h3>
 
-      {subtext ? (
-        <p className="mt-2 text-sm text-slate-500">{subtext}</p>
-      ) : null}
+      {subtext ? <p className="mt-1 text-xs text-slate-500">{subtext}</p> : null}
     </div>
   );
 }
@@ -273,18 +334,20 @@ function MiniMetricCard({
   helper?: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)]">
+    <div className="rounded-[20px] border border-[rgba(15,23,42,0.08)] bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]">
         <Icon className="h-5 w-5" />
       </div>
 
-      <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
         {label}
       </p>
-      <p className="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">
+
+      <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-950">
         {value}
       </p>
-      {helper ? <p className="mt-2 text-sm text-slate-500">{helper}</p> : null}
+
+      {helper ? <p className="mt-1 text-xs text-slate-500">{helper}</p> : null}
     </div>
   );
 }
@@ -319,11 +382,10 @@ export default function ShopDashboard() {
   const totalShops = shops.length;
 
   const businessType = selectedShop?.businessType || "N/A";
+  const shopTypeLabel = formatShopType(selectedShop?.shopType);
   const selectedShopAddress = getFullAddress(selectedShop);
-
   const selectedShopStatus = selectedShop?.isActive ? "Active" : "Inactive";
   const accountControl = authUser.shopControl || "N/A";
-
   const selectedShopImage = selectedShop?.frontImageUrl || "";
 
   const availableSwitchShops = useMemo(() => {
@@ -332,6 +394,7 @@ export default function ShopDashboard() {
 
   async function readResponse(res: Response) {
     const text = await res.text();
+
     try {
       return JSON.parse(text) as ApiJson;
     } catch {
@@ -373,6 +436,7 @@ export default function ShopDashboard() {
       }
 
       const shopListEntry = getSummaryEntry("shop_list");
+
       if (!shopListEntry) {
         setShops([]);
         setSelectedShop(null);
@@ -399,7 +463,7 @@ export default function ShopDashboard() {
 
       const ownerId = getId(selfUser?._id) || getId(selfUser?.id);
       const allowedShopIds = Array.isArray(selfUser?.shopIds)
-        ? selfUser!.shopIds!.map((item) => getId(item)).filter(Boolean)
+        ? selfUser.shopIds.map((item) => getId(item)).filter(Boolean)
         : [];
       const staffShopId = getId(selfUser?.shopId) || getId(authUser.shopId);
 
@@ -475,6 +539,7 @@ export default function ShopDashboard() {
       };
 
       const shopStaffListEntry = getSummaryEntry("shopstaff_list");
+
       if (shopStaffListEntry) {
         const staffRes = await fetch(
           apiUrl(resolveDynamicUrl(shopStaffListEntry, "")),
@@ -502,18 +567,22 @@ export default function ShopDashboard() {
             const recordShopId =
               getId(item.shopId) ||
               getId(item.shop) ||
-              getId((item as Record<string, unknown>).linkedShopId);
+              getId(item.linkedShopId);
+
             return String(recordShopId) === String(shopId);
           });
 
           nextCounts.totalStaff = filteredStaff.length;
+
           nextCounts.managers = filteredStaff.filter(
             (item) => normalizeRole(String(item.role || "")) === "SHOP_MANAGER"
           ).length;
+
           nextCounts.supervisors = filteredStaff.filter(
             (item) =>
               normalizeRole(String(item.role || "")) === "SHOP_SUPERVISOR"
           ).length;
+
           nextCounts.employees = filteredStaff.filter(
             (item) => normalizeRole(String(item.role || "")) === "EMPLOYEE"
           ).length;
@@ -521,6 +590,7 @@ export default function ShopDashboard() {
       }
 
       const productListEntry = getSummaryEntry("product_list");
+
       if (productListEntry) {
         const productRes = await fetch(
           apiUrl(resolveDynamicUrl(productListEntry, "")),
@@ -543,7 +613,8 @@ export default function ShopDashboard() {
             const recordShopId =
               getId(item.shopId) ||
               getId(item.shop) ||
-              getId((item as Record<string, unknown>).ownerShopId);
+              getId(item.ownerShopId);
+
             return String(recordShopId) === String(shopId);
           }).length;
         }
@@ -603,6 +674,7 @@ export default function ShopDashboard() {
   useEffect(() => {
     const handleExternalShopSync = () => {
       const storedShopId = getStoredSelectedShopId();
+
       if (!storedShopId || !shops.length) return;
 
       const matchedShop = shops.find(
@@ -627,62 +699,64 @@ export default function ShopDashboard() {
   }, [shops]);
 
   return (
-    <section className="space-y-6">
-      <section className="premium-hero premium-glow relative overflow-hidden rounded-[32px] px-5 py-6 md:px-7 md:py-7">
+    <section className="space-y-5">
+      <section className="premium-hero premium-glow relative overflow-hidden rounded-[28px] px-5 py-5 md:px-6 md:py-6">
         <div className="premium-grid-bg premium-bg-animate opacity-40" />
         <div className="premium-bg-overlay" />
 
         <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl space-y-3">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/95">
               <Sparkles className="h-3.5 w-3.5" />
               Shop Panel
             </span>
 
-            <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl">
               Welcome, {displayName}
             </h1>
 
-            <p className="max-w-2xl text-sm leading-6 text-white/85 md:text-base">
-              Manage all your shops, switch shops, and review shop-level business
-              performance from one premium dashboard.
+            <p className="max-w-2xl text-sm leading-6 text-white/85">
+              Manage all your shops, switch shops, and review shop-level
+              business performance from one premium dashboard.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="min-w-[220px] rounded-[28px] border border-white/25 bg-white/10 px-5 py-4 text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+            <div className="min-w-[210px] rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                   <Store className="h-5 w-5" />
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/75">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
                     Current Shop
                   </p>
-                  <p className="truncate text-xl font-bold">
+                  <p className="truncate text-lg font-bold">
                     {selectedShop?.name || "No Shop"}
                   </p>
-                  <p className="truncate text-sm text-white/80">
-                    {selectedShop?.businessType || "Not selected"}
+                  <p className="truncate text-xs text-white/80">
+                    {shopTypeLabel}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="min-w-[220px] rounded-[28px] border border-white/25 bg-white/10 px-5 py-4 text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+            <div className="min-w-[210px] rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/75">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
                     Account Role
                   </p>
-                  <p className="truncate text-xl font-bold">{roleLabel}</p>
-                  <p className="truncate text-sm text-white/80">
-                    {emailVerified ? "Verified account access" : "Email verification pending"}
+                  <p className="truncate text-lg font-bold">{roleLabel}</p>
+                  <p className="truncate text-xs text-white/80">
+                    {emailVerified
+                      ? "Verified account access"
+                      : "Email verification pending"}
                   </p>
                 </div>
               </div>
@@ -694,21 +768,27 @@ export default function ShopDashboard() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Building2}
-          label="My Shops"
-          value={totalShops}
+          label="Linked Shops"
+          value={`${totalShops}/7`}
           subtext="Total linked shop accounts"
         />
         <StatCard
           icon={CheckCircle2}
           label="Shop Status"
           value={selectedShopStatus}
-          subtext={selectedShop?.isActive ? "Currently operational" : "Currently inactive"}
+          subtext={
+            selectedShop?.isActive
+              ? "Currently operational"
+              : "Currently inactive"
+          }
         />
         <StatCard
           icon={MailCheck}
           label="Email Status"
           value={emailVerified ? "Verified" : "Pending"}
-          subtext={emailVerified ? "Verified account access" : "Verify your email access"}
+          subtext={
+            emailVerified ? "Verified account access" : "Verify your email access"
+          }
         />
         <StatCard
           icon={BriefcaseBusiness}
@@ -718,18 +798,18 @@ export default function ShopDashboard() {
         />
       </section>
 
-      <section className="rounded-[32px] border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
+      <section className="rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-[0_16px_44px_rgba(15,23,42,0.05)] md:p-6">
         <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-500">
+            <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-slate-500">
               Shop Overview
             </p>
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-950">
               Current Selected Shop
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
-              Review the currently selected shop, business type, team distribution,
-              and product summary in one place.
+              Review the currently selected shop, business type, shop type, team
+              distribution, and product summary in one place.
             </p>
           </div>
 
@@ -739,7 +819,7 @@ export default function ShopDashboard() {
               variant="outline"
               onClick={handleRefresh}
               disabled={loading}
-              className="h-11 rounded-2xl border-slate-200 bg-white px-4"
+              className="h-10 rounded-xl border-slate-200 bg-white px-4"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -754,7 +834,7 @@ export default function ShopDashboard() {
                 <Button
                   type="button"
                   onClick={() => setSwitchMenuOpen((prev) => !prev)}
-                  className="h-11 rounded-2xl bg-[var(--primary)] px-4 text-white hover:bg-[var(--primary-dark)]"
+                  className="h-10 rounded-xl bg-[var(--primary)] px-4 text-white hover:bg-[var(--primary-dark)]"
                 >
                   <Store className="mr-2 h-4 w-4" />
                   Switch Shop
@@ -762,9 +842,9 @@ export default function ShopDashboard() {
                 </Button>
 
                 {switchMenuOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-80 rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
+                  <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-80 rounded-[22px] border border-slate-200 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
                     <div className="px-3 pb-2 pt-2">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
                         Select Shop
                       </p>
                     </div>
@@ -791,7 +871,7 @@ export default function ShopDashboard() {
                                 {shop.name || "Unnamed Shop"}
                               </p>
                               <p className="truncate text-xs text-slate-500">
-                                {shop.businessType || "Shop"}
+                                {formatShopType(shop.shopType)}
                               </p>
                             </div>
 
@@ -815,7 +895,7 @@ export default function ShopDashboard() {
 
         <div className="mt-5">
           {loading ? (
-            <div className="flex min-h-[240px] items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-slate-50">
+            <div className="flex min-h-[220px] items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50">
               <div className="flex items-center gap-3 text-slate-500">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm font-medium">Loading dashboard...</span>
@@ -823,7 +903,7 @@ export default function ShopDashboard() {
             </div>
           ) : selectedShop ? (
             <div className="space-y-5">
-              <div className="rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.05)]">
+              <div className="rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)] md:p-5">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="flex min-w-0 items-start gap-4">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
@@ -849,7 +929,7 @@ export default function ShopDashboard() {
                         </h3>
 
                         <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
                             selectedShop.isActive
                               ? "bg-emerald-100 text-emerald-700"
                               : "bg-rose-100 text-rose-700"
@@ -859,9 +939,19 @@ export default function ShopDashboard() {
                         </span>
                       </div>
 
-                      <p className="mt-2 text-sm font-semibold text-[var(--primary)]">
-                        {selectedShop.businessType || "Business type not set"}
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-[var(--primary-soft)] px-3 py-1 text-xs font-bold text-[var(--primary)]">
+                          {shopTypeLabel}
+                        </span>
+
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                          {businessType}
+                        </span>
+
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                          Billing: {selectedShop.billingType || "N/A"}
+                        </span>
+                      </div>
 
                       <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
                         {selectedShopAddress || "Address not available"}
@@ -871,20 +961,20 @@ export default function ShopDashboard() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
-                        Business Type
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                        Mobile
                       </p>
-                      <p className="mt-2 text-lg font-bold text-slate-900">
-                        {businessType}
+                      <p className="mt-2 text-base font-bold text-slate-900">
+                        {selectedShop.mobile || "N/A"}
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
-                        Staff Access
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                        GST Billing
                       </p>
-                      <p className="mt-2 text-lg font-bold text-slate-900">
-                        Manage Team
+                      <p className="mt-2 text-base font-bold text-slate-900">
+                        {selectedShop.enableGSTBilling ? "Enabled" : "Disabled"}
                       </p>
                     </div>
                   </div>
@@ -924,20 +1014,22 @@ export default function ShopDashboard() {
                 />
                 <MiniMetricCard
                   icon={BellRing}
-                  label="Business Type"
-                  value={businessType}
-                  helper="Registered business"
+                  label="Shop Type"
+                  value={shopTypeLabel}
+                  helper="Registered shop type"
                 />
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[240px] flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)]">
                 <Store className="h-6 w-6" />
               </div>
+
               <h3 className="mt-4 text-xl font-bold text-slate-900">
                 No shop found
               </h3>
+
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
                 No shop is currently linked to this account, or the selected shop
                 data could not be loaded.

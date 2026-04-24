@@ -27,6 +27,8 @@ import {
 } from "@/constants/navigation";
 import { Button } from "@/components/ui/button";
 
+const SELECTED_SHOP_TYPE_KEY = "selected_shop_type_web";
+
 type MobileSidebarDrawerProps = {
   open: boolean;
   onClose: () => void;
@@ -59,6 +61,14 @@ function isParentActive(pathname: string, item: NavItem) {
   return false;
 }
 
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toUpperCase();
+}
+
+function normalizeValue(value?: string | null) {
+  return String(value || "").trim().toUpperCase();
+}
+
 export default function MobileSidebarDrawer({
   open,
   onClose,
@@ -66,19 +76,64 @@ export default function MobileSidebarDrawer({
 }: MobileSidebarDrawerProps) {
   const pathname = usePathname();
   const items = useMemo(() => SIDEBAR_MENU[role] ?? [], [role]);
+  const [selectedShopType, setSelectedShopType] = useState("");
+  const currentRole = useMemo(() => normalizeRole(role), [role]);
+  const visibleItems = useMemo(() => {
+    if (currentRole !== "SHOP_OWNER") {
+      return items;
+    }
+
+    return items.filter((item) => {
+      if (item.label !== "Shop Management") {
+        return true;
+      }
+
+      return normalizeValue(selectedShopType) === "WAREHOUSE_RETAIL_SHOP";
+    });
+  }, [currentRole, items, selectedShopType]);
 
   const defaultOpenMenu = useMemo(() => {
-    const activeItem = items.find(
+    const activeItem = visibleItems.find(
       (item) => item.children?.length && isParentActive(pathname, item)
     );
     return activeItem?.label ?? null;
-  }, [items, pathname]);
+  }, [pathname, visibleItems]);
 
   const [openMenu, setOpenMenu] = useState<string | null>(defaultOpenMenu);
 
   useEffect(() => {
     setOpenMenu(defaultOpenMenu);
   }, [defaultOpenMenu]);
+
+  useEffect(() => {
+    function syncSelectedShopType() {
+      if (typeof window === "undefined") return;
+
+      setSelectedShopType(
+        window.localStorage.getItem(SELECTED_SHOP_TYPE_KEY) || ""
+      );
+    }
+
+    syncSelectedShopType();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", syncSelectedShopType);
+      window.addEventListener(
+        "shop-selection-changed",
+        syncSelectedShopType as EventListener
+      );
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", syncSelectedShopType);
+        window.removeEventListener(
+          "shop-selection-changed",
+          syncSelectedShopType as EventListener
+        );
+      }
+    };
+  }, []);
 
   function toggleMenu(label: string) {
     setOpenMenu((prev) => (prev === label ? null : label));
@@ -128,7 +183,7 @@ export default function MobileSidebarDrawer({
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <nav className="space-y-2">
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = getIcon(item.label);
               const parentActive = isParentActive(pathname, item);
               const hasChildren = Boolean(item.children?.length);

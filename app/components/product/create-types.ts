@@ -61,7 +61,7 @@ export type ProductPresetDefinition = {
   sections: ProductPresetSection[];
 };
 
-export type ResolvedProductTypePreset = ProductPresetDefinition & {
+export type ResolvedProductPreset = ProductPresetDefinition & {
   itemTypeName: string;
 };
 
@@ -83,9 +83,11 @@ export type VariantAttribute = {
 export type VariantItem = {
   id: string;
   title: string;
+  description: string;
   attributes: VariantAttribute[];
   images: ProductImageItem[];
   videos: ProductVideoItem[];
+  compatibility: CompatibilityTableRow[];
   productInformation: ProductInformationSection[];
   isActive: boolean;
 };
@@ -95,13 +97,13 @@ export type ProductPayload = {
   itemName: string;
   itemModelNumber: string;
   itemKey: string;
+  description: string;
   searchKeys: string[];
   masterCategoryId: string;
   categoryId: string;
   subcategoryId: string;
-  productTypeId: string;
-  brandId: string;
-  modelId: string;
+  brandId: string[];
+  modelId: string[];
   images: Array<{
     url: string;
     publicId?: string;
@@ -118,6 +120,7 @@ export type ProductPayload = {
   }>;
   variant: Array<{
     title: string;
+    description: string;
     attributes: Array<{
       label: string;
       value: string;
@@ -129,6 +132,12 @@ export type ProductPayload = {
     videos: Array<{
       url: string;
       publicId?: string;
+    }>;
+    compatible: Array<{
+      brandId: string;
+      modelId: string[];
+      notes: string;
+      isActive: boolean;
     }>;
     productInformation: Array<{
       title: string;
@@ -155,7 +164,6 @@ export type ApiResponse<T> = {
   data?: T;
   categories?: T;
   masterCategories?: T;
-  productTypes?: T;
   brands?: T;
   models?: T;
 };
@@ -165,7 +173,6 @@ export type DropdownConfig = {
     | "masterCategoryId"
     | "categoryId"
     | "subcategoryId"
-    | "productTypeId"
     | "brandId"
     | "modelId";
   label: string;

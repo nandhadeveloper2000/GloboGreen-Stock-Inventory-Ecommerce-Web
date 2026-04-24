@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   KeyRound,
-  LockKeyhole,
   LogOut,
   UserCircle2,
 } from "lucide-react";
@@ -34,46 +33,55 @@ function getRolePaths(role: UserRole) {
       return {
         appBasePath: "/master",
         loginPath: "/masterlogin",
+        changePinPath: "/master/change-pin",
       };
     case "MANAGER":
       return {
-        appBasePath: "/subadmin",
-        loginPath: "/subadmin-login",
+        appBasePath: "/manager",
+        loginPath: "/masterlogin",
+        changePinPath: "/manager/change-pin",
       };
     case "SUPERVISOR":
       return {
         appBasePath: "/supervisor",
-        loginPath: "/supervisor-login",
+        loginPath: "/masterlogin",
+        changePinPath: "/supervisor/change-pin",
       };
     case "STAFF":
       return {
         appBasePath: "/staff",
-        loginPath: "/staff-login",
+        loginPath: "/masterlogin",
+        changePinPath: "/staff/change-pin",
       };
     case "SHOP_OWNER":
       return {
         appBasePath: "/shopowner",
         loginPath: "/shoplogin",
+        changePinPath: "/shopowner/change-pin",
       };
     case "SHOP_MANAGER":
       return {
         appBasePath: "/shopmanager",
         loginPath: "/shoplogin",
+        changePinPath: "/shopmanager/change-pin",
       };
     case "SHOP_SUPERVISOR":
       return {
         appBasePath: "/shopsupervisor",
         loginPath: "/shoplogin",
+        changePinPath: "/shopsupervisor/change-pin",
       };
     case "EMPLOYEE":
       return {
         appBasePath: "/employee",
         loginPath: "/shoplogin",
+        changePinPath: "/employee/change-pin",
       };
     default:
       return {
         appBasePath: "/",
         loginPath: "/",
+        changePinPath: "/",
       };
   }
 }
@@ -105,6 +113,14 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
     await clearAuth();
     toast.success("Logged out successfully");
     router.replace(paths.loginPath);
+  };
+
+  const handleProfile = () => {
+    router.push(`${paths.appBasePath}/profile`);
+  };
+
+  const handleChangePin = () => {
+    router.push(paths.changePinPath);
   };
 
   return (
@@ -156,7 +172,7 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onClick={() => router.push(`${paths.appBasePath}/profile`)}
+          onClick={handleProfile}
           className="cursor-pointer rounded-xl px-3 py-2.5"
         >
           <UserCircle2 className="mr-2 h-4 w-4" />
@@ -164,19 +180,11 @@ export default function AvatarDropdown({ role }: AvatarDropdownProps) {
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          onClick={() => router.push(`${paths.appBasePath}/change-pin`)}
+          onClick={handleChangePin}
           className="cursor-pointer rounded-xl px-3 py-2.5"
         >
           <KeyRound className="mr-2 h-4 w-4" />
           Change PIN
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => router.push(`${paths.appBasePath}/forgot-pin`)}
-          className="cursor-pointer rounded-xl px-3 py-2.5"
-        >
-          <LockKeyhole className="mr-2 h-4 w-4" />
-          Forgot PIN
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

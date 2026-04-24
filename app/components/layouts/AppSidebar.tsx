@@ -58,7 +58,9 @@ type ShopOwnerAccount =
 type ShopItem = {
   _id: string;
   name?: string;
+  shopType?: string;
   businessType?: string;
+  isMainWarehouse?: boolean;
   frontImageUrl?: string;
   isActive?: boolean;
   shopAddress?: Address;
@@ -97,6 +99,7 @@ type SummaryApiEntry = {
 const SELECTED_SHOP_KEY = "selected_shop_id_web";
 const SELECTED_SHOP_NAME_KEY = "selected_shop_name_web";
 const SELECTED_SHOP_IMAGE_KEY = "selected_shop_image_web";
+const SELECTED_SHOP_TYPE_KEY = "selected_shop_type_web";
 
 function getIcon(label: string) {
   if (label.includes("Dashboard")) return LayoutDashboard;
@@ -118,14 +121,20 @@ function isPathActive(pathname: string, href: string) {
 
 function isParentActive(pathname: string, item: NavItem) {
   if (item.href) return isPathActive(pathname, item.href);
+
   if (item.children?.length) {
     return item.children.some((child) => isPathActive(pathname, child.href));
   }
+
   return false;
 }
 
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toUpperCase();
+}
+
+function normalizeValue(value?: string | null) {
+  return String(value || "").trim().toUpperCase();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -155,6 +164,7 @@ function getSummaryEntry(key: string): SummaryApiEntry | null {
 
   if (!isRecord(entry)) return null;
   if (typeof entry.method !== "string") return null;
+
   if (typeof entry.url !== "string" && typeof entry.url !== "function") {
     return null;
   }
@@ -173,11 +183,8 @@ function readShopList(json: ApiJson): ShopItem[] {
 }
 
 function readSingleShop(json: ApiJson): ShopItem | null {
-  if (
-    isRecord(json.data) &&
-    isRecord((json.data as Record<string, unknown>).shop)
-  ) {
-    return (json.data as Record<string, unknown>).shop as ShopItem;
+  if (isRecord(json.data) && isRecord(json.data.shop)) {
+    return json.data.shop as ShopItem;
   }
 
   if (isRecord(json.data) && typeof json.data._id === "string") {
@@ -188,11 +195,8 @@ function readSingleShop(json: ApiJson): ShopItem | null {
 }
 
 function readSelfData(json: ApiJson): AuthUser | null {
-  if (
-    isRecord(json.data) &&
-    isRecord((json.data as Record<string, unknown>).user)
-  ) {
-    return (json.data as Record<string, unknown>).user as AuthUser;
+  if (isRecord(json.data) && isRecord(json.data.user)) {
+    return json.data.user as AuthUser;
   }
 
   if (isRecord(json.user)) {
@@ -208,14 +212,83 @@ function readSelfData(json: ApiJson): AuthUser | null {
 
 function readStoredShop() {
   if (typeof window === "undefined") {
-    return { id: "", name: "", image: "" };
+    return { id: "", name: "", image: "", type: "" };
   }
 
   return {
     id: window.localStorage.getItem(SELECTED_SHOP_KEY) || "",
     name: window.localStorage.getItem(SELECTED_SHOP_NAME_KEY) || "",
     image: window.localStorage.getItem(SELECTED_SHOP_IMAGE_KEY) || "",
+    type: window.localStorage.getItem(SELECTED_SHOP_TYPE_KEY) || "",
   };
+}
+
+function writeStoredShop(shop: ShopItem | null) {
+  if (typeof window === "undefined") return;
+
+  if (!shop?._id) {
+    window.localStorage.removeItem(SELECTED_SHOP_KEY);
+    window.localStorage.removeItem(SELECTED_SHOP_NAME_KEY);
+    window.localStorage.removeItem(SELECTED_SHOP_IMAGE_KEY);
+    window.localStorage.removeItem(SELECTED_SHOP_TYPE_KEY);
+    window.dispatchEvent(new Event("shop-selection-changed"));
+    return;
+  }
+
+  window.localStorage.setItem(SELECTED_SHOP_KEY, shop._id || "");
+  window.localStorage.setItem(SELECTED_SHOP_NAME_KEY, shop.name || "");
+  window.localStorage.setItem(SELECTED_SHOP_IMAGE_KEY, shop.frontImageUrl || "");
+  window.localStorage.setItem(SELECTED_SHOP_TYPE_KEY, shop.shopType || "");
+  window.dispatchEvent(new Event("shop-selection-changed"));
+}
+
+function isWarehouseRetailShop(shop?: ShopItem | null) {
+  return normalizeValue(shop?.shopType) === "WAREHOUSE_RETAIL_SHOP";
+}
+
+function resolveDefaultShopForSidebar(shops: ShopItem[], storedId?: string) {
+  if (!shops.length) return null;
+
+  if (storedId) {
+    const matchedStoredShop = shops.find(
+      (shop) => String(shop._id) === String(storedId)
+    );
+
+    if (matchedStoredShop) return matchedStoredShop;
+  }
+
+  const warehouseRetailShop = shops.find((shop) =>
+    isWarehouseRetailShop(shop)
+  );
+
+  if (warehouseRetailShop) return warehouseRetailShop;
+
+  const mainWarehouseShop = shops.find((shop) =>
+    Boolean(shop.isMainWarehouse)
+  );
+
+  if (mainWarehouseShop) return mainWarehouseShop;
+
+  return shops[0];
+}
+
+function formatShopType(value?: string | null) {
+  const normalized = normalizeValue(value);
+
+  switch (normalized) {
+    case "WAREHOUSE_RETAIL_SHOP":
+      return "Warehouse Retail Shop";
+    case "RETAIL_BRANCH_SHOP":
+      return "Retail Branch Shop";
+    case "BRANCH_RETAIL_SHOP":
+      return "Retail Branch Shop";
+    case "WHOLESALE_SHOP":
+      return "Wholesale Shop";
+    case "WAREHOUSE_SHOP":
+      return "Warehouse Shop";
+    default:
+      return value || "Selected Shop";
+  }
 }
 
 export default function AppSidebar({ role }: AppSidebarProps) {
@@ -224,19 +297,32 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
   const authUser = (user ?? {}) as AuthUser;
   const items = useMemo(() => SIDEBAR_MENU[role] ?? [], [role]);
-
-  const defaultOpenMenu = useMemo(() => {
-    const activeItem = items.find(
-      (item) => item.children?.length && isParentActive(pathname, item)
-    );
-    return activeItem?.label ?? null;
-  }, [items, pathname]);
-
-  const [openMenu, setOpenMenu] = useState<string | null>(defaultOpenMenu);
+  const currentRole = normalizeRole(authUser.role || role);
   const [selectedShop, setSelectedShop] = useState<ShopItem | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const visibleItems = useMemo(() => {
+    if (currentRole !== "SHOP_OWNER") {
+      return items;
+    }
 
-  const currentRole = normalizeRole(authUser.role || role);
+    return items.filter((item) => {
+      if (item.label !== "Shop Management") {
+        return true;
+      }
+
+      return isWarehouseRetailShop(selectedShop);
+    });
+  }, [currentRole, items, selectedShop]);
+
+  const defaultOpenMenu = useMemo(() => {
+    const activeItem = visibleItems.find(
+      (item) => item.children?.length && isParentActive(pathname, item)
+    );
+
+    return activeItem?.label ?? null;
+  }, [pathname, visibleItems]);
+
+  const [openMenu, setOpenMenu] = useState<string | null>(defaultOpenMenu);
 
   const isShopRole = [
     "SHOP_OWNER",
@@ -251,6 +337,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
   async function readResponse(res: Response) {
     const text = await res.text();
+
     try {
       return JSON.parse(text) as ApiJson;
     } catch {
@@ -269,8 +356,10 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       _id: stored.id || prev?._id || "",
       name: stored.name || prev?.name || "",
       frontImageUrl: stored.image || prev?.frontImageUrl || "",
+      shopType: stored.type || prev?.shopType || "",
       businessType: prev?.businessType || "",
       isActive: prev?.isActive,
+      isMainWarehouse: prev?.isMainWarehouse,
       shopAddress: prev?.shopAddress,
       shopOwnerAccountId: prev?.shopOwnerAccountId,
     }));
@@ -278,6 +367,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
   useEffect(() => {
     syncSidebarFromStorage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isShopRole]);
 
   useEffect(() => {
@@ -409,28 +499,16 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         } else {
           const currentShopId =
             getId(selfUser?.shopId) || getId(authUser.shopId);
+
           shops = currentShopId
             ? shops.filter((shop) => String(shop._id) === String(currentShopId))
             : [];
         }
 
         if (!ignore) {
-          const storedId = stored.id;
-
-          if (storedId) {
-            const matched = shops.find(
-              (shop) => String(shop._id) === String(storedId)
-            );
-
-            if (matched) {
-              setSelectedShop(matched);
-              setSidebarLoading(false);
-              return;
-            }
-          }
-
-          const fallbackShop = shops[0] ?? null;
+          const fallbackShop = resolveDefaultShopForSidebar(shops, stored.id);
           setSelectedShop(fallbackShop);
+          writeStoredShop(fallbackShop);
         }
       } catch {
         if (!ignore) {
@@ -448,6 +526,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
     return () => {
       ignore = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, authUser.shopId, currentRole, isShopRole]);
 
   useEffect(() => {
@@ -472,6 +551,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         window.removeEventListener("storage", handleShopSelectionChanged);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isShopRole]);
 
   function toggleMenu(label: string) {
@@ -483,7 +563,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
     : "GloboGreen";
 
   const sidebarSubtitle = isShopRole
-    ? selectedShop?.businessType || "Selected Shop"
+    ? formatShopType(selectedShop?.shopType || selectedShop?.businessType)
     : "Enterprise Panel";
 
   const sidebarImage = isShopRole
@@ -524,6 +604,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
             <p className="truncate text-sm font-semibold tracking-wide text-heading">
               {sidebarLoading && isShopRole ? "Loading..." : sidebarTitle}
             </p>
+
             <p className="truncate text-xs text-secondary-text">
               {sidebarSubtitle}
             </p>
@@ -537,7 +618,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         </div>
 
         <nav className="space-y-2">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = getIcon(item.label);
             const parentActive = isParentActive(pathname, item);
             const hasChildren = Boolean(item.children?.length);
@@ -649,6 +730,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]">
             Secure Access
           </p>
+
           <p className="mt-1 text-xs leading-5 text-secondary-text">
             Role-based navigation enabled for your current account.
           </p>

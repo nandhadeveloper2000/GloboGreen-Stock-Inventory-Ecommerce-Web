@@ -530,7 +530,7 @@ export default function EditSubCategoryPage() {
         const formData = new FormData();
         formData.append("image", imagePreview.file);
 
-        await apiClient.patch(
+        await apiClient.put(
           SummaryApi.sub_category_image_upload.url(id),
           formData,
           {

@@ -53,7 +53,7 @@ import {
   isFilledVariant,
   keyOf,
   normalizeSearchKeys,
-  resolveMobileProductPreset,
+  resolveMobileSubcategoryPreset,
   resolvePresetValueOption,
   toModelArray,
   toOptionArray,
@@ -114,12 +114,14 @@ type NormalizableProductInfoSection =
 
 type ExistingProductVariant = {
   title?: string;
+  description?: string;
   attributes?: Array<{
     label?: string;
     value?: string;
   }>;
   images?: ProductApiImage[];
   videos?: ProductApiVideo[];
+  compatible?: ExistingCompatibilityItem[];
   productInformation?: ExistingProductInfoSection[];
   isActive?: boolean;
 };
@@ -137,13 +139,13 @@ type ExistingProductData = {
   itemName?: string;
   itemModelNumber?: string;
   itemKey?: string;
+  description?: string;
   searchKeys?: string[];
   masterCategoryId?: ProductReference;
   categoryId?: ProductReference;
   subcategoryId?: ProductReference;
-  productTypeId?: ProductReference;
-  brandId?: ProductReference;
-  modelId?: ProductReference;
+  brandId?: ProductReference | ProductReference[];
+  modelId?: ProductReference | ProductReference[];
   images?: ProductApiImage[];
   videos?: ProductApiVideo[];
   compatible?: ExistingCompatibilityItem[];
@@ -165,6 +167,27 @@ function getReferenceName(value?: ProductReference | null) {
   if (!value) return "";
   if (typeof value === "string") return value;
   return String(value.name || "").trim();
+}
+
+function toReferenceArray(
+  value?: ProductReference | ProductReference[] | null
+): ProductReference[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function getReferenceIds(value?: ProductReference | ProductReference[] | null) {
+  return toReferenceArray(value)
+    .map((item) => getReferenceId(item))
+    .filter(Boolean);
+}
+
+function getReferenceNames(
+  value?: ProductReference | ProductReference[] | null
+) {
+  return toReferenceArray(value)
+    .map((item) => getReferenceName(item))
+    .filter(Boolean);
 }
 
 function toTextValue(value: unknown) {
@@ -256,7 +279,9 @@ function normalizeExistingProductInformation(
 
 function normalizeExistingVariants(
   value: ExistingProductVariant[] | undefined,
-  fallbackSections?: NormalizableProductInfoSection[]
+  fallbackSections?: NormalizableProductInfoSection[],
+  brandsList: OptionItem[] = [],
+  fallbackCompatibility?: ExistingCompatibilityItem[]
 ) {
   const normalized = Array.isArray(value)
     ? value.map((item, index) => ({
@@ -264,6 +289,7 @@ function normalizeExistingVariants(
           .toString(36)
           .slice(2, 8)}`,
         title: String(item?.title || ""),
+        description: String(item?.description || ""),
         attributes:
           Array.isArray(item?.attributes) && item.attributes.length
             ? item.attributes.map((attribute, attributeIndex) => ({
@@ -276,6 +302,10 @@ function normalizeExistingVariants(
             : [createVariantAttribute()],
         images: normalizeExistingImages(item?.images, `variant-${index}`),
         videos: normalizeExistingVideos(item?.videos, `variant-video-${index}`),
+        compatibility: buildCompatibilityRows(
+          brandsList,
+          item?.compatible?.length ? item.compatible : fallbackCompatibility
+        ),
         productInformation: normalizeExistingProductInformation(
           item?.productInformation,
           fallbackSections
@@ -284,7 +314,9 @@ function normalizeExistingVariants(
       }))
     : [];
 
-  return normalized.length ? normalized : [createVariantItem()];
+  return normalized.length
+    ? normalized
+    : [createVariantItem([], buildCompatibilityRows(brandsList, fallbackCompatibility))];
 }
 
 function hasSharedMediaData(item?: ExistingProductData | null) {
@@ -296,7 +328,10 @@ function hasSharedMediaData(item?: ExistingProductData | null) {
 }
 
 function hasCompatibilityData(item?: ExistingProductData | null) {
-  return Boolean(item?.compatible?.length);
+  return Boolean(
+    (item?.compatible?.length ?? 0) > 0 ||
+      item?.variant?.some((variantItem) => (variantItem?.compatible?.length ?? 0) > 0)
+  );
 }
 
 function hasVariantData(item?: ExistingProductData | null) {
@@ -374,6 +409,47 @@ function buildCompatibilityRows(
   });
 }
 
+function mergeCompatibilityRowsWithBrands(
+  brandsList: OptionItem[],
+  currentRows: CompatibilityTableRow[]
+) {
+  const currentMap = new Map(
+    currentRows.map((row) => [
+      row.brandId,
+      {
+        modelId: row.modelId,
+        notes: row.notes,
+        isActive: row.isActive,
+        enabled: row.enabled,
+      },
+    ])
+  );
+
+  return brandsList.map((brand) => {
+    const existing = currentMap.get(brand._id);
+
+    return {
+      rowId: brand._id,
+      brandId: brand._id,
+      enabled: existing?.enabled ?? false,
+      modelId: existing?.modelId || [],
+      notes: existing?.notes || "",
+      isActive: existing?.isActive ?? true,
+    };
+  });
+}
+
+function cloneCompatibilityRows(rows: CompatibilityTableRow[]) {
+  return rows.map((row) => ({
+    ...row,
+    modelId: [...row.modelId],
+  }));
+}
+
+function hasEnabledCompatibilityRows(rows: CompatibilityTableRow[]) {
+  return rows.some((row) => row.enabled);
+}
+
 function buildInitialManualSearchKeys(item: ExistingProductData) {
   const nextSearchKeys = normalizeSearchKeys(
     (Array.isArray(item.searchKeys) ? item.searchKeys : []).join(",")
@@ -381,9 +457,9 @@ function buildInitialManualSearchKeys(item: ExistingProductData) {
   const autoKeys = new Set(
     buildAutoSearchKeys({
       itemName: String(item.itemName || ""),
-      productTypeName: getReferenceName(item.productTypeId),
-      brandName: getReferenceName(item.brandId),
-      modelName: getReferenceName(item.modelId),
+      subcategoryName: getReferenceName(item.subcategoryId),
+      brandName: getReferenceNames(item.brandId).join(", "),
+      modelName: getReferenceNames(item.modelId).join(", "),
     })
   );
   const excludedKeys = new Set(
@@ -423,9 +499,11 @@ function hasFilledProductInfoSections(sections: ProductInformationSection[]) {
 function hasMeaningfulVariantData(item: VariantItem) {
   return Boolean(
     item.title.trim() ||
+      item.description.trim() ||
       isFilledVariant(item) ||
       item.images.length > 0 ||
       item.videos.length > 0 ||
+      hasEnabledCompatibilityRows(item.compatibility) ||
       hasFilledProductInfoSections(item.productInformation)
   );
 }
@@ -536,6 +614,94 @@ function TopLabelInput({
   );
 }
 
+function CompatibilityRowsEditor({
+  rows,
+  brandMap,
+  modelMapByBrand,
+  disabled = false,
+  emptyStateText = "Compatible brands will appear here after brands load.",
+  onUpdateRow,
+}: {
+  rows: CompatibilityTableRow[];
+  brandMap: Map<string, OptionItem>;
+  modelMapByBrand: Map<string, ModelItem[]>;
+  disabled?: boolean;
+  emptyStateText?: string;
+  onUpdateRow: (rowId: string, patch: Partial<CompatibilityTableRow>) => void;
+}) {
+  if (!rows.length) {
+    return (
+      <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+        {emptyStateText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => {
+        const brandName = brandMap.get(row.brandId)?.name || "-";
+        const brandModels =
+          modelMapByBrand.get(row.brandId)?.map((model) => ({
+            _id: model._id,
+            name: model.name,
+          })) || [];
+
+        return (
+          <div
+            key={row.rowId}
+            className="rounded-[22px] border border-slate-200 bg-white p-4"
+          >
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr]">
+              <div className="space-y-3">
+                <label className="inline-flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={row.enabled}
+                    onChange={(e) =>
+                      onUpdateRow(row.rowId, {
+                        enabled: e.target.checked,
+                      })
+                    }
+                    disabled={disabled}
+                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  <span className="font-semibold text-slate-900">
+                    {brandName}
+                  </span>
+                </label>
+
+                <textarea
+                  value={row.notes}
+                  onChange={(e) =>
+                    onUpdateRow(row.rowId, {
+                      notes: e.target.value,
+                    })
+                  }
+                  placeholder="Notes"
+                  className="premium-textarea min-h-25"
+                  disabled={disabled || !row.enabled}
+                />
+              </div>
+
+              <ModelCheckboxSelector
+                options={brandModels}
+                values={row.modelId}
+                onChange={(values) =>
+                  onUpdateRow(row.rowId, { modelId: values })
+                }
+                disabled={!row.enabled || disabled}
+                emptyText="Enable the brand to choose models"
+                allLabel="Select all models"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CreateProductPage({
   mode = "create",
   productId = "",
@@ -556,6 +722,7 @@ export default function CreateProductPage({
   const [itemName, setItemName] = useState("");
   const [itemModelNumber, setItemModelNumber] = useState("");
   const [itemKey, setItemKey] = useState("");
+  const [description, setDescription] = useState("");
   const [searchKeysInput, setSearchKeysInput] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [modelNumberManuallyEdited, setModelNumberManuallyEdited] =
@@ -564,23 +731,20 @@ export default function CreateProductPage({
   const [masterCategories, setMasterCategories] = useState<OptionItem[]>([]);
   const [categories, setCategories] = useState<OptionItem[]>([]);
   const [subcategories, setSubcategories] = useState<OptionItem[]>([]);
-  const [productTypes, setProductTypes] = useState<OptionItem[]>([]);
   const [brands, setBrands] = useState<OptionItem[]>([]);
   const [models, setModels] = useState<ModelItem[]>([]);
 
   const [masterCategoryId, setMasterCategoryId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
-  const [productTypeId, setProductTypeId] = useState("");
-  const [brandId, setBrandId] = useState("");
-  const [modelId, setModelId] = useState("");
+  const [brandIds, setBrandIds] = useState<string[]>([]);
+  const [modelIds, setModelIds] = useState<string[]>([]);
   const [categoryMappingMode, setCategoryMappingMode] =
     useState<CategoryMappingMode>("variant");
 
   const [loadingMasterCategories, setLoadingMasterCategories] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
-  const [loadingProductTypes, setLoadingProductTypes] = useState(false);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [loadingModels, setLoadingModels] = useState(true);
 
@@ -592,7 +756,6 @@ export default function CreateProductPage({
     masterCategoryId: "",
     categoryId: "",
     subcategoryId: "",
-    productTypeId: "",
     brandId: "",
     modelId: "",
   });
@@ -618,14 +781,12 @@ export default function CreateProductPage({
   const masterCategoryDropdownRef = useRef<HTMLDivElement | null>(null);
   const categoryDropdownRef = useRef<HTMLDivElement | null>(null);
   const subcategoryDropdownRef = useRef<HTMLDivElement | null>(null);
-  const productTypeDropdownRef = useRef<HTMLDivElement | null>(null);
   const brandDropdownRef = useRef<HTMLDivElement | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const masterCategorySearchInputRef = useRef<HTMLInputElement | null>(null);
   const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
   const subcategorySearchInputRef = useRef<HTMLInputElement | null>(null);
-  const productTypeSearchInputRef = useRef<HTMLInputElement | null>(null);
   const brandSearchInputRef = useRef<HTMLInputElement | null>(null);
   const modelSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -639,25 +800,50 @@ export default function CreateProductPage({
 
   const itemKeyPreview = itemKey.trim() ? keyOf(itemKey) : autoItemKey;
 
-  const selectedProductTypeName = useMemo(() => {
-    return productTypes.find((item) => item._id === productTypeId)?.name || "";
-  }, [productTypes, productTypeId]);
+  const selectedSubcategoryName = useMemo(() => {
+    return subcategories.find((item) => item._id === subcategoryId)?.name || "";
+  }, [subcategories, subcategoryId]);
 
-  const selectedProductTypePreset = useMemo(() => {
-    return resolveMobileProductPreset(selectedProductTypeName);
-  }, [selectedProductTypeName]);
+  const selectedSubcategoryPreset = useMemo(() => {
+    return resolveMobileSubcategoryPreset(selectedSubcategoryName);
+  }, [selectedSubcategoryName]);
 
+  const usesVariantCompatibilityMapping =
+    categoryMappingMode === "variantCompatibility";
+  const usesProductCompatibilityMapping =
+    categoryMappingMode === "productMediaInfoCompatibility";
   const usesVariantConfiguration =
     categoryMappingMode === "variant" ||
-    categoryMappingMode === "variantCompatibility";
+    usesVariantCompatibilityMapping;
   const usesCompatibilityMapping =
-    categoryMappingMode === "variantCompatibility" ||
-    categoryMappingMode === "productMediaInfoCompatibility";
+    usesVariantCompatibilityMapping || usesProductCompatibilityMapping;
   const usesProductMediaInformation =
-    categoryMappingMode === "productMediaInfoCompatibility" ||
+    usesProductCompatibilityMapping ||
     categoryMappingMode === "productMediaInfo";
 
-  const filteredPrimaryModelOptions = useMemo(() => models, [models]);
+  const filteredBrandOptions = useMemo(() => {
+    const query = searchMap.brandId.trim().toLowerCase();
+
+    return query
+      ? brands.filter((item) => item.name.toLowerCase().includes(query))
+      : brands;
+  }, [brands, searchMap.brandId]);
+
+  const availablePrimaryModelOptions = useMemo(() => {
+    return brandIds.length
+      ? models.filter((item) => brandIds.includes(getBrandIdFromModel(item)))
+      : [];
+  }, [brandIds, models]);
+
+  const filteredPrimaryModelOptions = useMemo(() => {
+    const query = searchMap.modelId.trim().toLowerCase();
+
+    return query
+      ? availablePrimaryModelOptions.filter((item) =>
+          item.name.toLowerCase().includes(query)
+        )
+      : availablePrimaryModelOptions;
+  }, [availablePrimaryModelOptions, searchMap.modelId]);
 
   const brandMap = useMemo(() => {
     const map = new Map<string, OptionItem>();
@@ -679,6 +865,22 @@ export default function CreateProductPage({
 
     return map;
   }, [models]);
+
+  const selectedBrandNames = useMemo(() => {
+    return brands
+      .filter((item) => brandIds.includes(item._id))
+      .map((item) => item.name);
+  }, [brandIds, brands]);
+
+  const selectedModelNames = useMemo(() => {
+    return models
+      .filter((item) => modelIds.includes(item._id))
+      .map((item) => item.name);
+  }, [modelIds, models]);
+
+  const defaultVariantCompatibilityRows = useMemo(() => {
+    return buildCompatibilityRows(brands, undefined);
+  }, [brands]);
 
   const filteredCompatibilityRows = useMemo(() => {
     const q = compatibilityBrandSearch.trim().toLowerCase();
@@ -746,9 +948,8 @@ const fetchExistingProduct = useEffectEvent(
       const nextMasterCategoryId = getReferenceId(item.masterCategoryId);
       const nextCategoryId = getReferenceId(item.categoryId);
       const nextSubcategoryId = getReferenceId(item.subcategoryId);
-      const nextProductTypeId = getReferenceId(item.productTypeId);
-      const nextBrandId = getReferenceId(item.brandId);
-      const nextModelId = getReferenceId(item.modelId);
+      const nextBrandIds = getReferenceIds(item.brandId);
+      const nextModelIds = getReferenceIds(item.modelId);
 
       setItemName(nextItemName);
       setItemModelNumber(nextItemModelNumber);
@@ -757,21 +958,23 @@ const fetchExistingProduct = useEffectEvent(
           nextItemModelNumber.trim() !== buildAutoModelNumber(nextItemName)
       );
       setItemKey(String(item.itemKey || ""));
+      setDescription(String(item.description || ""));
       setSearchKeysInput(buildInitialManualSearchKeys(item).join(", "));
 
       setMasterCategoryId(nextMasterCategoryId);
       setCategoryId(nextCategoryId);
       setSubcategoryId(nextSubcategoryId);
-      setProductTypeId(nextProductTypeId);
-      setBrandId(nextBrandId);
-      setModelId(nextModelId);
+      setBrandIds(nextBrandIds);
+      setModelIds(nextModelIds);
 
       skipNextPresetSyncRef.current = true;
       setCategoryMappingMode(resolveCategoryMappingMode(item));
 
       const nextVariant = normalizeExistingVariants(
         item.variant,
-        item.productInformation
+        item.productInformation,
+        brandsList,
+        item.compatible
       );
       const nextProductImages = normalizeExistingImages(
         item.images,
@@ -796,20 +999,12 @@ const fetchExistingProduct = useEffectEvent(
         await fetchCategories(nextMasterCategoryId, {
           categoryId: nextCategoryId,
           subcategoryId: nextSubcategoryId,
-          productTypeId: nextProductTypeId,
         });
       }
 
       if (nextCategoryId) {
         await fetchSubcategories(nextCategoryId, {
           subcategoryId: nextSubcategoryId,
-          productTypeId: nextProductTypeId,
-        });
-      }
-
-      if (nextSubcategoryId) {
-        await fetchProductTypes(nextSubcategoryId, {
-          productTypeId: nextProductTypeId,
         });
       }
     } catch (error: unknown) {
@@ -875,7 +1070,6 @@ useEffect(() => {
         masterCategoryDropdownRef,
         categoryDropdownRef,
         subcategoryDropdownRef,
-        productTypeDropdownRef,
         brandDropdownRef,
         modelDropdownRef,
       ].some((ref) => ref.current?.contains(target));
@@ -900,8 +1094,6 @@ useEffect(() => {
       inputRef = categorySearchInputRef;
     } else if (openDropdown === "subcategoryId") {
       inputRef = subcategorySearchInputRef;
-    } else if (openDropdown === "productTypeId") {
-      inputRef = productTypeSearchInputRef;
     } else if (openDropdown === "brandId") {
       inputRef = brandSearchInputRef;
     } else if (openDropdown === "modelId") {
@@ -938,25 +1130,16 @@ useEffect(() => {
   }, [categoryId]);
 
   useEffect(() => {
-    if (!subcategoryId) {
-      setProductTypes([]);
-      setProductTypeId("");
-      return;
-    }
-
-    void fetchProductTypes(subcategoryId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subcategoryId]);
-
-  useEffect(() => {
     if (skipNextPresetSyncRef.current) {
       skipNextPresetSyncRef.current = false;
       return;
     }
 
-    if (!selectedProductTypePreset) {
+    if (!selectedSubcategoryPreset) {
       revokeVariantMedia(variantRef.current);
-      setVariant([createVariantItem()]);
+      setVariant([
+        createVariantItem([], cloneCompatibilityRows(defaultVariantCompatibilityRows)),
+      ]);
       setProductInformation([{ ...initialProductInfoSection }]);
       return;
     }
@@ -964,34 +1147,33 @@ useEffect(() => {
     revokeVariantMedia(variantRef.current);
 
     const sections = buildPresetProductInfoSections(
-      selectedProductTypePreset.sections,
-      selectedProductTypePreset.itemTypeName
+      selectedSubcategoryPreset.sections,
+      selectedSubcategoryPreset.itemTypeName
     );
 
     const presetVariants = buildPresetVariantRows(
-      selectedProductTypePreset.variantLabels
+      selectedSubcategoryPreset.variantLabels
     ).map((item) => ({
       ...item,
+      compatibility: cloneCompatibilityRows(defaultVariantCompatibilityRows),
       productInformation: cloneProductInfoSections(sections),
     }));
 
     setVariant(presetVariants);
     setProductInformation(sections);
-  }, [selectedProductTypePreset]);
+  }, [defaultVariantCompatibilityRows, selectedSubcategoryPreset]);
 
   useEffect(() => {
     setCompatibilityCurrentPage(1);
   }, [compatibilityBrandSearch]);
 
   useEffect(() => {
-    const stillValid = filteredPrimaryModelOptions.some(
-      (item) => item._id === modelId
+    setModelIds((prev) =>
+      prev.filter((id) =>
+        availablePrimaryModelOptions.some((item) => item._id === id)
+      )
     );
-
-    if (modelId && !stillValid) {
-      setModelId("");
-    }
-  }, [filteredPrimaryModelOptions, modelId]);
+  }, [availablePrimaryModelOptions]);
 
   async function fetchMasterCategories() {
     try {
@@ -1023,7 +1205,6 @@ useEffect(() => {
     selectedValues?: {
       categoryId?: string;
       subcategoryId?: string;
-      productTypeId?: string;
     }
   ) {
     try {
@@ -1044,19 +1225,15 @@ useEffect(() => {
       setCategories(rows);
       const nextCategoryId = selectedValues?.categoryId ?? categoryId;
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
-      const nextProductTypeId = selectedValues?.productTypeId ?? productTypeId;
       const hasSelectedCategory = rows.some((item) => item._id === nextCategoryId);
 
       if (!hasSelectedCategory) {
         setCategoryId("");
         setSubcategoryId("");
-        setProductTypeId("");
         setSubcategories([]);
-        setProductTypes([]);
       } else {
         setCategoryId(nextCategoryId);
         setSubcategoryId(nextSubcategoryId);
-        setProductTypeId(nextProductTypeId);
       }
 
       return rows;
@@ -1073,7 +1250,6 @@ useEffect(() => {
     selectedCategoryId: string,
     selectedValues?: {
       subcategoryId?: string;
-      productTypeId?: string;
     }
   ) {
     try {
@@ -1093,18 +1269,14 @@ useEffect(() => {
 
       setSubcategories(rows);
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
-      const nextProductTypeId = selectedValues?.productTypeId ?? productTypeId;
       const hasSelectedSubcategory = rows.some(
         (item) => item._id === nextSubcategoryId
       );
 
       if (!hasSelectedSubcategory) {
         setSubcategoryId("");
-        setProductTypeId("");
-        setProductTypes([]);
       } else {
         setSubcategoryId(nextSubcategoryId);
-        setProductTypeId(nextProductTypeId);
       }
 
       return rows;
@@ -1114,46 +1286,6 @@ useEffect(() => {
       return [];
     } finally {
       setLoadingSubcategories(false);
-    }
-  }
-
-  async function fetchProductTypes(
-    selectedSubcategoryId: string,
-    selectedValues?: {
-      productTypeId?: string;
-    }
-  ) {
-    try {
-      setLoadingProductTypes(true);
-
-      const res = await apiClient.get<ApiResponse<OptionItem[]>>(
-        SummaryApi.product_type_list.url
-      );
-
-      const rows = filterActive(
-        toOptionArray(res.data?.data || res.data?.productTypes)
-      ).filter(
-        (item: OptionItem & { subCategoryId?: string | { _id?: string } }) => {
-          const value = item.subCategoryId;
-          if (typeof value === "string") return value === selectedSubcategoryId;
-          return value?._id === selectedSubcategoryId;
-        }
-      );
-
-      setProductTypes(rows);
-      const nextProductTypeId = selectedValues?.productTypeId ?? productTypeId;
-      const hasSelectedProductType = rows.some(
-        (item) => item._id === nextProductTypeId
-      );
-
-      setProductTypeId(hasSelectedProductType ? nextProductTypeId : "");
-      return rows;
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to load product types"));
-      setProductTypes([]);
-      return [];
-    } finally {
-      setLoadingProductTypes(false);
     }
   }
 
@@ -1170,14 +1302,16 @@ useEffect(() => {
       );
 
       setBrands(activeBrands);
-      setCompatibilityRows(
-        activeBrands.map((brand) => ({
-          rowId: brand._id,
-          brandId: brand._id,
-          enabled: false,
-          modelId: [],
-          notes: "",
-          isActive: true,
+      setCompatibilityRows((prev) =>
+        mergeCompatibilityRowsWithBrands(activeBrands, prev)
+      );
+      setVariant((prev) =>
+        prev.map((item) => ({
+          ...item,
+          compatibility: mergeCompatibilityRowsWithBrands(
+            activeBrands,
+            item.compatibility
+          ),
         }))
       );
       return activeBrands;
@@ -1185,6 +1319,12 @@ useEffect(() => {
       toast.error(getErrorMessage(error, "Failed to load brands"));
       setBrands([]);
       setCompatibilityRows([]);
+      setVariant((prev) =>
+        prev.map((item) => ({
+          ...item,
+          compatibility: [],
+        }))
+      );
       return [];
     } finally {
       setLoadingBrands(false);
@@ -1229,9 +1369,6 @@ useEffect(() => {
     if (key === "masterCategoryId") setMasterCategoryId(value);
     if (key === "categoryId") setCategoryId(value);
     if (key === "subcategoryId") setSubcategoryId(value);
-    if (key === "productTypeId") setProductTypeId(value);
-    if (key === "brandId") setBrandId(value);
-    if (key === "modelId") setModelId(value);
 
     setSearchMap((prev) => ({
       ...prev,
@@ -1239,6 +1376,22 @@ useEffect(() => {
     }));
 
     setOpenDropdown(null);
+  }
+
+  function handlePrimaryBrandChange(values: string[]) {
+    setBrandIds(values);
+    setModelIds((prev) =>
+      prev.filter((id) =>
+        models.some(
+          (item) =>
+            item._id === id && values.includes(getBrandIdFromModel(item))
+        )
+      )
+    );
+  }
+
+  function handlePrimaryModelChange(values: string[]) {
+    setModelIds(values);
   }
 
   function updateVariant(
@@ -1336,45 +1489,66 @@ useEffect(() => {
     );
   }
 
-  function addVariantRow() {
+  function buildDraftVariant(sourceVariant?: VariantItem) {
     const presetLabels =
-      selectedProductTypePreset?.variantLabels?.length
-        ? selectedProductTypePreset.variantLabels
+      selectedSubcategoryPreset?.variantLabels?.length
+        ? selectedSubcategoryPreset.variantLabels
         : [];
 
     const defaultProductInfo =
-      selectedProductTypePreset && productInformation.length
+      selectedSubcategoryPreset && productInformation.length
         ? cloneProductInfoSections(productInformation)
         : [{ ...initialProductInfoSection }];
 
-    setVariant((prev) => [
-      ...prev,
-      {
-        ...createVariantItem(presetLabels),
+    const defaultCompatibility = cloneCompatibilityRows(
+      defaultVariantCompatibilityRows
+    );
+
+    const nextVariant = createVariantItem(presetLabels, defaultCompatibility);
+
+    if (!sourceVariant) {
+      return {
+        ...nextVariant,
         productInformation: defaultProductInfo,
-      },
-    ]);
+      };
+    }
+
+    const nextAttributes = sourceVariant.attributes.length
+      ? sourceVariant.attributes.map((attribute) =>
+          createVariantAttribute(attribute.label, attribute.value)
+        )
+      : nextVariant.attributes;
+
+    return {
+      ...nextVariant,
+      title: sourceVariant.title.trim() || buildVariantTitle(nextAttributes),
+      description: sourceVariant.description,
+      attributes: nextAttributes,
+      compatibility: sourceVariant.compatibility.length
+        ? cloneCompatibilityRows(sourceVariant.compatibility)
+        : defaultCompatibility,
+      productInformation: sourceVariant.productInformation.length
+        ? cloneProductInfoSections(sourceVariant.productInformation)
+        : defaultProductInfo,
+      isActive: sourceVariant.isActive,
+    };
+  }
+
+  function addVariantRow() {
+    setVariant((prev) => {
+      const sourceVariant =
+        [...prev].reverse().find((item) => hasMeaningfulVariantData(item)) ||
+        prev[prev.length - 1];
+
+      return [...prev, buildDraftVariant(sourceVariant)];
+    });
   }
 
   function removeVariantRow(variantId: string) {
     setVariant((prev) => {
       if (prev.length === 1) {
         revokeVariantMedia(prev);
-        const presetLabels =
-          selectedProductTypePreset?.variantLabels?.length
-            ? selectedProductTypePreset.variantLabels
-            : [];
-        const defaultProductInfo =
-          selectedProductTypePreset && productInformation.length
-            ? cloneProductInfoSections(productInformation)
-            : [{ ...initialProductInfoSection }];
-
-        return [
-          {
-            ...createVariantItem(presetLabels),
-            productInformation: defaultProductInfo,
-          },
-        ];
+        return [buildDraftVariant()];
       }
 
       const current = prev.find((item) => item.id === variantId);
@@ -1924,6 +2098,89 @@ useEffect(() => {
     );
   }
 
+  function updateVariantCompatibilityRow(
+    variantId: string,
+    rowId: string,
+    patch: Partial<CompatibilityTableRow>
+  ) {
+    setVariant((prev) =>
+      prev.map((item) => {
+        if (item.id !== variantId) return item;
+
+        return {
+          ...item,
+          compatibility: item.compatibility.map((row) => {
+            if (row.rowId !== rowId) return row;
+
+            const next: CompatibilityTableRow = {
+              ...row,
+              ...patch,
+            };
+
+            if (patch.enabled === false) {
+              next.modelId = [];
+              next.notes = "";
+            }
+
+            return next;
+          }),
+        };
+      })
+    );
+  }
+
+  function buildCompatibilityPayload(rows: CompatibilityTableRow[]) {
+    return rows
+      .filter((row) => row.enabled)
+      .map((row) => ({
+        brandId: row.brandId,
+        modelId: row.modelId,
+        notes: row.notes.trim(),
+        isActive: row.isActive,
+      }));
+  }
+
+  function buildMergedCompatibilityPayload(items: VariantItem[]) {
+    const compatibilityMap = new Map<
+      string,
+      {
+        brandId: string;
+        modelId: Set<string>;
+        notes: Set<string>;
+        isActive: boolean;
+      }
+    >();
+
+    items.forEach((item) => {
+      buildCompatibilityPayload(item.compatibility).forEach((row) => {
+        const existing =
+          compatibilityMap.get(row.brandId) ||
+          {
+            brandId: row.brandId,
+            modelId: new Set<string>(),
+            notes: new Set<string>(),
+            isActive: false,
+          };
+
+        row.modelId.forEach((modelId) => existing.modelId.add(modelId));
+
+        if (row.notes.trim()) {
+          existing.notes.add(row.notes.trim());
+        }
+
+        existing.isActive = existing.isActive || row.isActive;
+        compatibilityMap.set(row.brandId, existing);
+      });
+    });
+
+    return Array.from(compatibilityMap.values()).map((row) => ({
+      brandId: row.brandId,
+      modelId: Array.from(row.modelId),
+      notes: Array.from(row.notes).join(" | "),
+      isActive: row.isActive,
+    }));
+  }
+
   function validateProductInfoSections(
     sections: ProductInformationSection[],
     errorPrefix: string
@@ -1992,18 +2249,13 @@ useEffect(() => {
       return false;
     }
 
-    if (!productTypeId) {
-      toast.error("Please select a product type");
+    if (!brandIds.length) {
+      toast.error("Please select at least one brand");
       return false;
     }
 
-    if (!brandId) {
-      toast.error("Please select a brand");
-      return false;
-    }
-
-    if (!modelId) {
-      toast.error("Please select a model");
+    if (!modelIds.length) {
+      toast.error("Please select at least one model");
       return false;
     }
 
@@ -2066,7 +2318,39 @@ useEffect(() => {
       }
     }
 
-    if (usesCompatibilityMapping) {
+    if (usesVariantCompatibilityMapping) {
+      const missingVariantCompatibilityIndex = variant.findIndex(
+        (item) =>
+          hasMeaningfulVariantData(item) &&
+          !hasEnabledCompatibilityRows(item.compatibility)
+      );
+
+      if (missingVariantCompatibilityIndex >= 0) {
+        toast.error(
+          `Select at least one compatible brand for Variant ${
+            missingVariantCompatibilityIndex + 1
+          }`
+        );
+        return false;
+      }
+
+      const invalidVariantCompatibilityIndex = variant.findIndex(
+        (item) =>
+          hasMeaningfulVariantData(item) &&
+          item.compatibility.some((row) => row.enabled && row.modelId.length === 0)
+      );
+
+      if (invalidVariantCompatibilityIndex >= 0) {
+        toast.error(
+          `Each selected compatible brand must have at least one model in Variant ${
+            invalidVariantCompatibilityIndex + 1
+          }`
+        );
+        return false;
+      }
+    }
+
+    if (usesProductCompatibilityMapping) {
       const hasCompatibleBrand = compatibilityRows.some((row) => row.enabled);
 
       if (!hasCompatibleBrand) {
@@ -2095,30 +2379,28 @@ useEffect(() => {
       itemName: itemName.trim(),
       itemModelNumber: itemModelNumber.trim(),
       itemKey: itemKeyPreview,
+      description: description.trim(),
       searchKeys: manualSearchKeys,
       masterCategoryId,
       categoryId,
       subcategoryId,
-      productTypeId,
-      brandId,
-      modelId,
+      brandId: brandIds,
+      modelId: modelIds,
       images: usesProductMediaInformation ? buildMediaPayload(productImages) : [],
       videos: usesProductMediaInformation ? buildMediaPayload(productVideos) : [],
-      compatible: usesCompatibilityMapping
-        ? compatibilityRows
-            .filter((row) => row.enabled)
-            .map((row) => ({
-              brandId: row.brandId,
-              modelId: row.modelId,
-              notes: row.notes.trim(),
-              isActive: row.isActive,
-            }))
+      compatible: usesVariantCompatibilityMapping
+        ? buildMergedCompatibilityPayload(
+            variant.filter((item) => hasMeaningfulVariantData(item))
+          )
+        : usesProductCompatibilityMapping
+          ? buildCompatibilityPayload(compatibilityRows)
         : [],
       variant: usesVariantConfiguration
         ? variant
             .filter((item) => hasMeaningfulVariantData(item))
             .map((item) => ({
               title: item.title.trim() || buildVariantTitle(item.attributes),
+              description: item.description.trim(),
               attributes: item.attributes
                 .filter(
                   (attribute) => attribute.label.trim() && attribute.value.trim()
@@ -2129,6 +2411,9 @@ useEffect(() => {
                 })),
               images: buildMediaPayload(item.images),
               videos: buildMediaPayload(item.videos),
+              compatible: usesVariantCompatibilityMapping
+                ? buildCompatibilityPayload(item.compatibility)
+                : [],
               productInformation: buildFilledProductInformation(
                 item.productInformation
               ),
@@ -2229,51 +2514,12 @@ useEffect(() => {
       loading: loadingSubcategories,
       disabled: !categoryId,
     },
-    {
-      key: "productTypeId",
-      label: "Product Type",
-      placeholder: "Select product type",
-      icon: Boxes,
-      options: productTypes,
-      value: productTypeId,
-      search: searchMap.productTypeId,
-      open: openDropdown === "productTypeId",
-      loading: loadingProductTypes,
-      disabled: !subcategoryId,
-    },
-    {
-      key: "brandId",
-      label: "Brand",
-      placeholder: "Select brand",
-      icon: Tags,
-      options: brands,
-      value: brandId,
-      search: searchMap.brandId,
-      open: openDropdown === "brandId",
-      loading: loadingBrands,
-    },
-    {
-      key: "modelId",
-      label: "Model",
-      placeholder: "Select model",
-      icon: Cpu,
-      options: filteredPrimaryModelOptions.map((item) => ({
-        _id: item._id,
-        name: item.name,
-        isActive: item.isActive,
-      })),
-      value: modelId,
-      search: searchMap.modelId,
-      open: openDropdown === "modelId",
-      loading: loadingModels,
-    },
   ];
 
   const dropdownRefs = {
     masterCategoryId: masterCategoryDropdownRef,
     categoryId: categoryDropdownRef,
     subcategoryId: subcategoryDropdownRef,
-    productTypeId: productTypeDropdownRef,
     brandId: brandDropdownRef,
     modelId: modelDropdownRef,
   };
@@ -2282,7 +2528,6 @@ useEffect(() => {
     masterCategoryId: masterCategorySearchInputRef,
     categoryId: categorySearchInputRef,
     subcategoryId: subcategorySearchInputRef,
-    productTypeId: productTypeSearchInputRef,
     brandId: brandSearchInputRef,
     modelId: modelSearchInputRef,
   };
@@ -2297,28 +2542,29 @@ useEffect(() => {
       value: "variant",
       title: "Variant",
       description:
-        "Use variant cards with attributes, images, and per-variant product information.",
+        "Use Variant Title,   , Variant Images & Media, and Variant Product Information.",
       icon: Boxes,
     },
     {
       value: "variantCompatibility",
       title: "Variant & Compatible Brands & Models",
       description:
-        "Combine variant cards with compatibility mapping for cross-brand and model support.",
+        "Use Variant Title, Variant Product Description, Variant Images & Media, Variant Product Information, and per-variant compatible brands and models.",
       icon: ShieldCheck,
     },
     {
       value: "productMediaInfoCompatibility",
-      title: "Product Images & Product Information & Compatible Brands & Models",
+      title:
+        "Product Description & Product Images & Product Information & Compatible Brands & Models",
       description:
-        "Combine shared product images and common product information with compatibility mapping for cross-brand and model support.",
+        "Use Product Description, Product Images & Media, and Product Information with compatible brands and models.",
       icon: ShieldCheck,
     },
     {
       value: "productMediaInfo",
-      title: "Product Images & Product Information",
+      title: "Product Description & Product Images & Product Information",
       description:
-        "Use shared product images and common product information without creating variants.",
+        "Use Product Description, Product Images & Media, and Product Information without creating variants.",
       icon: Info,
     },
   ];
@@ -2482,65 +2728,240 @@ useEffect(() => {
               ))}
             </div>
 
-            <div className="mt-6 border-t border-slate-200 pt-6">
-              <div className="mb-4">
-                <h3 className="text-base font-bold text-slate-900">
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
+                <div className="mb-3 flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                    <Tags className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Brands
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      Select one or more brands for this product mapping.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <TopLabelInput
+                    label="Brand Search"
+                    value={searchMap.brandId}
+                    onChange={(e) =>
+                      handleSearchChange("brandId", e.target.value)
+                    }
+                    placeholder="Search brands"
+                    disabled={submitting || loadingBrands}
+                  />
+
+                  <ModelCheckboxSelector
+                    options={filteredBrandOptions.map((item) => ({
+                      _id: item._id,
+                      name: item.name,
+                    }))}
+                    values={brandIds}
+                    onChange={handlePrimaryBrandChange}
+                    disabled={submitting || loadingBrands}
+                    emptyText="No brands found"
+                    allLabel="Select all brands"
+                  />
+
+                  {selectedBrandNames.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedBrandNames.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
+                <div className="mb-3 flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                    <Cpu className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Models
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      Select one or more models from the chosen brands.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <TopLabelInput
+                    label="Model Search"
+                    value={searchMap.modelId}
+                    onChange={(e) =>
+                      handleSearchChange("modelId", e.target.value)
+                    }
+                    placeholder={
+                      brandIds.length
+                        ? "Search models"
+                        : "Select brands first to load models"
+                    }
+                    disabled={
+                      submitting || loadingModels || brandIds.length === 0
+                    }
+                  />
+
+                  <ModelCheckboxSelector
+                    options={filteredPrimaryModelOptions.map((item) => ({
+                      _id: item._id,
+                      name: item.name,
+                    }))}
+                    values={modelIds}
+                    onChange={handlePrimaryModelChange}
+                    disabled={
+                      submitting || loadingModels || brandIds.length === 0
+                    }
+                    emptyText={
+                      brandIds.length
+                        ? "No models found for the selected brands"
+                        : "Select at least one brand to choose models"
+                    }
+                    allLabel="Select all models"
+                  />
+
+                  {selectedModelNames.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedModelNames.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          {usesProductMediaInformation ? (
+            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
+                  <Info className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Product Description
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {usesCompatibilityMapping
+                      ? "Add a shared product summary for product-level media, information, and compatibility details."
+                      : "Add a shared product summary for product-level media and information."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-cyan-50/60 p-4 shadow-sm">
+                <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Write a simple product description, highlights, use case, or selling summary..."
+                  className="premium-textarea min-h-36 w-full rounded-2xl border-slate-200 bg-white/90"
+                  disabled={submitting}
+                  maxLength={1200}
+                />
+
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <p>
+                    This description is stored with the product and can be reused
+                    in future product views or listings.
+                  </p>
+                  <span className="shrink-0 font-medium text-slate-400">
+                    {description.trim().length}/1200
+                  </span>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <Layers3 className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
                   Configuration Option
-                </h3>
+                </h2>
                 <p className="text-sm text-slate-500">
-                  Choose how this category mapping should store product details.
+                  Choose how product details should be stored before entering
+                  the matching description, media, and compatibility data.
                 </p>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
-                {categoryMappingOptions.map((option) => {
-                  const Icon = option.icon;
-                  const selected = categoryMappingMode === option.value;
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+              {categoryMappingOptions.map((option) => {
+                const Icon = option.icon;
+                const selected = categoryMappingMode === option.value;
 
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setCategoryMappingMode(option.value)}
-                      className={`rounded-3xl border p-4 text-left transition ${
-                        selected
-                          ? "border-violet-500 bg-violet-50 shadow-[0_18px_40px_rgba(139,92,246,0.14)]"
-                          : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/50"
-                      }`}
-                      disabled={submitting}
-                    >
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <div
-                          className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-                            selected
-                              ? "bg-violet-600 text-white"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </div>
-
-                        <span
-                          className={`inline-flex h-5 w-5 shrink-0 rounded-full border-2 ${
-                            selected
-                              ? "border-violet-600 bg-violet-600"
-                              : "border-slate-300 bg-white"
-                          }`}
-                        >
-                          <span className="m-auto h-2 w-2 rounded-full bg-white" />
-                        </span>
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCategoryMappingMode(option.value)}
+                    className={`rounded-3xl border p-4 text-left transition ${
+                      selected
+                        ? "border-violet-500 bg-violet-50 shadow-[0_18px_40px_rgba(139,92,246,0.14)]"
+                        : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/50"
+                    }`}
+                    disabled={submitting}
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div
+                        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                          selected
+                            ? "bg-violet-600 text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
                       </div>
 
-                      <h4 className="text-sm font-bold text-slate-900">
-                        {option.title}
-                      </h4>
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
-                        {option.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+                      <span
+                        className={`inline-flex h-5 w-5 shrink-0 rounded-full border-2 ${
+                          selected
+                            ? "border-violet-600 bg-violet-600"
+                            : "border-slate-300 bg-white"
+                        }`}
+                      >
+                        <span className="m-auto h-2 w-2 rounded-full bg-white" />
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-900">
+                      {option.title}
+                    </h4>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      {option.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -2553,10 +2974,15 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Variants</h2>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    {usesVariantCompatibilityMapping
+                      ? "Variants & Compatible Brands & Models"
+                      : "Variants"}
+                  </h2>
                   <p className="text-sm text-slate-500">
-                    Each variant can have its own attributes, media, and product
-                    information.
+                    {usesVariantCompatibilityMapping
+                      ? "Each variant can have its own title, description, attributes, media, product information, and compatible brands and models."
+                      : "Each variant can have its own title, description, attributes, media, and product information."}
                   </p>
                 </div>
               </div>
@@ -2586,6 +3012,11 @@ useEffect(() => {
                       <h3 className="text-lg font-bold text-slate-900">
                         {item.title.trim() || "New Variant"}
                       </h3>
+                      {usesVariantCompatibilityMapping ? (
+                        <p className="mt-1 text-sm text-slate-500">
+                          Variant {index + 1} compatible brands & models
+                        </p>
+                      ) : null}
                     </div>
 
                     <button
@@ -2610,6 +3041,28 @@ useEffect(() => {
                         className="premium-input"
                         disabled={submitting}
                       />
+                    </div>
+
+                    <div className="rounded-[22px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-amber-50/50 p-3 shadow-sm">
+                      <label className="premium-label">
+                        Variant Product Description
+                      </label>
+                      <textarea
+                        value={item.description}
+                        onChange={(e) =>
+                          updateVariant(item.id, {
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="Write a short description for this variant..."
+                        className="premium-textarea min-h-28 w-full resize-none rounded-2xl border-slate-200 bg-white/90"
+                        disabled={submitting}
+                        maxLength={1200}
+                      />
+
+                      <div className="mt-2 flex justify-end text-xs font-medium text-slate-400">
+                        {item.description.trim().length}/1200
+                      </div>
                     </div>
 
                     <div>
@@ -2685,8 +3138,30 @@ useEffect(() => {
                             value
                           )
                         }
+                        resolveOptions={getPresetValueOptions}
+                        allowCustomValue={(label) => isColourField(label)}
+                        resolveCustomValueOption={(label, value) =>
+                          resolvePresetValueOption(label, value)
+                        }
                       />
                     </div>
+
+                    {usesVariantCompatibilityMapping ? (
+                      <div>
+                        <label className="premium-label">
+                          Variant {index + 1} Compatible Brands & Models
+                        </label>
+                        <CompatibilityRowsEditor
+                          rows={item.compatibility}
+                          brandMap={brandMap}
+                          modelMapByBrand={modelMapByBrand}
+                          disabled={submitting}
+                          onUpdateRow={(rowId, patch) =>
+                            updateVariantCompatibilityRow(item.id, rowId, patch)
+                          }
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -2740,13 +3215,18 @@ useEffect(() => {
                     onAddField={addProductInfoField}
                     onRemoveField={removeProductInfoField}
                     onChangeField={updateProductInfoField}
+                    resolveOptions={getPresetValueOptions}
+                    allowCustomValue={(label) => isColourField(label)}
+                    resolveCustomValueOption={(label, value) =>
+                      resolvePresetValueOption(label, value)
+                    }
                   />
                 </div>
               </div>
             </section>
           ) : null}
 
-          {usesCompatibilityMapping ? (
+          {usesProductCompatibilityMapping ? (
             <section className="premium-card-solid rounded-3xl p-3 md:p-4">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
@@ -2773,67 +3253,14 @@ useEffect(() => {
               />
             </div>
 
-            <div className="space-y-3">
-              {paginatedCompatibilityRows.map((row) => {
-                const brandName = brandMap.get(row.brandId)?.name || "-";
-                const brandModels =
-                  modelMapByBrand.get(row.brandId)?.map((model) => ({
-                    _id: model._id,
-                    name: model.name,
-                  })) || [];
-
-                return (
-                  <div
-                    key={row.rowId}
-                    className="rounded-[22px] border border-slate-200 bg-white p-4"
-                  >
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr]">
-                      <div className="space-y-3">
-                        <label className="inline-flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={row.enabled}
-                            onChange={(e) =>
-                              updateCompatibilityRow(row.rowId, {
-                                enabled: e.target.checked,
-                              })
-                            }
-                            disabled={submitting}
-                            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                          />
-                          <span className="font-semibold text-slate-900">
-                            {brandName}
-                          </span>
-                        </label>
-
-                        <textarea
-                          value={row.notes}
-                          onChange={(e) =>
-                            updateCompatibilityRow(row.rowId, {
-                              notes: e.target.value,
-                            })
-                          }
-                          placeholder="Notes"
-                          className="premium-textarea min-h-25"
-                          disabled={submitting || !row.enabled}
-                        />
-                      </div>
-
-                      <ModelCheckboxSelector
-                        options={brandModels}
-                        values={row.modelId}
-                        onChange={(values) =>
-                          updateCompatibilityRow(row.rowId, { modelId: values })
-                        }
-                        disabled={!row.enabled || submitting}
-                        emptyText="Enable the brand to choose models"
-                        allLabel="Select all models"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <CompatibilityRowsEditor
+              rows={paginatedCompatibilityRows}
+              brandMap={brandMap}
+              modelMapByBrand={modelMapByBrand}
+              disabled={submitting}
+              emptyStateText="No compatible brands matched your search."
+              onUpdateRow={updateCompatibilityRow}
+            />
             </section>
           ) : null}
 

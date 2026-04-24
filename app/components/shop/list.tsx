@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import {
   CircleOff,
   Eye,
+  FileText,
+  ImageIcon,
   Loader2,
   Pencil,
   Power,
@@ -38,6 +40,15 @@ type ShopAddress = {
   pincode?: string;
 };
 
+type ShopDocument = {
+  url?: string;
+  publicId?: string;
+  public_id?: string;
+  mimeType?: string;
+  fileName?: string;
+  bytes?: number;
+};
+
 type ShopOwnerRef = {
   _id?: string;
   name?: string;
@@ -46,12 +57,41 @@ type ShopOwnerRef = {
   mobile?: string;
 };
 
+type PrimitiveIdObject = {
+  _id?: string;
+  id?: string;
+  $oid?: string;
+};
+
+type AuthUser = {
+  _id?: string;
+  id?: string;
+  role?: string;
+  shopIds?: (string | PrimitiveIdObject)[];
+  [key: string]: unknown;
+};
+
 type ShopListItem = {
   _id: string;
   name?: string;
+  shopType?: string;
   businessType?: string;
   isActive?: boolean;
   createdAt?: string;
+
+  mobile?: string;
+  email?: string;
+
+  enableGSTBilling?: boolean;
+  billingType?: "GST" | "NON_GST" | "BOTH" | string;
+  gstNumber?: string;
+
+  frontImageUrl?: string;
+  frontImagePublicId?: string;
+
+  gstCertificate?: ShopDocument;
+  udyamCertificate?: ShopDocument;
+
   shopAddress?: ShopAddress;
   shopOwnerAccountId?: string | ShopOwnerRef;
 };
@@ -83,10 +123,13 @@ function normalizeRole(role?: string | null): AppRole {
   if (value === "MASTER_ADMIN") return "MASTER_ADMIN";
   if (value === "MANAGER") return "MANAGER";
   if (value === "SUPERVISOR") return "SUPERVISOR";
+  if (value === "STAFF") return "STAFF";
+
   if (value === "SHOP_OWNER") return "SHOP_OWNER";
   if (value === "SHOP_MANAGER") return "SHOP_MANAGER";
   if (value === "SHOP_SUPERVISOR") return "SHOP_SUPERVISOR";
   if (value === "EMPLOYEE") return "EMPLOYEE";
+
   return "STAFF";
 }
 
@@ -94,10 +137,11 @@ function getShopBasePath(role: AppRole) {
   if (role === "MASTER_ADMIN") return "/master/shop";
   if (role === "MANAGER") return "/manager/shop";
   if (role === "SUPERVISOR") return "/supervisor/shop";
-  if (role === "SHOP_OWNER") return "/shopowner/shop";
+  if (role === "SHOP_OWNER") return "/shopowner/shopprofile";
   if (role === "SHOP_MANAGER") return "/shopmanager/shop";
   if (role === "SHOP_SUPERVISOR") return "/shopsupervisor/shop";
   if (role === "EMPLOYEE") return "/employee/shop";
+
   return "/staff/shop";
 }
 
@@ -105,15 +149,53 @@ function getShopOwnerBasePath(role: AppRole) {
   if (role === "MASTER_ADMIN") return "/master/shopowner";
   if (role === "MANAGER") return "/manager/shopowner";
   if (role === "SUPERVISOR") return "/supervisor/shopowner";
-  if (role === "SHOP_OWNER") return "/shopowner/shopowner";
+  if (role === "SHOP_OWNER") return "/shopowner/profile";
   if (role === "SHOP_MANAGER") return "/shopmanager/shopowner";
   if (role === "SHOP_SUPERVISOR") return "/shopsupervisor/shopowner";
   if (role === "EMPLOYEE") return "/employee/shopowner";
+
   return "/staff/shopowner";
 }
 
 function hasTextValue(value?: string | null) {
   return String(value || "").trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getId(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+
+  if (isRecord(value)) {
+    if (typeof value._id === "string") return value._id;
+    if (typeof value.id === "string") return value.id;
+    if (typeof value.$oid === "string") return value.$oid;
+  }
+
+  return "";
+}
+
+function hasDocument(doc?: ShopDocument) {
+  return (
+    hasTextValue(doc?.url) ||
+    hasTextValue(doc?.publicId) ||
+    hasTextValue(doc?.public_id) ||
+    Number(doc?.bytes || 0) > 0
+  );
+}
+
+function hasAnyShopDocument(shop: ShopListItem) {
+  return hasDocument(shop.gstCertificate) || hasDocument(shop.udyamCertificate);
+}
+
+function hasFrontImage(shop: ShopListItem) {
+  return (
+    hasTextValue(shop.frontImageUrl) ||
+    hasTextValue(shop.frontImagePublicId)
+  );
 }
 
 function isAddressComplete(address?: ShopAddress) {
@@ -131,6 +213,7 @@ function getOwnerRef(shop: ShopListItem) {
   if (shop.shopOwnerAccountId && typeof shop.shopOwnerAccountId === "object") {
     return shop.shopOwnerAccountId;
   }
+
   return null;
 }
 
@@ -138,6 +221,7 @@ function getOwnerId(shop: ShopListItem) {
   if (typeof shop.shopOwnerAccountId === "string") {
     return shop.shopOwnerAccountId;
   }
+
   return String(getOwnerRef(shop)?._id || "");
 }
 
@@ -166,11 +250,14 @@ function getShopProgressMetrics(shop: ShopListItem) {
     isAddressComplete(shop.shopAddress),
     hasTextValue(getOwnerId(shop)),
     shop.isActive !== false,
+    hasFrontImage(shop),
+    hasAnyShopDocument(shop),
   ];
 
   const totalCount = trackedSections.length;
   const filledCount = trackedSections.filter(Boolean).length;
   const emptyCount = totalCount - filledCount;
+
   const percent = totalCount
     ? Math.round((filledCount / totalCount) * 100)
     : 0;
@@ -183,6 +270,20 @@ function getShopProgressMetrics(shop: ShopListItem) {
   };
 }
 
+function getMissingShopFields(shop: ShopListItem) {
+  const missing: string[] = [];
+
+  if (!hasTextValue(shop.name)) missing.push("Shop Name");
+  if (!hasTextValue(shop.businessType)) missing.push("Business Type");
+  if (!isAddressComplete(shop.shopAddress)) missing.push("Address");
+  if (!hasTextValue(getOwnerId(shop))) missing.push("Shop Owner");
+  if (shop.isActive === false) missing.push("Active Status");
+  if (!hasFrontImage(shop)) missing.push("Front Image");
+  if (!hasAnyShopDocument(shop)) missing.push("Shop Document");
+
+  return missing;
+}
+
 function getProgressTone(percent: number) {
   if (percent >= 100) return "bg-emerald-500";
   if (percent >= 70) return "bg-sky-500";
@@ -190,20 +291,61 @@ function getProgressTone(percent: number) {
   return "bg-rose-500";
 }
 
+function DocumentBadge({
+  active,
+  label,
+  icon,
+}: {
+  active: boolean;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+        active
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-slate-200 bg-slate-50 text-slate-500"
+      }`}
+    >
+      {icon}
+      {label}
+    </span>
+  );
+}
+
 export default function ShopListPage() {
   const auth = useAuth();
   const accessToken = auth?.accessToken ?? null;
+
+  const authUser = ((auth as { user?: AuthUser | null })?.user ?? null) as
+    | AuthUser
+    | null;
 
   const currentRole = normalizeRole(
     (auth as { role?: string | null; user?: { role?: string | null } })?.role ||
       (auth as { user?: { role?: string | null } })?.user?.role
   );
 
-  const shopBasePath = useMemo(() => getShopBasePath(currentRole), [currentRole]);
+  const isShopOwnerView = currentRole === "SHOP_OWNER";
+
+  const shopBasePath = useMemo(
+    () => getShopBasePath(currentRole),
+    [currentRole]
+  );
+
   const shopOwnerBasePath = useMemo(
     () => getShopOwnerBasePath(currentRole),
     [currentRole]
   );
+
+  const ownerActionHref = useMemo(() => {
+    if (currentRole === "SHOP_OWNER") {
+      return "/shopowner/profile";
+    }
+
+    return `${shopOwnerBasePath}/view`;
+  }, [currentRole, shopOwnerBasePath]);
 
   const [data, setData] = useState<ShopListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,8 +362,8 @@ export default function ShopListPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(`${baseURL}${SummaryApi.master_list_shops.url}`, {
-        method: SummaryApi.master_list_shops.method,
+      const response = await fetch(`${baseURL}${SummaryApi.shop_list.url}`, {
+        method: SummaryApi.shop_list.method,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
@@ -229,13 +371,51 @@ export default function ShopListPage() {
         cache: "no-store",
       });
 
-      const result = (await response.json().catch(() => ({}))) as ApiListResponse;
+      const result = (await response
+        .json()
+        .catch(() => ({}))) as ApiListResponse;
 
       if (!response.ok || !result?.success) {
         throw new Error(result?.message || "Failed to load shop records");
       }
 
-      setData(Array.isArray(result?.data) ? result.data : []);
+      const items = Array.isArray(result?.data) ? result.data : [];
+
+      if (currentRole === "SHOP_OWNER") {
+        const ownerId = getId(authUser?._id) || getId(authUser?.id);
+
+        const allowedShopIds = Array.isArray(authUser?.shopIds)
+          ? authUser.shopIds.map((item) => getId(item)).filter(Boolean)
+          : [];
+
+        setData(
+          items.filter((shop) => {
+            const shopOwnerId =
+              typeof shop.shopOwnerAccountId === "string"
+                ? shop.shopOwnerAccountId
+                : shop.shopOwnerAccountId?._id || "";
+
+            if (
+              ownerId &&
+              shopOwnerId &&
+              String(shopOwnerId) === String(ownerId)
+            ) {
+              return true;
+            }
+
+            if (
+              allowedShopIds.length &&
+              allowedShopIds.includes(String(shop._id))
+            ) {
+              return true;
+            }
+
+            return false;
+          })
+        );
+      } else {
+        setData(items);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to load shop records";
@@ -246,7 +426,7 @@ export default function ShopListPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, authUser, currentRole]);
 
   useEffect(() => {
     void fetchShops();
@@ -259,19 +439,14 @@ export default function ShopListPage() {
     }
 
     const nextStatus = !(shop.isActive ?? false);
-    const confirmed = window.confirm(
-      `Are you sure you want to ${nextStatus ? "activate" : "deactivate"} this shop?`
-    );
-
-    if (!confirmed) return;
 
     try {
       setActionLoading(shop._id);
 
       const response = await fetch(
-        `${baseURL}${SummaryApi.master_update_shop.url(shop._id)}`,
+        `${baseURL}${SummaryApi.shop_update.url(shop._id)}`,
         {
-          method: SummaryApi.master_update_shop.method,
+          method: SummaryApi.shop_update.method,
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -281,8 +456,9 @@ export default function ShopListPage() {
         }
       );
 
-      const result =
-        (await response.json().catch(() => ({}))) as ApiActionResponse;
+      const result = (await response
+        .json()
+        .catch(() => ({}))) as ApiActionResponse;
 
       if (!response.ok || !result?.success) {
         throw new Error(result?.message || "Status update failed");
@@ -297,7 +473,9 @@ export default function ShopListPage() {
       );
 
       toast.success(
-        nextStatus ? "Shop activated successfully" : "Shop deactivated successfully"
+        nextStatus
+          ? "Shop activated successfully"
+          : "Shop deactivated successfully"
       );
     } catch (error) {
       const message =
@@ -316,16 +494,13 @@ export default function ShopListPage() {
       return;
     }
 
-    const confirmed = window.confirm("Delete this shop?");
-    if (!confirmed) return;
-
     try {
       setActionLoading(shop._id);
 
       const response = await fetch(
-        `${baseURL}${SummaryApi.master_delete_shop.url(shop._id)}`,
+        `${baseURL}${SummaryApi.shop_delete.url(shop._id)}`,
         {
-          method: SummaryApi.master_delete_shop.method,
+          method: SummaryApi.shop_delete.method,
           headers: {
             Authorization: `Bearer ${accessToken}`,
             Accept: "application/json",
@@ -333,8 +508,9 @@ export default function ShopListPage() {
         }
       );
 
-      const result =
-        (await response.json().catch(() => ({}))) as ApiActionResponse;
+      const result = (await response
+        .json()
+        .catch(() => ({}))) as ApiActionResponse;
 
       if (!response.ok || !result?.success) {
         throw new Error(result?.message || "Delete failed");
@@ -378,7 +554,7 @@ export default function ShopListPage() {
     return Array.from(grouped.values());
   }, [data]);
 
-  const filteredData = useMemo(() => {
+  const filteredGroupedData = useMemo(() => {
     const term = search.trim().toLowerCase();
 
     if (!term) return groupedData;
@@ -393,21 +569,60 @@ export default function ShopListPage() {
         .join(" ")
         .toLowerCase();
 
-      const shopMatch = group.shops.some((shop) =>
-        [
+      const shopMatch = group.shops.some((shop) => {
+        const progress = getShopProgressMetrics(shop);
+        const missingFields = getMissingShopFields(shop);
+
+        return [
           shop.name,
+          shop.shopType,
           shop.businessType,
+          shop.billingType,
+          shop.gstNumber,
           getCompactAddress(shop.shopAddress),
-          `${getShopProgressMetrics(shop).percent}%`,
+          `${progress.percent}%`,
+          `${progress.filledCount}/${progress.totalCount}`,
+          missingFields.join(" "),
         ]
           .join(" ")
           .toLowerCase()
-          .includes(term)
-      );
+          .includes(term);
+      });
 
       return ownerHaystack.includes(term) || shopMatch;
     });
   }, [groupedData, search]);
+
+  const flatFilteredShops = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return data;
+
+    return data.filter((shop) => {
+      const progress = getShopProgressMetrics(shop);
+      const missingFields = getMissingShopFields(shop);
+      const owner = getOwnerRef(shop);
+
+      return [
+        shop.name,
+        shop.shopType,
+        shop.businessType,
+        shop.billingType,
+        shop.gstNumber,
+        getCompactAddress(shop.shopAddress),
+        owner?.name,
+        owner?.username,
+        owner?.email,
+        owner?.mobile,
+        `${progress.percent}%`,
+        `${progress.filledCount}/${progress.totalCount}`,
+        missingFields.join(" "),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+  }, [data, search]);
 
   const totalShopCount = data.length;
   const totalOwnerCount = groupedData.length;
@@ -423,6 +638,10 @@ export default function ShopListPage() {
 
     return Math.round(total / data.length);
   }, [data]);
+
+  const isEmpty = isShopOwnerView
+    ? flatFilteredShops.length === 0
+    : filteredGroupedData.length === 0;
 
   return (
     <div className="page-shell">
@@ -442,9 +661,11 @@ export default function ShopListPage() {
                 <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                   Shop List
                 </h1>
+
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                  Review grouped shop records by shop owner and track each shop
-                  setup completion with shop-wise progress.
+                  {isShopOwnerView
+                    ? "Review your linked shops, billing type, documents, and setup progress."
+                    : "Review grouped shop records by shop owner and track setup completion with front image and shop document validation."}
                 </p>
               </div>
             </div>
@@ -452,17 +673,23 @@ export default function ShopListPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Total Shops</p>
-                <p className="mt-2 text-2xl font-bold text-white">{totalShopCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {totalShopCount}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Owners</p>
-                <p className="mt-2 text-2xl font-bold text-white">{totalOwnerCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {totalOwnerCount}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
                 <p className="text-xs text-white/70">Active Shops</p>
-                <p className="mt-2 text-2xl font-bold text-white">{activeShopCount}</p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {activeShopCount}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
@@ -485,7 +712,9 @@ export default function ShopListPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Directory</h2>
                 <p className="text-sm text-slate-500">
-                  Search by shop owner, shop name, business type, address, or progress.
+                  {isShopOwnerView
+                    ? "Search by shop name, address, billing type, document status, or progress."
+                    : "Search by shop owner, shop name, business type, address, or progress."}
                 </p>
               </div>
             </div>
@@ -496,7 +725,7 @@ export default function ShopListPage() {
                 type="text"
                 placeholder="Search shops..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(event) => setSearch(event.target.value)}
                 className="premium-input pl-11"
               />
             </div>
@@ -509,12 +738,16 @@ export default function ShopListPage() {
                 Loading shop records...
               </div>
             </div>
-          ) : filteredData.length === 0 ? (
+          ) : isEmpty ? (
             <div className="flex min-h-80 flex-col items-center justify-center px-6 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                 <CircleOff className="h-8 w-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900">No shops found</h3>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                No shops found
+              </h3>
+
               <p className="mt-2 max-w-md text-sm text-slate-500">
                 No shop record matches your current search.
               </p>
@@ -522,175 +755,402 @@ export default function ShopListPage() {
           ) : (
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr className="border-b border-slate-200 text-left text-slate-600">
-                      <th className="px-5 py-4 font-semibold">S.No</th>
-                      <th className="px-5 py-4 font-semibold">Shop Owner Name</th>
-                      <th className="px-5 py-4 font-semibold">Shop Details</th>
-                      <th className="px-5 py-4 font-semibold">Shop Count</th>
-                      <th className="px-5 py-4 text-right font-semibold">Action</th>
-                    </tr>
-                  </thead>
+                {isShopOwnerView ? (
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr className="border-b border-slate-200 text-left text-slate-600">
+                        <th className="px-5 py-4 font-semibold">S.No</th>
+                        <th className="px-5 py-4 font-semibold">Shop Name</th>
+                        <th className="px-5 py-4 font-semibold">Address</th>
+                        <th className="px-5 py-4 font-semibold">Billing</th>
+                        <th className="px-5 py-4 font-semibold">
+                          Shop Progress
+                        </th>
+                        <th className="px-5 py-4 font-semibold">Document</th>
+                        <th className="px-5 py-4 text-right font-semibold">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
 
-                  <tbody className="bg-white">
-                    {filteredData.map((group, index) => (
-                      <tr
-                        key={group.ownerId}
-                        className="border-b border-slate-100 align-top last:border-b-0"
-                      >
-                        <td className="px-5 py-4 font-medium text-slate-700 align-top">
-                          {index + 1}
-                        </td>
+                    <tbody className="bg-white">
+                      {flatFilteredShops.map((shop, index) => {
+                        const isBusy = actionLoading === shop._id;
+                        const isActive = shop.isActive !== false;
+                        const progress = getShopProgressMetrics(shop);
+                        const progressTone = getProgressTone(progress.percent);
 
-                        <td className="px-5 py-4 align-top">
-                          <div className="min-w-55 space-y-1">
-                            <p className="font-semibold text-slate-900">
-                              {group.ownerName || "-"}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {group.ownerUsername ? `@${group.ownerUsername}` : "-"}
-                            </p>
-                            <p className="break-all text-xs text-slate-500">
-                              {group.ownerEmail || "-"}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {group.ownerMobile || "-"}
-                            </p>
-                          </div>
-                        </td>
+                        return (
+                          <tr
+                            key={shop._id}
+                            className="border-b border-slate-100 align-top last:border-b-0"
+                          >
+                            <td className="px-5 py-4 align-top font-medium text-slate-700">
+                              {index + 1}
+                            </td>
 
-                        <td className="px-5 py-4 align-top">
-                          <div className="min-w-[430px] space-y-2">
-                            {group.shops.map((shop) => {
-                              const isBusy = actionLoading === shop._id;
-                              const isActive = shop.isActive !== false;
-                              const progress = getShopProgressMetrics(shop);
-                              const progressTone = getProgressTone(progress.percent);
+                            <td className="px-5 py-4 align-top">
+                              <div className="min-w-[220px]">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Link
+                                    href={`${shopBasePath}/view?id=${shop._id}`}
+                                    className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-[color:var(--primary)]"
+                                    title={shop.name || "Shop"}
+                                  >
+                                    {shop.name || "Shop"}
+                                  </Link>
 
-                              return (
-                                <div
-                                  key={shop._id}
-                                  className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+                                  <span
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                                      isActive
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : "border-slate-200 bg-slate-100 text-slate-600"
+                                    }`}
+                                  >
+                                    {isActive ? "Active" : "Inactive"}
+                                  </span>
+                                </div>
+
+                                <p className="mt-2 text-xs text-slate-500">
+                                  {shop.businessType || "-"}
+                                </p>
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4 align-top">
+                              <p className="max-w-[260px] text-xs leading-5 text-slate-600">
+                                {getCompactAddress(shop.shopAddress)}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-4 align-top">
+                              <div className="space-y-1">
+                                <span
+                                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    shop.billingType === "GST" ||
+                                    shop.billingType === "BOTH"
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-slate-200 bg-slate-50 text-slate-600"
+                                  }`}
                                 >
-                                  <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center gap-2">
+                                  {shop.billingType || "NON_GST"}
+                                </span>
+
+                                {shop.gstNumber ? (
+                                  <p className="text-[11px] text-slate-500">
+                                    GST: {shop.gstNumber}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4 align-top">
+                              <div className="min-w-[190px]">
+                                <div className="mb-1 flex items-center justify-between gap-3">
+                                  <span className="text-xs font-semibold text-slate-900">
+                                    {progress.percent}% Complete
+                                  </span>
+
+                                  <span className="text-[11px] text-slate-500">
+                                    {progress.filledCount}/
+                                    {progress.totalCount}
+                                  </span>
+                                </div>
+
+                                <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${progressTone}`}
+                                    style={{ width: `${progress.percent}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4 align-top">
+                              <div className="flex min-w-[230px] flex-wrap gap-2">
+                                <DocumentBadge
+                                  active={hasFrontImage(shop)}
+                                  label="Front Image"
+                                  icon={<ImageIcon className="h-3.5 w-3.5" />}
+                                />
+
+                                <DocumentBadge
+                                  active={hasDocument(shop.gstCertificate)}
+                                  label="GST"
+                                  icon={<FileText className="h-3.5 w-3.5" />}
+                                />
+
+                                <DocumentBadge
+                                  active={hasDocument(shop.udyamCertificate)}
+                                  label="Udyam"
+                                  icon={<FileText className="h-3.5 w-3.5" />}
+                                />
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4 align-top">
+                              <div className="flex items-center justify-end gap-2">
+                                <Link
+                                  href={`${shopBasePath}/view?id=${shop._id}`}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                                  title="View Shop"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+
+                                <Link
+                                  href={`${shopBasePath}/edit/${shop._id}`}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                                  title="Edit Shop"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(shop)}
+                                  disabled={isBusy}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  title={
+                                    isActive
+                                      ? "Deactivate Shop"
+                                      : "Activate Shop"
+                                  }
+                                >
+                                  {isBusy ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Power className="h-4 w-4" />
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(shop)}
+                                  disabled={isBusy}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Delete Shop"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr className="border-b border-slate-200 text-left text-slate-600">
+                        <th className="px-5 py-4 font-semibold">S.No</th>
+                        <th className="px-5 py-4 font-semibold">
+                          Shop Owner Name
+                        </th>
+                        <th className="px-5 py-4 font-semibold">
+                          Shop Details
+                        </th>
+                        <th className="px-5 py-4 font-semibold">Shop Count</th>
+                        <th className="px-5 py-4 text-right font-semibold">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="bg-white">
+                      {filteredGroupedData.map((group, index) => (
+                        <tr
+                          key={group.ownerId}
+                          className="border-b border-slate-100 align-top last:border-b-0"
+                        >
+                          <td className="px-5 py-4 align-top font-medium text-slate-700">
+                            {index + 1}
+                          </td>
+
+                          <td className="px-5 py-4 align-top">
+                            <div className="min-w-55 space-y-1">
+                              <p className="font-semibold text-slate-900">
+                                {group.ownerName || "-"}
+                              </p>
+
+                              <p className="text-xs text-slate-500">
+                                {group.ownerUsername
+                                  ? `@${group.ownerUsername}`
+                                  : "-"}
+                              </p>
+
+                              <p className="break-all text-xs text-slate-500">
+                                {group.ownerEmail || "-"}
+                              </p>
+
+                              <p className="text-xs text-slate-500">
+                                {group.ownerMobile || "-"}
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4 align-top">
+                            <div className="min-w-[430px] space-y-2">
+                              {group.shops.map((shop) => {
+                                const isBusy = actionLoading === shop._id;
+                                const isActive = shop.isActive !== false;
+                                const progress = getShopProgressMetrics(shop);
+                                const progressTone = getProgressTone(
+                                  progress.percent
+                                );
+                                const missingFields =
+                                  getMissingShopFields(shop);
+
+                                return (
+                                  <div
+                                    key={shop._id}
+                                    className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+                                  >
+                                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Link
+                                            href={`${shopBasePath}/view?id=${shop._id}`}
+                                            className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-[color:var(--primary)]"
+                                            title={shop.name || "Shop"}
+                                          >
+                                            {shop.name || "Shop"}
+                                          </Link>
+
+                                          <span
+                                            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                                              isActive
+                                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                : "border-slate-200 bg-slate-100 text-slate-600"
+                                            }`}
+                                          >
+                                            {isActive ? "Active" : "Inactive"}
+                                          </span>
+
+                                          <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
+                                            {progress.percent}% Complete
+                                          </span>
+                                        </div>
+
+                                        <div className="mt-2 space-y-1">
+                                          <p className="truncate text-xs text-slate-500">
+                                            {shop.businessType || "-"}
+                                          </p>
+
+                                          <p className="line-clamp-1 text-xs text-slate-500">
+                                            {getCompactAddress(
+                                              shop.shopAddress
+                                            )}
+                                          </p>
+                                        </div>
+
+                                        <div className="mt-3">
+                                          <div className="mb-1 flex items-center justify-between gap-3">
+                                            <span className="text-xs font-semibold text-slate-900">
+                                              Shop Progress
+                                            </span>
+
+                                            <span className="text-[11px] text-slate-500">
+                                              {progress.filledCount}/
+                                              {progress.totalCount}
+                                            </span>
+                                          </div>
+
+                                          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                              className={`h-full rounded-full transition-all ${progressTone}`}
+                                              style={{
+                                                width: `${progress.percent}%`,
+                                              }}
+                                            />
+                                          </div>
+
+                                          {missingFields.length > 0 && (
+                                            <p className="mt-2 line-clamp-1 text-[11px] text-slate-500">
+                                              Missing:{" "}
+                                              {missingFields.join(", ")}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex shrink-0 items-center gap-2 xl:pl-2">
                                         <Link
                                           href={`${shopBasePath}/view?id=${shop._id}`}
-                                          className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-[color:var(--primary)]"
-                                          title={shop.name || "Shop"}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                                          title="View Shop"
                                         >
-                                          {shop.name || "Shop"}
+                                          <Eye className="h-4 w-4" />
                                         </Link>
 
-                                        <span
-                                          className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                                            isActive
-                                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                              : "border-slate-200 bg-slate-100 text-slate-600"
-                                          }`}
+                                        <Link
+                                          href={`${shopBasePath}/edit/${shop._id}`}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                                          title="Edit Shop"
                                         >
-                                          {isActive ? "Active" : "Inactive"}
-                                        </span>
+                                          <Pencil className="h-4 w-4" />
+                                        </Link>
 
-                                        <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
-                                          {progress.percent}% Complete
-                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleToggleStatus(shop)
+                                          }
+                                          disabled={isBusy}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                          title={
+                                            isActive
+                                              ? "Deactivate Shop"
+                                              : "Activate Shop"
+                                          }
+                                        >
+                                          {isBusy ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Power className="h-4 w-4" />
+                                          )}
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDelete(shop)}
+                                          disabled={isBusy}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                          title="Delete Shop"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
                                       </div>
-
-                                      <div className="mt-2 space-y-1">
-                                        <p className="truncate text-xs text-slate-500">
-                                          {shop.businessType || "-"}
-                                        </p>
-                                        <p className="line-clamp-1 text-xs text-slate-500">
-                                          {getCompactAddress(shop.shopAddress)}
-                                        </p>
-                                      </div>
-
-                                      <div className="mt-3">
-                                        <div className="mb-1 flex items-center justify-between gap-3">
-                                          <span className="text-xs font-semibold text-slate-900">
-                                            Shop Progress
-                                          </span>
-                                          <span className="text-[11px] text-slate-500">
-                                            {progress.filledCount}/{progress.totalCount}
-                                          </span>
-                                        </div>
-
-                                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                                          <div
-                                            className={`h-full rounded-full transition-all ${progressTone}`}
-                                            style={{ width: `${progress.percent}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex shrink-0 items-center gap-2 xl:pl-2">
-                                      <Link
-                                        href={`${shopBasePath}/view?id=${shop._id}`}
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Link>
-
-                                      <Link
-                                        href={`${shopBasePath}/edit/${shop._id}`}
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Link>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleStatus(shop)}
-                                        disabled={isBusy}
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                      >
-                                        {isBusy ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Power className="h-4 w-4" />
-                                        )}
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDelete(shop)}
-                                        disabled={isBusy}
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </td>
+                                );
+                              })}
+                            </div>
+                          </td>
 
-                        <td className="px-5 py-4 align-top">
-                          <span className="inline-flex min-w-14 items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-                            {group.shops.length}
-                          </span>
-                        </td>
+                          <td className="px-5 py-4 align-top">
+                            <span className="inline-flex min-w-14 items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                              {group.shops.length}
+                            </span>
+                          </td>
 
-                        <td className="px-5 py-4 align-top">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`${shopOwnerBasePath}/view?id=${group.ownerId}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
-                            >
-                              <User2 className="h-4 w-4" />
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <td className="px-5 py-4 align-top">
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href={`${ownerActionHref}?id=${group.ownerId}`}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                title="View Shop Owner"
+                              >
+                                <User2 className="h-4 w-4" />
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}

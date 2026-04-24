@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -26,8 +26,22 @@ import { toast } from "sonner";
 import SummaryApi, { baseURL } from "@/constants/SummaryApi";
 import { useAuth } from "@/context/auth/AuthProvider";
 
-type AppRole = "MASTER_ADMIN" | "MANAGER" | "SUPERVISOR" | "STAFF";
+type AppRole =
+  | "MASTER_ADMIN"
+  | "MANAGER"
+  | "SUPERVISOR"
+  | "STAFF"
+  | "SHOP_OWNER"
+  | "SHOP_MANAGER"
+  | "SHOP_SUPERVISOR"
+  | "EMPLOYEE";
 type BusinessType = "" | "Retail" | "Wholesale";
+
+type ShopType =
+  | ""
+  | "WAREHOUSE_RETAIL_SHOP"
+  | "RETAIL_BRANCH_SHOP"
+  | "WHOLESALE_SHOP";
 
 type Option = {
   label: string;
@@ -44,7 +58,10 @@ type OwnerOption = Option & {
 type FormState = {
   ownerId: string;
   shopName: string;
+  shopType: ShopType;
   businessType: BusinessType;
+  mobile: string;
+  gstNumber: string;
   state: string;
   district: string;
   taluk: string;
@@ -86,7 +103,13 @@ type ShopDetailsResponse = {
   data?: {
     _id?: string;
     name?: string;
+    mobile?: string;
+    shopType?: ShopType;
     businessType?: BusinessType;
+    isMainWarehouse?: boolean;
+    billingType?: "GST" | "NON_GST" | "BOTH";
+    enableGSTBilling?: boolean;
+    gstNumber?: string;
     isActive?: boolean;
     frontImageUrl?: string;
     shopAddress?: {
@@ -123,7 +146,10 @@ type ShopOwnerListItem = {
 const INITIAL: FormState = {
   ownerId: "",
   shopName: "",
+  shopType: "",
   businessType: "",
+  mobile: "",
+  gstNumber: "",
   state: "",
   district: "",
   taluk: "",
@@ -137,6 +163,24 @@ const BUSINESS_OPTIONS: Option[] = [
   { label: "Wholesale", value: "Wholesale" },
 ];
 
+const SHOP_TYPE_OPTIONS: Option[] = [
+  {
+    label: "Warehouse Retail Shop",
+    value: "WAREHOUSE_RETAIL_SHOP",
+    searchText: "warehouse main warehouse retail warehouse shop",
+  },
+  {
+    label: "Warehouse Retail Branch Shop",
+    value: "RETAIL_BRANCH_SHOP",
+    searchText: "branch retail branch shop retail shop",
+  },
+  {
+    label: "Wholesale Shop",
+    value: "WHOLESALE_SHOP",
+    searchText: "wholesale shop wholesale",
+  },
+];
+
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
 }
@@ -147,6 +191,10 @@ function digitsOnly(value: string) {
 
 function normalizeOptionText(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeGstNumber(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
 }
 
 function toTitleCase(value: string) {
@@ -162,6 +210,15 @@ function toTitleCase(value: string) {
 
 function isValidPincode(pincode: string) {
   return /^\d{6}$/.test(pincode);
+}
+
+function isValidIndianMobile(mobile: string) {
+  return /^[6-9]\d{9}$/.test(mobile);
+}
+
+function isValidGST(gstNumber: string) {
+  if (!gstNumber) return true;
+  return /^[0-9A-Z]{15}$/.test(gstNumber);
 }
 
 function appendOption(options: Option[], rawValue: string) {
@@ -197,8 +254,51 @@ function getRoleBadgeText(role?: string | null) {
   if (value === "MANAGER") return "Manager";
   if (value === "SUPERVISOR") return "Supervisor";
   if (value === "STAFF") return "Staff";
+  if (value === "SHOP_OWNER") return "Shop Owner";
+  if (value === "SHOP_MANAGER") return "Shop Manager";
+  if (value === "SHOP_SUPERVISOR") return "Shop Supervisor";
+  if (value === "EMPLOYEE") return "Employee";
 
   return "Unknown";
+}
+
+function getEntityId(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record._id === "string") return record._id;
+  if (typeof record.id === "string") return record.id;
+  if (typeof record.$oid === "string") return record.$oid;
+
+  return "";
+}
+
+function getShopListPath(role?: string | null) {
+  const value = String(role || "").trim().toUpperCase();
+
+  if (value === "MASTER_ADMIN") return "/master/shop/list";
+  if (value === "MANAGER") return "/manager/shop/list";
+  if (value === "SUPERVISOR") return "/supervisor/shop/list";
+  if (value === "SHOP_OWNER") return "/shopowner/shopprofile/list";
+
+  return "/master/shop/list";
+}
+
+function getShopTypeLabel(shopType?: string) {
+  if (shopType === "WAREHOUSE_RETAIL_SHOP") {
+    return "Warehouse Retail Shop";
+  }
+
+  if (shopType === "RETAIL_BRANCH_SHOP") {
+    return "Warehouse Retail Branch Shop";
+  }
+
+  if (shopType === "WHOLESALE_SHOP") {
+    return "Wholesale Shop";
+  }
+
+  return "-";
 }
 
 function toOptions(arr: unknown): Option[] {
@@ -222,7 +322,11 @@ function toOptions(arr: unknown): Option[] {
                 ? obj.value
                 : typeof obj.title === "string"
                   ? obj.title
-                  : "";
+                  : typeof obj.villageName === "string"
+                    ? obj.villageName
+                    : typeof obj.talukName === "string"
+                      ? obj.talukName
+                      : "";
 
         if (raw) {
           return { label: raw, value: raw };
@@ -256,8 +360,14 @@ function InfoPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function CreateShopPage() {
-  return <ShopForm mode="create" />;
+export default function CreateShopPage({
+  mode = "create",
+  shopId = "",
+}: {
+  mode?: ShopFormMode;
+  shopId?: string;
+}) {
+  return <ShopForm mode={mode} shopId={shopId} />;
 }
 
 function SectionHeader({
@@ -344,6 +454,7 @@ function FloatingSelect({
   value,
   onChange,
   options,
+  placeholder,
   disabled,
   error,
   required,
@@ -353,6 +464,7 @@ function FloatingSelect({
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: Option[];
+  placeholder?: string;
   disabled?: boolean;
   error?: string;
   required?: boolean;
@@ -373,7 +485,7 @@ function FloatingSelect({
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         >
-          <option value=""></option>
+          <option value="">{placeholder || ""}</option>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -727,15 +839,16 @@ function UploadCard({
 
 export function ShopForm({
   mode = "create",
+  shopId: shopIdProp = "",
 }: {
   mode?: ShopFormMode;
+  shopId?: string;
 }) {
   const router = useRouter();
-  const params = useParams<{ id?: string }>();
-  const { accessToken, role } = useAuth();
+  const { accessToken, role, user } = useAuth();
+
   const isEditMode = mode === "edit";
-  const shopId = String(params?.id || "").trim();
-  const listPath = "/master/shop/list";
+  const shopId = String(shopIdProp || "").trim();
 
   const frontImageInputRef = useRef<HTMLInputElement | null>(null);
   const gstInputRef = useRef<HTMLInputElement | null>(null);
@@ -744,6 +857,10 @@ export function ShopForm({
   const currentUserRole = useMemo(
     () => String(role || "").toUpperCase() as AppRole,
     [role]
+  );
+  const listPath = useMemo(
+    () => getShopListPath(currentUserRole),
+    [currentUserRole]
   );
 
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -926,6 +1043,46 @@ export function ShopForm({
     async function loadOwners() {
       if (!accessToken) return;
 
+      if (currentUserRole === "SHOP_OWNER") {
+        const ownerId = getEntityId(user);
+        const ownerUsername = String(
+          (user as { username?: string } | null)?.username || ""
+        ).trim();
+        const ownerEmail = String(
+          (user as { email?: string } | null)?.email || ""
+        ).trim();
+        const ownerName = String(
+          (user as { name?: string } | null)?.name ||
+            ownerUsername ||
+            ownerEmail ||
+            "Shop Owner"
+        ).trim();
+
+        if (!active) return;
+
+        setOwners(
+          ownerId
+            ? [
+                {
+                  value: ownerId,
+                  label: ownerUsername ? `${ownerName} (@${ownerUsername})` : ownerName,
+                  name: ownerName,
+                  username: ownerUsername,
+                  email: ownerEmail,
+                  searchText: `${ownerName} ${ownerUsername} ${ownerEmail}`,
+                },
+              ]
+            : []
+        );
+
+        setForm((prev) => ({
+          ...prev,
+          ownerId: ownerId || prev.ownerId,
+        }));
+        setLoadingOwners(false);
+        return;
+      }
+
       try {
         setLoadingOwners(true);
 
@@ -985,7 +1142,7 @@ export function ShopForm({
     return () => {
       active = false;
     };
-  }, [accessToken]);
+  }, [accessToken, currentUserRole, user]);
 
   useEffect(() => {
     let active = true;
@@ -1010,9 +1167,9 @@ export function ShopForm({
         setLoadFailed(false);
 
         const response = await fetch(
-          `${baseURL}${SummaryApi.master_get_shop.url(shopId)}`,
+          `${baseURL}${SummaryApi.shop_get.url(shopId)}`,
           {
-            method: SummaryApi.master_get_shop.method,
+            method: SummaryApi.shop_get.method,
             headers: {
               Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
@@ -1031,10 +1188,12 @@ export function ShopForm({
         }
 
         const shop = result.data;
+        
         const ownerRef =
           shop.shopOwnerAccountId && typeof shop.shopOwnerAccountId === "object"
             ? shop.shopOwnerAccountId
             : null;
+
         const ownerId =
           typeof shop.shopOwnerAccountId === "string"
             ? shop.shopOwnerAccountId
@@ -1075,7 +1234,10 @@ export function ShopForm({
         setForm({
           ownerId,
           shopName: shop.name || "",
+          shopType: shop.shopType || "",
           businessType: shop.businessType || "",
+          mobile: digitsOnly(String(shop.mobile || "")).slice(0, 10),
+          gstNumber: normalizeGstNumber(String(shop.gstNumber || "")),
           state: shop.shopAddress?.state || "",
           district: shop.shopAddress?.district || "",
           taluk: shop.shopAddress?.taluk || "",
@@ -1397,18 +1559,20 @@ export function ShopForm({
     }
 
     try {
+      const frontRemoveApi =
+        currentUserRole === "SHOP_OWNER"
+          ? SummaryApi.shop_front_remove
+          : SummaryApi.shop_front_remove_admin;
+
       setRemovingFrontImage(true);
 
-      const response = await fetch(
-        `${baseURL}${SummaryApi.shop_front_remove_admin.url(shopId)}`,
-        {
-          method: SummaryApi.shop_front_remove_admin.method,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${baseURL}${frontRemoveApi.url(shopId)}`, {
+        method: frontRemoveApi.method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      });
 
       const result =
         (await response.json().catch(() => ({}))) as ShopActionResponse;
@@ -1496,6 +1660,11 @@ export function ShopForm({
     }
 
     try {
+      const removeDocApi =
+        currentUserRole === "SHOP_OWNER"
+          ? SummaryApi.shop_docs_remove
+          : SummaryApi.shop_docs_remove_admin;
+
       if (isGst) {
         setRemovingGst(true);
       } else {
@@ -1503,9 +1672,9 @@ export function ShopForm({
       }
 
       const response = await fetch(
-        `${baseURL}${SummaryApi.shop_docs_remove_admin.url(shopId, key)}`,
+        `${baseURL}${removeDocApi.url(shopId, key)}`,
         {
-          method: SummaryApi.shop_docs_remove_admin.method,
+          method: removeDocApi.method,
           headers: {
             Authorization: `Bearer ${accessToken}`,
             Accept: "application/json",
@@ -1563,6 +1732,21 @@ export function ShopForm({
       nextErrors.shopName = "Shop name is required";
     }
 
+    if (!form.shopType.trim()) {
+      nextErrors.shopType = "Shop type is required";
+    }
+
+    if (!form.mobile.trim()) {
+      nextErrors.mobile = "Shop mobile number is required";
+    } else if (!isValidIndianMobile(form.mobile)) {
+      nextErrors.mobile = "Enter a valid 10-digit mobile number";
+    }
+
+    const cleanGst = normalizeGstNumber(form.gstNumber);
+    if (cleanGst && !isValidGST(cleanGst)) {
+      nextErrors.gstNumber = "GST number must be 15 characters";
+    }
+
     if (!form.state.trim()) nextErrors.state = "State is required";
     if (!form.district.trim()) nextErrors.district = "District is required";
     if (!form.taluk.trim()) nextErrors.taluk = "Taluk is required";
@@ -1579,8 +1763,13 @@ export function ShopForm({
     return Object.keys(nextErrors).length === 0;
   };
 
-  const uploadShopDocs = async (shopId: string) => {
+  const uploadShopDocs = async (targetShopId: string) => {
     if ((!gstFile && !udyamFile) || !accessToken) return;
+
+    const uploadDocsApi =
+      currentUserRole === "SHOP_OWNER"
+        ? SummaryApi.shop_docs_upload
+        : SummaryApi.shop_docs_upload_admin;
 
     const payload = new FormData();
 
@@ -1593,9 +1782,9 @@ export function ShopForm({
     }
 
     const response = await fetch(
-      `${baseURL}${SummaryApi.shop_docs_upload_admin.url(shopId)}`,
+      `${baseURL}${uploadDocsApi.url(targetShopId)}`,
       {
-        method: SummaryApi.shop_docs_upload_admin.method,
+        method: uploadDocsApi.method,
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -1610,16 +1799,21 @@ export function ShopForm({
     }
   };
 
-  const uploadFrontImage = async (shopId: string) => {
+  const uploadFrontImage = async (targetShopId: string) => {
     if (!frontImageFile || !accessToken) return;
+
+    const uploadFrontApi =
+      currentUserRole === "SHOP_OWNER"
+        ? SummaryApi.shop_front_upload
+        : SummaryApi.shop_front_upload_admin;
 
     const payload = new FormData();
     payload.append("front", frontImageFile);
 
     const response = await fetch(
-      `${baseURL}${SummaryApi.shop_front_upload_admin.url(shopId)}`,
+      `${baseURL}${uploadFrontApi.url(targetShopId)}`,
       {
-        method: SummaryApi.shop_front_upload_admin.method,
+        method: uploadFrontApi.method,
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -1666,6 +1860,8 @@ export function ShopForm({
 
       const address = buildAddressPayload(form);
       const cleanShopName = toTitleCase(form.shopName);
+      const cleanMobile = digitsOnly(form.mobile).slice(0, 10);
+      const cleanGstNumber = normalizeGstNumber(form.gstNumber);
 
       if (isEditMode) {
         if (!shopId) {
@@ -1673,10 +1869,11 @@ export function ShopForm({
           return;
         }
 
+        const updateShopApi = SummaryApi.shop_update;
         const response = await fetch(
-          `${baseURL}${SummaryApi.master_update_shop.url(shopId)}`,
+          `${baseURL}${updateShopApi.url(shopId)}`,
           {
-            method: SummaryApi.master_update_shop.method,
+            method: updateShopApi.method,
             headers: {
               Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
@@ -1684,7 +1881,15 @@ export function ShopForm({
             },
             body: JSON.stringify({
               name: cleanShopName,
+              shopType: form.shopType,
+              isMainWarehouse: form.shopType === "WAREHOUSE_RETAIL_SHOP",
+              billingType: form.shopType === "WHOLESALE_SHOP" ? "GST" : "BOTH",
+              enableGSTBilling:
+                form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
+                form.shopType === "WHOLESALE_SHOP",
               businessType: form.businessType,
+              mobile: cleanMobile,
+              gstNumber: cleanGstNumber,
               state: address.state,
               district: address.district,
               taluk: address.taluk,
@@ -1703,11 +1908,34 @@ export function ShopForm({
           return;
         }
       } else {
+        const createShopApi = SummaryApi.shop_create;
         const payload = new FormData();
+
         payload.append("name", cleanShopName);
         payload.append("shopName", cleanShopName);
         payload.append("ownerId", form.ownerId);
         payload.append("shopOwnerAccountId", form.ownerId);
+        payload.append("shopType", form.shopType);
+        payload.append("mobile", cleanMobile);
+        payload.append("gstNumber", cleanGstNumber);
+
+        payload.append(
+          "isMainWarehouse",
+          String(form.shopType === "WAREHOUSE_RETAIL_SHOP")
+        );
+
+        payload.append(
+          "billingType",
+          form.shopType === "WHOLESALE_SHOP" ? "GST" : "BOTH"
+        );
+
+        payload.append(
+          "enableGSTBilling",
+          String(
+            form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
+              form.shopType === "WHOLESALE_SHOP"
+          )
+        );
 
         if (form.businessType) {
           payload.append("businessType", form.businessType);
@@ -1725,9 +1953,9 @@ export function ShopForm({
         }
 
         const response = await fetch(
-          `${baseURL}${SummaryApi.master_create_shop.url}`,
+          `${baseURL}${createShopApi.url}`,
           {
-            method: SummaryApi.master_create_shop.method,
+            method: createShopApi.method,
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
@@ -1824,9 +2052,7 @@ export function ShopForm({
 
   return (
     <div className="page-shell">
-            <div className="mx-auto w-full max-w-7xl space-y-5">
-
-
+      <div className="mx-auto w-full max-w-7xl space-y-5">
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -1844,7 +2070,7 @@ export function ShopForm({
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
                 {isEditMode
-                  ? "Update the linked shop details, mapped address, front image, and documents in one single form."
+                  ? "Update the linked shop details, mapped address, mobile number, front image, and documents in one single form."
                   : "Create a shop separately from the shop owner account and link it to an existing shop owner profile."}
               </p>
             </div>
@@ -1893,13 +2119,20 @@ export function ShopForm({
                 value={form.ownerId}
                 onChange={(value) => updateField("ownerId", value)}
                 options={owners}
-                disabled={isEditMode || loadingOwners || owners.length === 0}
+                disabled={
+                  currentUserRole === "SHOP_OWNER" ||
+                  isEditMode ||
+                  loadingOwners ||
+                  owners.length === 0
+                }
                 error={errors.ownerId}
                 required
                 placeholder="Search and select a shop owner"
                 searchPlaceholder="Search owner by name, username, or email"
                 helperText={
-                  isEditMode
+                  currentUserRole === "SHOP_OWNER"
+                    ? "Shop owner is locked to your current account."
+                    : isEditMode
                     ? "Shop owner is locked for existing shop records."
                     : "Choose an existing shop owner account to link this shop."
                 }
@@ -1913,7 +2146,34 @@ export function ShopForm({
                   updateField("businessType", e.target.value as BusinessType)
                 }
                 options={BUSINESS_OPTIONS}
+                placeholder="Select business type"
                 error={errors.businessType}
+              />
+
+              <SearchableSelect
+                id="shopType"
+                label="Shop Type"
+                value={form.shopType}
+                onChange={(value) => {
+                  const nextShopType = value as ShopType;
+
+                  setForm((prev) => ({
+                    ...prev,
+                    shopType: nextShopType,
+                    businessType:
+                      nextShopType === "WHOLESALE_SHOP"
+                        ? "Wholesale"
+                        : prev.businessType || "Retail",
+                  }));
+
+                  setErrors((prev) => ({ ...prev, shopType: undefined }));
+                }}
+                options={SHOP_TYPE_OPTIONS}
+                error={errors.shopType}
+                required
+                placeholder="Select shop type"
+                searchPlaceholder="Search shop type"
+                helperText="Choose a main warehouse, branch shop, or wholesale shop."
               />
 
               <FloatingInput
@@ -1926,11 +2186,27 @@ export function ShopForm({
               />
 
               <FloatingInput
-                id="ownerPreview"
-                label="Owner Email"
-                value={selectedOwner?.email || ""}
-                onChange={() => undefined}
-                disabled
+                id="mobile"
+                label="Shop Mobile Number"
+                type="tel"
+                maxLength={10}
+                value={form.mobile}
+                onChange={(e) =>
+                  updateField("mobile", digitsOnly(e.target.value).slice(0, 10))
+                }
+                error={errors.mobile}
+                required
+              />
+
+              <FloatingInput
+                id="gstNumber"
+                label="GST Number"
+                maxLength={15}
+                value={form.gstNumber}
+                onChange={(e) =>
+                  updateField("gstNumber", normalizeGstNumber(e.target.value))
+                }
+                error={errors.gstNumber}
               />
             </div>
 
@@ -1949,7 +2225,8 @@ export function ShopForm({
             />
 
             <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              Search the dropdown or type a value to add it as a custom address option.
+              Search the dropdown or type a value to add it as a custom address
+              option.
               {locationError ? (
                 <p className="mt-1 text-xs text-slate-500">
                   Location lookup note: {locationError}
@@ -2120,7 +2397,8 @@ export function ShopForm({
                   description="Upload the shop front image."
                   preview={frontImagePreview}
                   fileName={
-                    frontImageFile?.name || (existingFrontImageUrl ? "Uploaded image" : "")
+                    frontImageFile?.name ||
+                    (existingFrontImageUrl ? "Uploaded image" : "")
                   }
                   onUpload={(file) =>
                     handleImageUpload(
@@ -2198,9 +2476,18 @@ export function ShopForm({
                     value={selectedOwner?.label || "-"}
                   />
                   <ReviewItem label="Shop Name" value={form.shopName} />
+                  <ReviewItem label="Shop Mobile" value={form.mobile} />
+                  <ReviewItem
+                    label="GST Number"
+                    value={form.gstNumber || "Optional / Not added"}
+                  />
                   <ReviewItem
                     label="Business Type"
                     value={form.businessType || "-"}
+                  />
+                  <ReviewItem
+                    label="Shop Type"
+                    value={getShopTypeLabel(form.shopType)}
                   />
                   <ReviewItem label="State" value={form.state} />
                   <ReviewItem label="District" value={form.district} />

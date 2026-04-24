@@ -59,13 +59,6 @@ const MASTER_ADMIN_MENU: NavItem[] = [
     ],
   },
   {
-    label: "Product Type",
-    children: [
-      { label: "Create ProductType", href: "/master/producttype/create" },
-      { label: "ProductType List", href: "/master/producttype/list" },
-    ],
-  },
-  {
     label: "Brand",
     children: [
       { label: "Create Brand", href: "/master/brand/create" },
@@ -97,6 +90,13 @@ const MASTER_ADMIN_MENU: NavItem[] = [
 
 const SHOP_OWNER_MENU: NavItem[] = [
   { label: "Dashboard", href: "/shopowner/dashboard" },
+  {
+    label: "Shop Management",
+    children: [
+      { label: "Create Shop", href: "/shopowner/shopprofile/create" },
+      { label: "Shop List", href: "/shopowner/shopprofile/list" },
+    ],
+  },
   {
     label: "Shop Staff Management",
     children: [

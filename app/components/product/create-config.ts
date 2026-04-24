@@ -11,7 +11,7 @@ import type {
   ProductPayload,
   ProductPresetDefinition,
   ProductPresetSection,
-  ResolvedProductTypePreset,
+  ResolvedProductPreset,
   VariantAttribute,
   VariantImageGroupPayload,
   VariantVideoGroupPayload,
@@ -104,33 +104,33 @@ const COLOUR_KEYWORD_SWATCHES: Array<{
   tokens: string[];
   swatch: string;
 }> = [
-  { tokens: ["black"], swatch: "#111827" },
-  { tokens: ["white"], swatch: "#ffffff" },
-  { tokens: ["silver"], swatch: "#c0c0c0" },
-  { tokens: ["gray", "grey"], swatch: "#6b7280" },
-  { tokens: ["space gray", "space grey"], swatch: "#4b5563" },
-  { tokens: ["navy"], swatch: "#1e3a8a" },
-  { tokens: ["blue"], swatch: "#2563eb" },
-  { tokens: ["sky"], swatch: "#38bdf8" },
-  { tokens: ["mint"], swatch: "#b8f2d0" },
-  { tokens: ["sage"], swatch: "#9caf88" },
-  { tokens: ["olive"], swatch: "#6b8e23" },
-  { tokens: ["green"], swatch: "#16a34a" },
-  { tokens: ["teal"], swatch: "#0f766e" },
-  { tokens: ["cyan"], swatch: "#06b6d4" },
-  { tokens: ["red"], swatch: "#dc2626" },
-  { tokens: ["maroon"], swatch: "#7f1d1d" },
-  { tokens: ["rose"], swatch: "#fb7185" },
-  { tokens: ["pink"], swatch: "#ec4899" },
-  { tokens: ["purple"], swatch: "#7c3aed" },
-  { tokens: ["lavender"], swatch: "#c4b5fd" },
-  { tokens: ["violet"], swatch: "#8b5cf6" },
-  { tokens: ["yellow"], swatch: "#facc15" },
-  { tokens: ["orange"], swatch: "#f97316" },
-  { tokens: ["gold"], swatch: "#eab308" },
-  { tokens: ["brown"], swatch: "#8b5e3c" },
-  { tokens: ["beige"], swatch: "#d6c6a5" },
-];
+    { tokens: ["black"], swatch: "#111827" },
+    { tokens: ["white"], swatch: "#ffffff" },
+    { tokens: ["silver"], swatch: "#c0c0c0" },
+    { tokens: ["gray", "grey"], swatch: "#6b7280" },
+    { tokens: ["space gray", "space grey"], swatch: "#4b5563" },
+    { tokens: ["navy"], swatch: "#1e3a8a" },
+    { tokens: ["blue"], swatch: "#2563eb" },
+    { tokens: ["sky"], swatch: "#38bdf8" },
+    { tokens: ["mint"], swatch: "#b8f2d0" },
+    { tokens: ["sage"], swatch: "#9caf88" },
+    { tokens: ["olive"], swatch: "#6b8e23" },
+    { tokens: ["green"], swatch: "#16a34a" },
+    { tokens: ["teal"], swatch: "#0f766e" },
+    { tokens: ["cyan"], swatch: "#06b6d4" },
+    { tokens: ["red"], swatch: "#dc2626" },
+    { tokens: ["maroon"], swatch: "#7f1d1d" },
+    { tokens: ["rose"], swatch: "#fb7185" },
+    { tokens: ["pink"], swatch: "#ec4899" },
+    { tokens: ["purple"], swatch: "#7c3aed" },
+    { tokens: ["lavender"], swatch: "#c4b5fd" },
+    { tokens: ["violet"], swatch: "#8b5cf6" },
+    { tokens: ["yellow"], swatch: "#facc15" },
+    { tokens: ["orange"], swatch: "#f97316" },
+    { tokens: ["gold"], swatch: "#eab308" },
+    { tokens: ["brown"], swatch: "#8b5e3c" },
+    { tokens: ["beige"], swatch: "#d6c6a5" },
+  ];
 
 const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
   smartphone: {
@@ -139,6 +139,8 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
       "Memory Storage Capacity",
       "Ram Memory Installed Size",
       "Style Name",
+      "CPU Model",
+      "CPU Speed",
     ],
     sections: [
       {
@@ -146,22 +148,39 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         fieldLabels: [
           "Operating System",
           "Ram Memory Installed",
+          "Processor Series",
+          "Processor Speed",
           "Memory Storage Capacity",
+          "Colour",
+          "SIM Card Slot Count",
           "Connector Type",
           "Form Factor",
-          "SIM Card Slot Count",
-          "Colour",
+          "Biometric Security Feature",
           "Sim Card Size",
           "Water Resistance Level",
-          "EU Spare Part Availability Duration",
+          "Headphones Jack",
           "Product Features",
-          "Biometric Security Feature",
-          "Human Interface Types",
+          "Flash Memory Supported Size Maximum",
+        ],
+      }, 
+      {
+        title: "Camera",
+        fieldLabels: [
+          "Front Photo Sensor Resolution",
+          "Rear Facing Camera Photo Sensor Resolution",
+          "Number of Rear Facing Cameras",
+          "Number of Front Cameras",
+          "Digital Zoom",
+          "Camera Flash Type",
         ],
       },
       {
         title: "Battery",
-        fieldLabels: ["Battery Power", "Battery Capacity"],
+        fieldLabels: ["Battery Capacity","Battery Power"],
+      },
+      {
+        title: "Measurements",
+        fieldLabels: ["Item Weight Unit of Measure", "Item Dimensions"],
       },
       {
         title: "Battery Life",
@@ -172,18 +191,8 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         ],
       },
       {
-        title: "Camera",
-        fieldLabels: [
-          "Front Photo Sensor Resolution",
-          "Rear Facing Camera Photo Sensor Resolution",
-          "Number of Rear Facing Cameras",
-          "Digital Zoom",
-          "Camera Flash Type",
-        ],
-      },
-      {
-        title: "Measurements",
-        fieldLabels: ["Item Weight Unit of Measure", "Item Dimensions"],
+        title: "Navigation",
+        fieldLabels: ["GPS Geotagging Functionality"],
       },
       {
         title: "Display",
@@ -192,6 +201,7 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
           "Resolution",
           "Display Type",
           "Maximum Display Resolution",
+          "Display Pixel Density",
         ],
       },
       {
@@ -200,11 +210,19 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
           "Wireless Provider",
           "Cellular Technology",
           "Network Connectivity Technology",
+          "Wireless Network Technology",
         ],
       },
       {
         title: "Item Details",
-        fieldLabels: ["Box Contents", "Item Type Name", "Unit Count"],
+        fieldLabels: [
+          "Model Year",
+          "Box Contents", 
+          "Specific Uses For Product",
+          "Item Type Name", 
+          "Unit Count",
+          "Warranty Description",
+        ],
       },
       {
         title: "Video",
@@ -224,15 +242,18 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
       "Water Resistance Level",
       "Item Hardness",
       "Special Feature",
+      "Screen Surface Description	",
     ],
     sections: [
       {
-        title: "Item Details",
-        fieldLabels: ["Item Type Name", "Item Weight", "Warranty Description"],
-      },
-      {
         title: "Features & Specs",
-        fieldLabels: ["Clarity", "Screen Surface Description"],
+        fieldLabels: [
+          "Item Hardness",
+          "Special Features", 
+          "Screen Surface Description",
+          "Clarity", 
+          ""
+        ],
       },
       {
         title: "Measurements",
@@ -241,6 +262,10 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
       {
         title: "Additional Details",
         fieldLabels: ["Material Type"],
+      },
+            {
+        title: "Item Details",
+        fieldLabels: ["Colour","Item Type Name", "Item Weight", "Warranty Description"],
       },
     ],
   },
@@ -253,23 +278,29 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
           "Water Resistance Level",
           "Embellishment Feature",
           "Product Features",
+          "Screen Size Unit of Measure",
+          "Is Autographed",
         ],
       },
       {
         title: "Style",
         fieldLabels: ["Colour", "Form Factor", "Pattern", "Theme"],
       },
-      {
-        title: "Additional Details",
-        fieldLabels: ["Item Dimensions"],
-      },
-      {
+            {
         title: "Materials & Care",
         fieldLabels: ["Enclosure Material", "Product Finish Type"],
       },
       {
+        title: "Additional Details",
+        fieldLabels: ["Item Dimensions"],
+      },
+
+      {
         title: "Item Details",
-        fieldLabels: ["Box Contents", "Unit Count", "Item Type Name"],
+        fieldLabels: ["Box Contents", "Unit Count",
+           "Item Type Name",
+           "Unit Count",
+          "Warranty Description"],
       },
     ],
   },
@@ -510,15 +541,20 @@ export function createVariantAttribute(
   };
 }
 
-export function createVariantItem(attributeLabels: string[] = []): VariantItem {
+export function createVariantItem(
+  attributeLabels: string[] = [],
+  compatibility: VariantItem["compatibility"] = []
+): VariantItem {
   return {
     id: makeId("variant"),
     title: "",
+    description: "",
     attributes: attributeLabels.length
       ? attributeLabels.map((label) => createVariantAttribute(label, ""))
       : [createVariantAttribute()],
     images: [],
     videos: [],
+    compatibility,
     productInformation: [{ ...initialProductInfoSection }],
     isActive: true,
   };
@@ -626,13 +662,13 @@ export function buildProductFormData(
   formData.append("itemName", payload.itemName);
   formData.append("itemModelNumber", payload.itemModelNumber);
   formData.append("itemKey", payload.itemKey);
+  formData.append("description", payload.description);
   formData.append("configurationMode", payload.configurationMode);
   formData.append("masterCategoryId", payload.masterCategoryId);
   formData.append("categoryId", payload.categoryId);
   formData.append("subcategoryId", payload.subcategoryId);
-  formData.append("productTypeId", payload.productTypeId);
-  formData.append("brandId", payload.brandId);
-  formData.append("modelId", payload.modelId);
+  formData.append("brandId", JSON.stringify(payload.brandId));
+  formData.append("modelId", JSON.stringify(payload.modelId));
   formData.append("searchKeys", JSON.stringify(payload.searchKeys));
   formData.append("images", JSON.stringify(payload.images));
   formData.append("videos", JSON.stringify(payload.videos));
@@ -701,9 +737,9 @@ export function buildProductFormData(
   const productImageGroup: ProductImageGroupPayload | null =
     newProductImages.length > 0
       ? {
-          imageField: "productImages",
-          fileNames: newProductImages.map((image) => image.name),
-        }
+        imageField: "productImages",
+        fileNames: newProductImages.map((image) => image.name),
+      }
       : null;
 
   if (productImageGroup) {
@@ -717,9 +753,9 @@ export function buildProductFormData(
   const productVideoGroup: ProductVideoGroupPayload | null =
     newProductVideos.length > 0
       ? {
-          videoField: "productVideos",
-          fileNames: newProductVideos.map((video) => video.name),
-        }
+        videoField: "productVideos",
+        fileNames: newProductVideos.map((video) => video.name),
+      }
       : null;
 
   if (productVideoGroup) {
@@ -741,12 +777,12 @@ export function buildProductFormData(
 
 export function buildAutoSearchKeys({
   itemName,
-  productTypeName,
+  subcategoryName,
   brandName,
   modelName,
 }: {
   itemName: string;
-  productTypeName: string;
+  subcategoryName: string;
   brandName: string;
   modelName: string;
 }) {
@@ -755,7 +791,7 @@ export function buildAutoSearchKeys({
       itemName,
       brandName,
       modelName,
-      productTypeName,
+      subcategoryName,
     ]
       .map((item) => item.trim())
       .filter(Boolean)
@@ -801,7 +837,10 @@ export function isColourField(label: string) {
 export function getPresetValueOptions(label: string) {
   const normalizedLabel = normalizePresetLookup(label);
 
-  if (normalizedLabel === "ram memory installed size") {
+  if (
+    normalizedLabel === "ram memory installed size" ||
+    normalizedLabel === "ram memory installed"
+  ) {
     return SMARTPHONE_RAM_OPTIONS;
   }
 
@@ -918,10 +957,10 @@ export function cloneProductInfoSections(
   }));
 }
 
-export function resolveMobileProductPreset(
-  productTypeName: string
-): ResolvedProductTypePreset | null {
-  const normalizedName = normalizePresetLookup(productTypeName);
+export function resolveMobileSubcategoryPreset(
+  subcategoryName: string
+): ResolvedProductPreset | null {
+  const normalizedName = normalizePresetLookup(subcategoryName);
 
   if (!normalizedName) {
     return null;
@@ -1001,6 +1040,8 @@ export function resolveMobileProductPreset(
 
   if (
     normalizedName.includes("smartphone") ||
+    normalizedName.includes("smart phone") ||
+    normalizedName.includes("smart phones") ||
     normalizedName === "mobile" ||
     normalizedName === "mobiles" ||
     normalizedName.includes("mobile phone")

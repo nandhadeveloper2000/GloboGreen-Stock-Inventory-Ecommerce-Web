@@ -2,7 +2,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Boxes,
   CheckCircle2,
@@ -18,7 +24,6 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  Tag,
   Trash2,
   XCircle,
 } from "lucide-react";
@@ -51,7 +56,9 @@ type ProductInformationSection = {
 
 type VariantRow = {
   title?: string;
+  description?: string;
   images?: ApiImage[];
+  productInformation?: ProductInformationSection[];
   attributes?: Array<{
     label?: string;
     value?: string;
@@ -75,9 +82,8 @@ type ProductItem = {
   itemModelNumber?: string;
   itemKey?: string;
   searchKeys?: string[];
-  productTypeId?: RefItem;
-  brandId?: RefItem;
-  modelId?: RefItem;
+  brandId?: RefItem | RefItem[];
+  modelId?: RefItem | RefItem[];
   images?: ApiImage[];
   compatible?: CompatibilityRow[];
   variant?: VariantRow[];
@@ -157,22 +163,33 @@ function getRefName(value?: RefItem | null) {
   return String(value.name || "").trim();
 }
 
-function getProductTypeName(item: ProductItem) {
-  return getRefName(item.productTypeId) || "-";
+function getRefNames(value?: RefItem | RefItem[] | null) {
+  if (!value) return [];
+
+  return (Array.isArray(value) ? value : [value])
+    .map((item) => getRefName(item))
+    .filter(Boolean);
 }
 
 function getBrandName(item: ProductItem) {
-  return getRefName(item.brandId) || "-";
+  return getRefNames(item.brandId).join(", ") || "-";
 }
 
 function getModelName(item: ProductItem) {
-  return getRefName(item.modelId) || "-";
+  return getRefNames(item.modelId).join(", ") || "-";
 }
 
 function hasSharedMedia(item: ProductItem) {
-  return Boolean(
-    (item.images?.length ?? 0) > 0 || (item.productInformation?.length ?? 0) > 0
+  const hasTopLevelMedia =
+    (item.images?.length ?? 0) > 0 || (item.productInformation?.length ?? 0) > 0;
+
+  const hasVariantMedia = (item.variant || []).some(
+    (variant) =>
+      (variant.images?.length ?? 0) > 0 ||
+      (variant.productInformation?.length ?? 0) > 0
   );
+
+  return hasTopLevelMedia || hasVariantMedia;
 }
 
 function hasVariants(item: ProductItem) {
@@ -253,16 +270,60 @@ function buildSearchText(item: ProductItem) {
     })
     .join(" ");
 
+  const variantText = (item.variant || [])
+    .map((variant) => {
+      const attributeText = (variant.attributes || [])
+        .map((attribute) => `${attribute.label || ""} ${attribute.value || ""}`.trim())
+        .join(" ");
+
+      const productInfoText = (variant.productInformation || [])
+        .map((section) =>
+          [
+            section.title || "",
+            ...(section.fields || []).map(
+              (field) => `${field.label || ""} ${field.value || ""}`.trim()
+            ),
+          ]
+            .filter(Boolean)
+            .join(" ")
+        )
+        .join(" ");
+
+      return [
+        variant.title || "",
+        variant.description || "",
+        attributeText,
+        productInfoText,
+      ]
+        .filter(Boolean)
+        .join(" ");
+    })
+    .join(" ");
+
+  const topLevelProductInfoText = (item.productInformation || [])
+    .map((section) =>
+      [
+        section.title || "",
+        ...(section.fields || []).map(
+          (field) => `${field.label || ""} ${field.value || ""}`.trim()
+        ),
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+    .join(" ");
+
   return [
     item.itemName,
     item.itemModelNumber,
     item.itemKey,
     ...(item.searchKeys || []),
-    getProductTypeName(item),
     getBrandName(item),
     getModelName(item),
     getConfigurationLabel(item),
     compatibilityText,
+    variantText,
+    topLevelProductInfoText,
   ]
     .filter(Boolean)
     .join(" ")
@@ -293,21 +354,21 @@ function StatCard({
 }: {
   title: string;
   value: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   iconWrapClassName: string;
 }) {
   return (
-    <div className="premium-card-solid rounded-[28px] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center justify-between">
+    <div className="premium-card-solid rounded-3xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <h3 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             {value}
           </h3>
         </div>
 
         <div
-          className={`flex h-14 w-14 items-center justify-center rounded-2xl ${iconWrapClassName}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${iconWrapClassName}`}
         >
           {icon}
         </div>
@@ -316,27 +377,289 @@ function StatCard({
   );
 }
 
-function TableSkeleton() {
+function CardGridSkeleton() {
   return (
-    <div className="premium-card-solid overflow-hidden rounded-[30px] p-0">
-      <div className="grid grid-cols-1 gap-4 p-6">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={index}
-            className="animate-pulse rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-slate-200" />
-              <div className="flex-1">
-                <div className="h-4 w-40 rounded bg-slate-200" />
-                <div className="mt-3 h-3 w-28 rounded bg-slate-100" />
-              </div>
-              <div className="h-9 w-24 rounded-full bg-slate-200" />
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div
+          key={index}
+          className="premium-card-solid animate-pulse rounded-3xl p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="h-7 w-12 rounded-full bg-slate-200" />
+            <div className="flex gap-2">
+              <div className="h-8 w-8 rounded-xl bg-slate-200" />
+              <div className="h-8 w-8 rounded-xl bg-slate-200" />
+              <div className="h-8 w-8 rounded-xl bg-slate-200" />
             </div>
           </div>
-        ))}
-      </div>
+
+          <div className="mt-4 flex items-start gap-3">
+            <div className="h-14 w-14 rounded-[18px] bg-slate-200" />
+            <div className="flex-1">
+              <div className="h-4 w-32 rounded bg-slate-200" />
+              <div className="mt-2 h-3 w-24 rounded bg-slate-100" />
+              <div className="mt-2 h-3 w-20 rounded bg-slate-100" />
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            {Array.from({ length: 3 }).map((_, itemIndex) => (
+              <div
+                key={itemIndex}
+                className="rounded-[18px] border border-slate-100 bg-slate-50/70 p-3"
+              >
+                <div className="h-3 w-14 rounded bg-slate-200" />
+                <div className="mt-2 h-4 w-24 rounded bg-slate-100" />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <div className="h-7 w-20 rounded-full bg-slate-200" />
+            <div className="h-7 w-20 rounded-full bg-slate-200" />
+            <div className="h-7 w-20 rounded-full bg-slate-200" />
+          </div>
+        </div>
+      ))}
     </div>
+  );
+}
+
+function ActionIconButton({
+  href,
+  onClick,
+  disabled = false,
+  label,
+  className,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  label: string;
+  className: string;
+  children: ReactNode;
+}) {
+  const sharedClassName = `inline-flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`;
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        aria-label={label}
+        title={label}
+        className={sharedClassName}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={sharedClassName}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProductCard({
+  item,
+  index,
+  startIndex,
+  basePath,
+  deletingId,
+  togglingId,
+  onToggleStatus,
+  onDelete,
+}: {
+  item: ProductItem;
+  index: number;
+  startIndex: number;
+  basePath: string;
+  deletingId: string | null;
+  togglingId: string | null;
+  onToggleStatus: (item: ProductItem) => void;
+  onDelete: (id: string) => void;
+}) {
+  const previewImage = getPreviewImageUrl(item);
+  const active = isProductActive(item);
+  const isDeleting = deletingId === item._id;
+  const isToggling = togglingId === item._id;
+  const variantRows = item.variant?.length ?? 0;
+  const compatibleRows = item.compatible?.length ?? 0;
+  const sharedMedia = hasSharedMedia(item);
+
+  return (
+    <article className="premium-card-solid group relative overflow-hidden rounded-3xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-r from-sky-50/70 via-white to-violet-50/70" />
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600 shadow-sm">
+            <span>#{startIndex + index + 1}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ActionIconButton
+              href={`${basePath}/product/edit/${item._id}`}
+              label={`Edit ${item.itemName}`}
+              className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </ActionIconButton>
+
+            <ActionIconButton
+              onClick={() => void onToggleStatus(item)}
+              disabled={isToggling}
+              label={
+                active
+                  ? `Deactivate ${item.itemName}`
+                  : `Activate ${item.itemName}`
+              }
+              className={
+                active
+                  ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              }
+            >
+              {isToggling ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Power className="h-3.5 w-3.5" />
+              )}
+            </ActionIconButton>
+
+            <ActionIconButton
+              onClick={() => void onDelete(item._id)}
+              disabled={isDeleting}
+              label={`Delete ${item.itemName}`}
+              className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </ActionIconButton>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-start gap-3">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100 shadow-sm">
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt={item.itemName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <ImageIcon className="h-5 w-5 text-slate-400" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={
+                  active
+                    ? "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
+                    : "inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
+                }
+              >
+                {active ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : (
+                  <XCircle className="h-3 w-3" />
+                )}
+                {active ? "Active" : "Inactive"}
+              </span>
+
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getApprovalBadgeClass(
+                  item.approvalStatus
+                )}`}
+              >
+                {String(item.approvalStatus || "PENDING").toUpperCase()}
+              </span>
+            </div>
+
+            <h3 className="mt-2 line-clamp-1 text-base font-bold tracking-tight text-slate-900">
+              {item.itemName}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Model No: {item.itemModelNumber || "-"}
+            </p>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Key: {item.itemKey || "-"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Brand
+              </p>
+              <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-slate-800">
+                {getBrandName(item)}
+              </p>
+            </div>
+
+            <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Model
+              </p>
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                <Cpu className="h-3.5 w-3.5 text-slate-400" />
+                <span className="truncate">{getModelName(item)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-sky-50/70 via-white to-violet-50/60 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              Configuration
+            </p>
+            <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-800">
+              {getConfigurationLabel(item)}
+            </p>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              Updated
+            </p>
+            <p className="mt-1.5 text-xs font-semibold text-slate-800">
+              {formatDate(item.updatedAt || item.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+            <Layers3 className="h-3.5 w-3.5" />
+            Variant {variantRows}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Compatible {compatibleRows}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+            <ImageIcon className="h-3.5 w-3.5" />
+            Media {sharedMedia ? "Yes" : "No"}
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -408,7 +731,7 @@ export default function ProductListPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
   const fetchProducts = useCallback(async (showLoader = true) => {
     try {
@@ -531,7 +854,7 @@ export default function ProductListPage() {
   return (
     <div className="page-shell">
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-[34px] px-5 py-6 md:px-7 md:py-7">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-[30px] px-5 py-6 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
 
@@ -543,7 +866,7 @@ export default function ProductListPage() {
               </span>
 
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-6xl">
+                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                   Products
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-white/85 md:text-base">
@@ -559,7 +882,7 @@ export default function ProductListPage() {
                 type="button"
                 onClick={() => void fetchProducts(false)}
                 disabled={refreshing}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -569,7 +892,7 @@ export default function ProductListPage() {
 
               <Link
                 href={`${basePath}/product/create`}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-slate-900 shadow-sm transition hover:shadow-md"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition hover:shadow-md"
               >
                 <Plus className="h-4 w-4" />
                 Create Product
@@ -582,43 +905,42 @@ export default function ProductListPage() {
           <StatCard
             title="Total Products"
             value={totalCount}
-            icon={<Package2 className="h-6 w-6 text-violet-700" />}
+            icon={<Package2 className="h-5 w-5 text-violet-700" />}
             iconWrapClassName="bg-violet-100"
           />
           <StatCard
             title="Active"
             value={activeCount}
-            icon={<CheckCircle2 className="h-6 w-6 text-emerald-700" />}
+            icon={<CheckCircle2 className="h-5 w-5 text-emerald-700" />}
             iconWrapClassName="bg-emerald-100"
           />
           <StatCard
             title="With Variants"
             value={variantCount}
-            icon={<Layers3 className="h-6 w-6 text-amber-700" />}
+            icon={<Layers3 className="h-5 w-5 text-amber-700" />}
             iconWrapClassName="bg-amber-100"
           />
           <StatCard
             title="Compatibility Mapped"
             value={compatibilityCount}
-            icon={<ShieldCheck className="h-6 w-6 text-sky-700" />}
+            icon={<ShieldCheck className="h-5 w-5 text-sky-700" />}
             iconWrapClassName="bg-sky-100"
           />
         </section>
 
-        <section className="premium-card-solid rounded-[30px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-3xl p-4 md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#2e3192] to-[#9116a1] text-white shadow-lg">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-[#2e3192] to-[#9116a1] text-white shadow-lg">
                 <Search className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-lg font-bold tracking-tight text-slate-900 md:text-xl">
                   Product Directory
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Search by product name, model number, key, product type, brand,
-                  or model.
+                  Search by product name, model number, key, brand, or model.
                 </p>
               </div>
             </div>
@@ -638,25 +960,34 @@ export default function ProductListPage() {
 
         <div>
           {loading ? (
-            <TableSkeleton />
+            <CardGridSkeleton />
           ) : filteredItems.length === 0 ? (
-            <div className="premium-card-solid rounded-[30px] border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+            <div className="premium-card-solid rounded-3xl border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                 <Boxes className="h-10 w-10" />
               </div>
+
               <h3 className="mt-5 text-xl font-bold text-slate-900">
                 No products found
               </h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm text-slate-500">
                 {search.trim()
-                  ? "No products matched your search. Try another keyword."
-                  : "No products are available yet. Create your first product to get started."}
+                  ? "Try adjusting your search keyword."
+                  : "Start by creating your first product."}
               </p>
 
-              <div className="mt-6">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+                >
+                  Clear Search
+                </button>
+
                 <Link
                   href={`${basePath}/product/create`}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
                   <Plus className="h-4 w-4" />
                   Create Product
@@ -665,362 +996,20 @@ export default function ProductListPage() {
             </div>
           ) : (
             <>
-              <div className="hidden overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] xl:block">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-slate-50/90">
-                      <tr className="text-left">
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          S.No
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          Product
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          Category Mapping
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          Configuration
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          Status
-                        </th>
-                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-slate-100">
-                      {paginatedItems.map((item, index) => {
-                        const previewImage = getPreviewImageUrl(item);
-                        const isDeleting = deletingId === item._id;
-                        const isToggling = togglingId === item._id;
-                        const active = isProductActive(item);
-                        const variantRows = item.variant?.length ?? 0;
-                        const compatibleRows = item.compatible?.length ?? 0;
-                        const sharedMedia = hasSharedMedia(item);
-
-                        return (
-                          <tr
-                            key={item._id}
-                            className="transition-colors hover:bg-slate-50/70"
-                          >
-                            <td className="px-6 py-5 text-sm font-semibold text-slate-700">
-                              {startIndex + index + 1}
-                            </td>
-
-                            <td className="px-6 py-5">
-                              <div className="flex items-center gap-4">
-                                <div className="flex h-15 w-15 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                                  {previewImage ? (
-                                    <img
-                                      src={previewImage}
-                                      alt={item.itemName}
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <ImageIcon className="h-6 w-6 text-slate-400" />
-                                  )}
-                                </div>
-
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-bold text-slate-900">
-                                    {item.itemName}
-                                  </p>
-                                  <p className="mt-1 text-xs font-medium text-slate-500">
-                                    Model No: {item.itemModelNumber || "-"}
-                                  </p>
-                                  <p className="mt-1 text-xs font-medium text-slate-500">
-                                    Key: {item.itemKey || "-"}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-5">
-                              <div className="space-y-2">
-                                <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
-                                  <Tag className="h-3.5 w-3.5" />
-                                  {getProductTypeName(item)}
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    Brand: {getBrandName(item)}
-                                  </span>
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    <Cpu className="h-3.5 w-3.5" />
-                                    {getModelName(item)}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-5">
-                              <div className="space-y-2">
-                                <span className="inline-flex rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">
-                                  {getConfigurationLabel(item)}
-                                </span>
-
-                                <div className="flex flex-wrap gap-2">
-                                  <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    Variants: {variantRows}
-                                  </span>
-                                  <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    Compatible: {compatibleRows}
-                                  </span>
-                                  <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    Shared Media: {sharedMedia ? "Yes" : "No"}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-5">
-                              <div className="space-y-2">
-                                <span
-                                  className={
-                                    active
-                                      ? "inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700"
-                                      : "inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
-                                  }
-                                >
-                                  {active ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  )}
-                                  {active ? "Active" : "Inactive"}
-                                </span>
-
-                                <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getApprovalBadgeClass(
-                                    item.approvalStatus
-                                  )}`}
-                                >
-                                  {String(item.approvalStatus || "PENDING").toUpperCase()}
-                                </span>
-
-                                <p className="text-xs font-medium text-slate-500">
-                                  Updated: {formatDate(item.updatedAt || item.createdAt)}
-                                </p>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-5">
-                              <div className="flex items-center justify-end gap-2">
-                                <Link
-                                  href={`${basePath}/product/edit/${item._id}`}
-                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  Edit
-                                </Link>
-
-                                <button
-                                  type="button"
-                                  onClick={() => void handleToggleStatus(item)}
-                                  disabled={isToggling}
-                                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    active
-                                      ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                      : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                  }`}
-                                >
-                                  {isToggling ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Power className="h-4 w-4" />
-                                  )}
-                                  {active ? "Deactivate" : "Activate"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => void handleDelete(item._id)}
-                                  disabled={isDeleting}
-                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {isDeleting ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 xl:hidden">
-                {paginatedItems.map((item, index) => {
-                  const previewImage = getPreviewImageUrl(item);
-                  const active = isProductActive(item);
-                  const isDeleting = deletingId === item._id;
-                  const isToggling = togglingId === item._id;
-
-                  return (
-                    <div
-                      key={item._id}
-                      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
-                    >
-                      <div className="p-5">
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">
-                            <span>S.No</span>
-                            <span>{startIndex + index + 1}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={
-                                active
-                                  ? "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-                                  : "inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700"
-                              }
-                            >
-                              {active ? (
-                                <CheckCircle2 className="h-3 w-3" />
-                              ) : (
-                                <XCircle className="h-3 w-3" />
-                              )}
-                              {active ? "Active" : "Inactive"}
-                            </span>
-
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${getApprovalBadgeClass(
-                                item.approvalStatus
-                              )}`}
-                            >
-                              {String(item.approvalStatus || "PENDING").toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                            {previewImage ? (
-                              <img
-                                src={previewImage}
-                                alt={item.itemName}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <ImageIcon className="h-7 w-7 text-slate-400" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-base font-bold text-slate-900">
-                              {item.itemName}
-                            </h3>
-                            <p className="mt-1 text-xs font-medium text-slate-500">
-                              Model No: {item.itemModelNumber || "-"}
-                            </p>
-                            <p className="mt-1 text-xs font-medium text-slate-500">
-                              Key: {item.itemKey || "-"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl bg-slate-50 p-3">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                              Product Type
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              {getProductTypeName(item)}
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl bg-slate-50 p-3">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                              Category Mapping
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              {getBrandName(item)} / {getModelName(item)}
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl bg-slate-50 p-3 sm:col-span-2">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                              Configuration
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              {getConfigurationLabel(item)}
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                                Variants: {item.variant?.length ?? 0}
-                              </span>
-                              <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                                Compatible: {item.compatible?.length ?? 0}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl bg-slate-50 p-3 sm:col-span-2">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                              Updated
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              {formatDate(item.updatedAt || item.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          <Link
-                            href={`${basePath}/product/edit/${item._id}`}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Edit
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={() => void handleToggleStatus(item)}
-                            disabled={isToggling}
-                            className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                              active
-                                ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            }`}
-                          >
-                            {isToggling ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Power className="h-4 w-4" />
-                            )}
-                            {active ? "Deactivate" : "Activate"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(item._id)}
-                            disabled={isDeleting}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {paginatedItems.map((item, index) => (
+                  <ProductCard
+                    key={item._id}
+                    item={item}
+                    index={index}
+                    startIndex={startIndex}
+                    basePath={basePath}
+                    deletingId={deletingId}
+                    togglingId={togglingId}
+                    onToggleStatus={handleToggleStatus}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </div>
 
               <PaginationFooter
@@ -1030,7 +1019,9 @@ export default function ProductListPage() {
                 startIndex={startIndex}
                 itemsPerPage={itemsPerPage}
                 onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                onNext={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
               />
             </>
           )}

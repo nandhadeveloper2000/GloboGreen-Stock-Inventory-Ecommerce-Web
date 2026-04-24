@@ -80,7 +80,7 @@ function getUserFromRefreshPayload(payload: RefreshResponse): Record<string, unk
 
 function redirectToLogin() {
   if (typeof window === "undefined") return;
-  window.location.href = "/login";
+  window.location.href = "/masterlogin";
 }
 
 async function callRefreshToken(): Promise<RefreshResponse> {

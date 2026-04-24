@@ -39,20 +39,48 @@ type ShopAddress = {
   pincode?: string;
 };
 
-type ShopOwnerDoc = {
+type ShopDocument = {
   url?: string;
+  publicId?: string;
+  public_id?: string;
   mimeType?: string;
   fileName?: string;
   bytes?: number;
 };
 
+type ShopOwnerDoc = {
+  url?: string;
+  publicId?: string;
+  public_id?: string;
+  mimeType?: string;
+  fileName?: string;
+  bytes?: number;
+};
+
+type LinkedShopOwnerRef = {
+  _id?: string;
+};
+
 type LinkedShop = {
   _id?: string;
   name?: string;
+  shopType?: string;
   businessType?: string;
   isActive?: boolean;
   createdAt?: string;
+
+  enableGSTBilling?: boolean;
+  billingType?: "GST" | "NON_GST" | "BOTH" | string;
+  gstNumber?: string;
+
+  frontImageUrl?: string;
+  frontImagePublicId?: string;
+
+  gstCertificate?: ShopDocument;
+  udyamCertificate?: ShopDocument;
+
   shopAddress?: ShopAddress;
+  shopOwnerAccountId?: string | LinkedShopOwnerRef;
 };
 
 type ShopOwnerDetails = {
@@ -85,6 +113,7 @@ function normalizeRole(role?: string | null): AppRole {
   if (value === "MASTER_ADMIN") return "MASTER_ADMIN";
   if (value === "MANAGER") return "MANAGER";
   if (value === "SUPERVISOR") return "SUPERVISOR";
+
   return "STAFF";
 }
 
@@ -92,7 +121,16 @@ function getPanelBasePath(role: AppRole) {
   if (role === "MASTER_ADMIN") return "/master/shopowner";
   if (role === "MANAGER") return "/manager/shopowner";
   if (role === "SUPERVISOR") return "/supervisor/shopowner";
+
   return "/staff/shopowner";
+}
+
+function getShopBasePath(role: AppRole) {
+  if (role === "MASTER_ADMIN") return "/master/shop";
+  if (role === "MANAGER") return "/manager/shop";
+  if (role === "SUPERVISOR") return "/supervisor/shop";
+
+  return "/staff/shop";
 }
 
 function getAvatarSrc(item?: ShopOwnerDetails | null) {
@@ -132,6 +170,7 @@ function formatBytes(bytes?: number) {
 
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -165,6 +204,40 @@ function hasTextValue(value?: string | null) {
   return String(value || "").trim().length > 0;
 }
 
+function hasDocument(doc?: ShopDocument) {
+  return (
+    hasTextValue(doc?.url) ||
+    hasTextValue(doc?.publicId) ||
+    hasTextValue(doc?.public_id) ||
+    Number(doc?.bytes || 0) > 0
+  );
+}
+
+function hasFrontImage(shop: LinkedShop) {
+  return (
+    hasTextValue(shop.frontImageUrl) ||
+    hasTextValue(shop.frontImagePublicId)
+  );
+}
+
+function hasAnyShopDocument(shop: LinkedShop) {
+  return hasDocument(shop.gstCertificate) || hasDocument(shop.udyamCertificate);
+}
+
+function getLinkedShopOwnerId(shop: LinkedShop, fallbackOwnerId?: string) {
+  if (typeof shop.shopOwnerAccountId === "string") {
+    return shop.shopOwnerAccountId;
+  }
+
+  const populatedOwnerId = String(shop.shopOwnerAccountId?._id || "").trim();
+
+  if (populatedOwnerId) {
+    return populatedOwnerId;
+  }
+
+  return String(fallbackOwnerId || "").trim();
+}
+
 function isAddressComplete(address?: ShopAddress) {
   return [
     address?.state,
@@ -176,17 +249,24 @@ function isAddressComplete(address?: ShopAddress) {
   ].every((value) => hasTextValue(value));
 }
 
-function getLinkedShopProgressMetrics(shop: LinkedShop) {
+function getLinkedShopProgressMetrics(
+  shop: LinkedShop,
+  fallbackOwnerId?: string
+) {
   const trackedSections = [
     hasTextValue(shop.name),
     hasTextValue(shop.businessType),
     isAddressComplete(shop.shopAddress),
+    hasTextValue(getLinkedShopOwnerId(shop, fallbackOwnerId)),
     shop.isActive !== false,
+    hasFrontImage(shop),
+    hasAnyShopDocument(shop),
   ];
 
   const totalCount = trackedSections.length;
   const filledCount = trackedSections.filter(Boolean).length;
   const emptyCount = totalCount - filledCount;
+
   const percent = totalCount
     ? Math.round((filledCount / totalCount) * 100)
     : 0;
@@ -199,10 +279,32 @@ function getLinkedShopProgressMetrics(shop: LinkedShop) {
   };
 }
 
+function getLinkedShopMissingFields(
+  shop: LinkedShop,
+  fallbackOwnerId?: string
+) {
+  const missing: string[] = [];
+
+  if (!hasTextValue(shop.name)) missing.push("Shop Name");
+  if (!hasTextValue(shop.businessType)) missing.push("Business Type");
+  if (!isAddressComplete(shop.shopAddress)) missing.push("Address");
+
+  if (!hasTextValue(getLinkedShopOwnerId(shop, fallbackOwnerId))) {
+    missing.push("Shop Owner");
+  }
+
+  if (shop.isActive === false) missing.push("Active Status");
+  if (!hasFrontImage(shop)) missing.push("Front Image");
+  if (!hasAnyShopDocument(shop)) missing.push("Shop Document");
+
+  return missing;
+}
+
 function getProgressTone(percent: number) {
   if (percent >= 100) return "bg-emerald-500";
   if (percent >= 70) return "bg-sky-500";
   if (percent >= 40) return "bg-amber-500";
+
   return "bg-rose-500";
 }
 
@@ -239,30 +341,20 @@ function SectionHeader({
   );
 }
 
-function DetailCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function DetailCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value || "-"}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">
+        {value || "-"}
+      </p>
     </div>
   );
 }
 
-function LinkCard({
-  label,
-  href,
-}: {
-  label: string;
-  href?: string | null;
-}) {
+function LinkCard({ label, href }: { label: string; href?: string | null }) {
   const url = String(href || "").trim();
 
   return (
@@ -303,13 +395,19 @@ export default function ShopOwnerViewPage() {
     () => getPanelBasePath(currentRole),
     [currentRole]
   );
-  const shopBasePath = "/master/shop";
+
+  const shopBasePath = useMemo(
+    () => getShopBasePath(currentRole),
+    [currentRole]
+  );
 
   const shopOwnerId = String(searchParams.get("id") || "").trim();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ShopOwnerDetails | null>(null);
-  const [shopActionLoading, setShopActionLoading] = useState<string | null>(null);
+  const [shopActionLoading, setShopActionLoading] = useState<string | null>(
+    null
+  );
 
   const fetchDetails = useCallback(async () => {
     if (!shopOwnerId) {
@@ -349,7 +447,9 @@ export default function ShopOwnerViewPage() {
       setData(result.data);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to load shop owner details";
+        error instanceof Error
+          ? error.message
+          : "Failed to load shop owner details";
 
       console.error(error);
       toast.error(message);
@@ -375,11 +475,6 @@ export default function ShopOwnerViewPage() {
     }
 
     const nextStatus = !(shop.isActive ?? false);
-    const confirmed = window.confirm(
-      `Are you sure you want to ${nextStatus ? "activate" : "deactivate"} this shop?`
-    );
-
-    if (!confirmed) return;
 
     try {
       setShopActionLoading(shop._id);
@@ -404,13 +499,14 @@ export default function ShopOwnerViewPage() {
       }
 
       toast.success(
-        nextStatus ? "Shop activated successfully" : "Shop deactivated successfully"
+        nextStatus
+          ? "Shop activated successfully"
+          : "Shop deactivated successfully"
       );
+
       await fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Status update failed"
-      );
+      toast.error(error instanceof Error ? error.message : "Status update failed");
     } finally {
       setShopActionLoading(null);
     }
@@ -421,9 +517,6 @@ export default function ShopOwnerViewPage() {
       toast.error("Authentication or shop id missing");
       return;
     }
-
-    const confirmed = window.confirm("Delete this shop?");
-    if (!confirmed) return;
 
     try {
       setShopActionLoading(shop._id);
@@ -484,6 +577,7 @@ export default function ShopOwnerViewPage() {
           <h1 className="text-2xl font-bold text-slate-900">
             Shop Owner View
           </h1>
+
           <p className="mt-2 text-sm text-slate-500">
             A valid shop owner id was not found, or the details could not be
             loaded.
@@ -540,6 +634,7 @@ export default function ShopOwnerViewPage() {
                   <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                     {data.name || "Shop Owner"}
                   </h1>
+
                   <p className="mt-2 text-sm leading-6 text-white/80 md:text-base">
                     View complete shop owner account details, verification
                     status, address, documents, and linked shops.
@@ -752,6 +847,7 @@ export default function ShopOwnerViewPage() {
                           ) : (
                             <FileImage className="h-10 w-10 text-slate-400" />
                           )}
+
                           <p className="mt-3 text-sm font-semibold text-slate-700">
                             {data.idProof.fileName || "Open uploaded document"}
                           </p>
@@ -801,8 +897,10 @@ export default function ShopOwnerViewPage() {
             {linkedShops.length ? (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {linkedShops.map((shop, index) => {
-                  const progress = getLinkedShopProgressMetrics(shop);
+                  const progress = getLinkedShopProgressMetrics(shop, data._id);
                   const progressTone = getProgressTone(progress.percent);
+                  const missingFields = getLinkedShopMissingFields(shop, data._id);
+                  const shopActive = shop.isActive !== false;
 
                   return (
                     <div
@@ -821,12 +919,12 @@ export default function ShopOwnerViewPage() {
 
                         <span
                           className={`inline-flex shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                            shop.isActive
+                            shopActive
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                               : "border-slate-200 bg-slate-100 text-slate-600"
                           }`}
                         >
-                          {shop.isActive ? "Active" : "Inactive"}
+                          {shopActive ? "Active" : "Inactive"}
                         </span>
                       </div>
 
@@ -837,7 +935,7 @@ export default function ShopOwnerViewPage() {
                         />
                         <DetailCard
                           label="Status"
-                          value={shop.isActive ? "Active" : "Inactive"}
+                          value={shopActive ? "Active" : "Inactive"}
                         />
                       </div>
 
@@ -859,8 +957,15 @@ export default function ShopOwnerViewPage() {
                         </div>
 
                         <p className="mt-2 text-xs text-slate-500">
-                          {progress.filledCount}/{progress.totalCount} sections completed
+                          {progress.filledCount}/{progress.totalCount} sections
+                          completed
                         </p>
+
+                        {missingFields.length > 0 && (
+                          <p className="mt-1 line-clamp-1 text-xs text-rose-500">
+                            Missing: {missingFields.join(", ")}
+                          </p>
+                        )}
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -878,6 +983,7 @@ export default function ShopOwnerViewPage() {
                         <Link
                           href={`${shopBasePath}/view?id=${shop._id}`}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                          title="View Shop"
                         >
                           <Eye className="h-4 w-4" />
                         </Link>
@@ -885,6 +991,7 @@ export default function ShopOwnerViewPage() {
                         <Link
                           href={`${shopBasePath}/edit/${shop._id}`}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                          title="Edit Shop"
                         >
                           <Pencil className="h-4 w-4" />
                         </Link>
@@ -894,6 +1001,7 @@ export default function ShopOwnerViewPage() {
                           onClick={() => handleToggleLinkedShop(shop)}
                           disabled={shopActionLoading === shop._id}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          title={shopActive ? "Deactivate Shop" : "Activate Shop"}
                         >
                           {shopActionLoading === shop._id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -907,6 +1015,7 @@ export default function ShopOwnerViewPage() {
                           onClick={() => handleDeleteLinkedShop(shop)}
                           disabled={shopActionLoading === shop._id}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          title="Delete Shop"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

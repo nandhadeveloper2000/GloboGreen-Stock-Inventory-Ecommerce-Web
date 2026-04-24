@@ -346,20 +346,19 @@ export default function SubCategoryListPage() {
           />
         </div>
 
-        <section className="premium-card-solid rounded-[28px] px-5 py-5">
+        <section className="premium-card-solid rounded-[30px] p-4 md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-[#5b2bbd] to-[#9116a1] text-white shadow-md">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#5b2bbd] to-[#9116a1] text-white shadow-lg">
                 <FolderKanban className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">
                   SubCategory Directory
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Search by sub category name, key, category, or master
-                  category.
+                <p className="text-sm text-slate-500">
+                  Search by sub category name, key, category, or master category.
                 </p>
               </div>
             </div>
@@ -376,42 +375,196 @@ export default function SubCategoryListPage() {
           </div>
         </section>
 
-        <div className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-sm">
-          <div className="hidden grid-cols-[0.6fr_2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 lg:grid">
-            <div>S.No</div>
-            <div>SubCategory</div>
-            <div>Category</div>
-            <div>Master Category</div>
-            <div>Status</div>
-            <div>Updated</div>
-            <div className="text-right">Actions</div>
-          </div>
-
+        <div>
           {loading ? (
-            <div className="flex min-h-70 items-center justify-center px-6 py-16">
-              <div className="text-center">
-                <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-violet-600" />
-                <p className="text-sm font-medium text-slate-500">
-                  Loading sub categories...
-                </p>
-              </div>
-            </div>
+            <TableSkeleton />
           ) : filteredItems.length === 0 ? (
-            <div className="flex min-h-70 flex-col items-center justify-center px-6 py-16 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-500">
-                <FolderTree className="h-7 w-7" />
+            <div className="premium-card-solid rounded-[30px] border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <FolderTree className="h-10 w-10" />
               </div>
-              <h4 className="text-lg font-bold text-slate-900">
+              <h3 className="mt-5 text-xl font-bold text-slate-900">
                 No sub categories found
-              </h4>
-              <p className="mt-2 max-w-md text-sm text-slate-500">
-                Try changing the search text or create a new sub category to get
-                started.
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                {search.trim()
+                  ? "No records matched your search. Try another keyword."
+                  : "No sub categories are available yet. Create your first sub category to get started."}
               </p>
+
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => router.push(`${basePath}/subcategory/create`)}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create SubCategory
+                </button>
+              </div>
             </div>
           ) : (
             <>
-              <div className="divide-y divide-slate-200">
+              <div className="hidden overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] lg:block">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[1180px] w-full border-collapse">
+                    <thead className="bg-slate-50/90">
+                      <tr className="text-left">
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          S.No
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          SubCategory
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          Category
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          Master Category
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          Updated
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {paginatedItems.map((item, index) => {
+                        const itemId = item._id;
+                        const imageUrl = getImage(item);
+                        const isDeleting = deletingId === itemId;
+                        const isToggling = togglingId === itemId;
+
+                        return (
+                          <tr
+                            key={itemId || item.nameKey}
+                            className="transition-colors hover:bg-slate-50/70"
+                          >
+                            <td className="px-6 py-5 text-sm font-semibold text-slate-700">
+                              {(currentPage - 1) * pageSize + index + 1}
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-4">
+                                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                                  {imageUrl ? (
+                                    <Image
+                                      src={imageUrl}
+                                      alt={item.name}
+                                      fill
+                                      sizes="56px"
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <FolderTree className="h-5 w-5 text-slate-400" />
+                                  )}
+                                </div>
+
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-bold text-slate-900">
+                                    {item.name}
+                                  </p>
+                                  <p className="mt-1 text-xs font-medium text-slate-500">
+                                    Key: {item.nameKey}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="inline-flex items-center rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
+                                {getCategoryName(item)}
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="inline-flex items-center rounded-full bg-fuchsia-50 px-3 py-1.5 text-xs font-semibold text-fuchsia-700">
+                                {getMasterCategoryName(item)}
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-5">
+                              {item.isActive ? (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Inactive
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="px-6 py-5 text-sm font-medium text-slate-600">
+                              <div className="inline-flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-slate-400" />
+                                {formatDate(item.updatedAt)}
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="flex items-center justify-end gap-2">
+                                <ActionButton
+                                  label={item.isActive ? "Deactivate" : "Activate"}
+                                  onClick={() => handleToggle(itemId, item.isActive)}
+                                  icon={
+                                    <Power
+                                      className={`h-4 w-4 ${
+                                        isToggling ? "animate-pulse" : ""
+                                      }`}
+                                    />
+                                  }
+                                  className={
+                                    item.isActive
+                                      ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                      : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                  }
+                                  disabled={isToggling}
+                                />
+
+                                <ActionButton
+                                  label="Edit"
+                                  onClick={() =>
+                                    itemId &&
+                                    router.push(`${basePath}/subcategory/edit/${itemId}`)
+                                  }
+                                  icon={<Pencil className="h-4 w-4" />}
+                                  className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                                  disabled={!itemId}
+                                />
+
+                                <ActionButton
+                                  label="Delete"
+                                  onClick={() => handleDelete(itemId)}
+                                  icon={
+                                    <Trash2
+                                      className={`h-4 w-4 ${
+                                        isDeleting ? "animate-pulse" : ""
+                                      }`}
+                                    />
+                                  }
+                                  className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                  disabled={isDeleting}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 lg:hidden">
                 {paginatedItems.map((item, index) => {
                   const itemId = item._id;
                   const imageUrl = getImage(item);
@@ -421,116 +574,9 @@ export default function SubCategoryListPage() {
                   return (
                     <div
                       key={itemId || item.nameKey}
-                      className="px-4 py-4 transition hover:bg-slate-50/80 md:px-6"
+                      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
                     >
-                      <div className="hidden grid-cols-[0.6fr_2.1fr_1.6fr_1.6fr_1.1fr_1.2fr_1.6fr] items-center gap-4 lg:grid">
-                        <div className="text-sm font-semibold text-slate-700">
-                          {(currentPage - 1) * pageSize + index + 1}
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                            {imageUrl ? (
-                              <Image
-                                src={imageUrl}
-                                alt={item.name}
-                                fill
-                                sizes="56px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <FolderTree className="h-5 w-5 text-slate-400" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0">
-                            <h4 className="truncate text-base font-bold text-slate-900">
-                              {item.name}
-                            </h4>
-                            <p className="mt-1 truncate text-sm text-slate-500">
-                              Key: {item.nameKey}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-                            {getCategoryName(item)}
-                          </span>
-                        </div>
-
-                        <div>
-                          <span className="inline-flex rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
-                            {getMasterCategoryName(item)}
-                          </span>
-                        </div>
-
-                        <div>
-                          {item.isActive ? (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Active
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                              <XCircle className="h-3.5 w-3.5" />
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <CalendarDays className="h-4 w-4 text-slate-400" />
-                          {formatDate(item.updatedAt)}
-                        </div>
-
-                        <div className="flex justify-end gap-2">
-                          <ActionButton
-                            label={item.isActive ? "Deactivate" : "Activate"}
-                            onClick={() => handleToggle(itemId, item.isActive)}
-                            icon={
-                              <Power
-                                className={`h-4 w-4 ${
-                                  isToggling ? "animate-pulse" : ""
-                                }`}
-                              />
-                            }
-                            className={
-                              item.isActive
-                                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            }
-                            disabled={isToggling}
-                          />
-
-                          <ActionButton
-                            label="Edit"
-                            onClick={() =>
-                              itemId &&
-                              router.push(`${basePath}/subcategory/edit/${itemId}`)
-                            }
-                            icon={<Pencil className="h-4 w-4" />}
-                            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                            disabled={!itemId}
-                          />
-
-                          <ActionButton
-                            label="Delete"
-                            onClick={() => handleDelete(itemId)}
-                            icon={
-                              <Trash2
-                                className={`h-4 w-4 ${
-                                  isDeleting ? "animate-pulse" : ""
-                                }`}
-                              />
-                            }
-                            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                            disabled={isDeleting}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 lg:hidden">
+                      <div className="p-5">
                         <div className="flex items-start gap-4">
                           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                             {imageUrl ? (
@@ -587,40 +633,40 @@ export default function SubCategoryListPage() {
                                 value={formatDate(item.updatedAt)}
                               />
                             </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <ActionButton
+                                label={item.isActive ? "Deactivate" : "Activate"}
+                                onClick={() => handleToggle(itemId, item.isActive)}
+                                icon={<Power className="h-4 w-4" />}
+                                className={
+                                  item.isActive
+                                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                    : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                }
+                                disabled={isToggling}
+                              />
+
+                              <ActionButton
+                                label="Edit"
+                                onClick={() =>
+                                  itemId &&
+                                  router.push(`${basePath}/subcategory/edit/${itemId}`)
+                                }
+                                icon={<Pencil className="h-4 w-4" />}
+                                className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                                disabled={!itemId}
+                              />
+
+                              <ActionButton
+                                label="Delete"
+                                onClick={() => handleDelete(itemId)}
+                                icon={<Trash2 className="h-4 w-4" />}
+                                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                disabled={isDeleting}
+                              />
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <ActionButton
-                            label={item.isActive ? "Deactivate" : "Activate"}
-                            onClick={() => handleToggle(itemId, item.isActive)}
-                            icon={<Power className="h-4 w-4" />}
-                            className={
-                              item.isActive
-                                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            }
-                            disabled={isToggling}
-                          />
-
-                          <ActionButton
-                            label="Edit"
-                            onClick={() =>
-                              itemId &&
-                              router.push(`${basePath}/subcategory/edit/${itemId}`)
-                            }
-                            icon={<Pencil className="h-4 w-4" />}
-                            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                            disabled={!itemId}
-                          />
-
-                          <ActionButton
-                            label="Delete"
-                            onClick={() => handleDelete(itemId)}
-                            icon={<Trash2 className="h-4 w-4" />}
-                            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                            disabled={isDeleting}
-                          />
                         </div>
                       </div>
                     </div>
@@ -628,7 +674,7 @@ export default function SubCategoryListPage() {
                 })}
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-500">
                   Showing {startEntry} to {endEntry} of {filteredItems.length} entries
                 </p>
@@ -726,6 +772,30 @@ function InfoChip({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-sm font-semibold text-slate-700">
         {value}
       </p>
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="premium-card-solid overflow-hidden rounded-[30px] p-0">
+      <div className="grid grid-cols-1 gap-4 p-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="animate-pulse rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-slate-200" />
+              <div className="flex-1">
+                <div className="h-4 w-40 rounded bg-slate-200" />
+                <div className="mt-3 h-3 w-28 rounded bg-slate-100" />
+              </div>
+              <div className="h-9 w-24 rounded-full bg-slate-200" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
