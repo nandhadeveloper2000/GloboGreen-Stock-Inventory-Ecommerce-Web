@@ -543,12 +543,108 @@ shopstaff_toggle_active: {
       `${API_BASE}/shops/${id}/docs/${key}/admin`,
   },
 
+  /* ===================== SHOP PRODUCTS ===================== */
+  shop_product_available_list: {
+    method: "GET",
+    url: (
+      shopId: string,
+      params?: Record<string, string | number | undefined | null>
+    ) =>
+      withQuery(`${API_BASE}/shop-products/${shopId}/available-products`, params),
+  },
+  shop_product_list: {
+    method: "GET",
+    url: (shopId: string) => `${API_BASE}/shop-products/${shopId}/products`,
+  },
+  shop_product_create: {
+    method: "POST",
+    url: (shopId: string) => `${API_BASE}/shop-products/${shopId}/products`,
+  },
+  shop_product_update: {
+    method: "PUT",
+    url: (shopId: string, productId: string) =>
+      `${API_BASE}/shop-products/${shopId}/products/${productId}`,
+  },
+  shop_product_delete: {
+    method: "DELETE",
+    url: (shopId: string, productId: string) =>
+      `${API_BASE}/shop-products/${shopId}/products/${productId}`,
+  },
+
   /* ===================== LOCATIONS ===================== */
   location_all: { method: "GET", url: `${API_BASE}/locations/all` },
   location_states: { method: "GET", url: `${API_BASE}/locations/states` },
   location_districts: { method: "GET", url: `${API_BASE}/locations/districts` },
   location_taluks: { method: "GET", url: `${API_BASE}/locations/taluks` },
   location_villages: { method: "GET", url: `${API_BASE}/locations/villages` },
+
+ /* ===================== VENDORS ===================== */
+vendor_list: {
+  method: "GET",
+  url: (q = "") =>
+    `${API_BASE}/vendors${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+},
+
+vendor_create: {
+  method: "POST",
+  url: `${API_BASE}/vendors`,
+},
+
+/* ===================== SHOP VENDORS ===================== */
+shop_vendor_list: {
+  method: "GET",
+  url: (shopId: string, q = "") =>
+    `${API_BASE}/shop-vendors/${shopId}/vendors${
+      q ? `?q=${encodeURIComponent(q)}` : ""
+    }`,
+},
+
+shop_vendor_create: {
+  method: "POST",
+  url: (shopId: string) => `${API_BASE}/shop-vendors/${shopId}/vendors`,
+},
+
+shop_vendor_update: {
+  method: "PUT",
+  url: (shopId: string, vendorId: string) =>
+    `${API_BASE}/shop-vendors/${shopId}/vendors/${vendorId}`,
+},
+
+shop_vendor_delete: {
+  method: "DELETE",
+  url: (shopId: string, vendorId: string) =>
+    `${API_BASE}/shop-vendors/${shopId}/vendors/${vendorId}`,
+},
+vendors: {
+  list: {
+    url: "/api/vendors",
+    method: "get",
+  },
+  create: {
+    url: "/api/vendors",
+    method: "post",
+  },
+  getById: (id: string) => ({
+    url: `/api/vendors/${id}`,
+    method: "get",
+  }),
+  update: (id: string) => ({
+    url: `/api/vendors/${id}`,
+    method: "put",
+  }),
+  updateStatus: (id: string) => ({
+    url: `/api/vendors/${id}/status`,
+    method: "patch",
+  }),
+  delete: (id: string) => ({
+    url: `/api/vendors/${id}`,
+    method: "delete",
+  }),
+  listByShop: (shopId: string) => ({
+    url: `/api/vendors/shop/${shopId}`,
+    method: "get",
+  }),
+},
 };
 
 export default SummaryApi;

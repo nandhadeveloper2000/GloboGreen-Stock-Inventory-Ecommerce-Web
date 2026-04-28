@@ -1775,7 +1775,7 @@ export function ShopForm({
       nextErrors.shopType = "Shop type is required";
     }
 
-    if (isShopOwnerSide && !form.billingType.trim()) {
+    if (!form.billingType.trim()) {
       nextErrors.billingType = "GST billing selection is required";
     }
 
@@ -1786,8 +1786,7 @@ export function ShopForm({
     }
 
     const cleanGst = normalizeGstNumber(form.gstNumber);
-    const shouldValidateGstNumber =
-      !isShopOwnerSide || form.billingType === "GST";
+    const shouldValidateGstNumber = form.billingType === "GST";
 
     if (shouldValidateGstNumber && cleanGst && !isValidGST(cleanGst)) {
       nextErrors.gstNumber = "GST number must be 15 characters";
@@ -1908,21 +1907,11 @@ export function ShopForm({
       const cleanShopName = toTitleCase(form.shopName);
       const cleanMobile = digitsOnly(form.mobile).slice(0, 10);
       const cleanGstNumber = normalizeGstNumber(form.gstNumber);
-      const resolvedBillingType = isShopOwnerSide
-        ? form.billingType === "NON_GST"
-          ? "NON_GST"
-          : "GST"
-        : form.shopType === "WHOLESALE_SHOP"
-          ? "GST"
-          : "BOTH";
-      const enableGSTBilling = isShopOwnerSide
-        ? resolvedBillingType === "GST"
-        : form.shopType === "WAREHOUSE_RETAIL_SHOP" ||
-          form.shopType === "WHOLESALE_SHOP";
+      const resolvedBillingType =
+        form.billingType === "NON_GST" ? "NON_GST" : "GST";
+      const enableGSTBilling = resolvedBillingType === "GST";
       const gstNumberForSubmit =
-        isShopOwnerSide && resolvedBillingType === "NON_GST"
-          ? ""
-          : cleanGstNumber;
+        resolvedBillingType === "NON_GST" ? "" : cleanGstNumber;
 
       if (isEditMode) {
         if (!shopId) {
@@ -2226,33 +2215,30 @@ export function ShopForm({
                 helperText="Choose a main warehouse, branch shop, or wholesale shop."
               />
 
-              {isShopOwnerSide ? (
-                <FloatingSelect
-                  id="billingType"
-                  label="GST Billing"
-                  value={form.billingType}
-                  onChange={(e) => {
-                    const nextBillingType = e.target.value as ShopBillingType;
+              <FloatingSelect
+                id="billingType"
+                label="GST Billing"
+                value={form.billingType}
+                onChange={(e) => {
+                  const nextBillingType = e.target.value as ShopBillingType;
 
-                    setForm((prev) => ({
-                      ...prev,
-                      billingType: nextBillingType,
-                    }));
-                    setErrors((prev) => ({
-                      ...prev,
-                      billingType: undefined,
-                      gstNumber:
-                        nextBillingType === "NON_GST"
-                          ? undefined
-                          : prev.gstNumber,
-                    }));
-                  }}
-                  options={GST_BILLING_OPTIONS}
-                  placeholder="Select GST billing"
-                  error={errors.billingType}
-                  required
-                />
-              ) : null}
+                  setForm((prev) => ({
+                    ...prev,
+                    billingType: nextBillingType,
+                    gstNumber: nextBillingType === "NON_GST" ? "" : prev.gstNumber,
+                  }));
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    billingType: undefined,
+                    gstNumber: undefined,
+                  }));
+                }}
+                options={GST_BILLING_OPTIONS}
+                placeholder="Select GST billing"
+                error={errors.billingType}
+                required
+              />
 
               <FloatingInput
                 id="shopName"
@@ -2284,7 +2270,7 @@ export function ShopForm({
                 onChange={(e) =>
                   updateField("gstNumber", normalizeGstNumber(e.target.value))
                 }
-                disabled={isShopOwnerSide && form.billingType === "NON_GST"}
+                disabled={form.billingType === "NON_GST"}
                 error={errors.gstNumber}
               />
             </div>
@@ -2556,16 +2542,14 @@ export function ShopForm({
                   />
                   <ReviewItem label="Shop Name" value={form.shopName} />
                   <ReviewItem label="Shop Mobile" value={form.mobile} />
-                  {isShopOwnerSide ? (
-                    <ReviewItem
-                      label="GST Billing"
-                      value={getBillingTypeLabel(form.billingType)}
-                    />
-                  ) : null}
+                  <ReviewItem
+                    label="GST Billing"
+                    value={getBillingTypeLabel(form.billingType)}
+                  />
                   <ReviewItem
                     label="GST Number"
                     value={
-                      isShopOwnerSide && form.billingType === "NON_GST"
+                      form.billingType === "NON_GST"
                         ? "Not required for NON GST"
                         : form.gstNumber || "Optional / Not added"
                     }

@@ -90,6 +90,13 @@ const MASTER_ADMIN_MENU: NavItem[] = [
 
 const SHOP_OWNER_MENU: NavItem[] = [
   { label: "Dashboard", href: "/shopowner/dashboard" },
+    {
+    label: "Shop Staff Management",
+    children: [
+      { label: "Create Shop Staff", href: "/shopowner/shopstaff/create" },
+      { label: "Shop Staff List", href: "/shopowner/shopstaff/list" },
+    ],
+  },
   {
     label: "Shop Management",
     children: [
@@ -98,12 +105,20 @@ const SHOP_OWNER_MENU: NavItem[] = [
     ],
   },
   {
-    label: "Shop Staff Management",
+    label: "Supplier / Vendor",
     children: [
-      { label: "Create Shop Staff", href: "/shopowner/shopstaff/create" },
-      { label: "Shop Staff List", href: "/shopowner/shopstaff/list" },
+      { label: "Create Vendor", href: "/shopowner/vendors/create" },
+      { label: "Vendor List", href: "/shopowner/vendors/list" },
     ],
   },
+    {
+    label: "My Shop Product",
+    children: [
+      { label: "Add Shop Product", href: "/shopowner/myshoppage/create" },
+      { label: "Shop Product List", href: "/shopowner/myshoppage/list" },
+    ],
+  },
+
 ];
 
 const SHOP_MANAGER_MENU: NavItem[] = [

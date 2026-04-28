@@ -69,6 +69,10 @@ function normalizeValue(value?: string | null) {
   return String(value || "").trim().toUpperCase();
 }
 
+function isWarehouseOnlySection(label: string) {
+  return label === "Shop Management" || label === "My Shop Product";
+}
+
 export default function MobileSidebarDrawer({
   open,
   onClose,
@@ -84,7 +88,7 @@ export default function MobileSidebarDrawer({
     }
 
     return items.filter((item) => {
-      if (item.label !== "Shop Management") {
+      if (!isWarehouseOnlySection(item.label)) {
         return true;
       }
 

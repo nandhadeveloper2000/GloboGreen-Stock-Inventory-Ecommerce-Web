@@ -11,7 +11,6 @@ import {
   MailCheck,
   MailX,
   Pencil,
-  Power,
   Search,
   ShieldCheck,
   Sparkles,
@@ -75,6 +74,7 @@ function normalizeRole(role?: string | null): AppRole {
   if (value === "MASTER_ADMIN") return "MASTER_ADMIN";
   if (value === "MANAGER") return "MANAGER";
   if (value === "SUPERVISOR") return "SUPERVISOR";
+
   return "STAFF";
 }
 
@@ -82,6 +82,7 @@ function getPanelBasePath(role: AppRole) {
   if (role === "MASTER_ADMIN") return "/master/shopowner";
   if (role === "MANAGER") return "/manager/shopowner";
   if (role === "SUPERVISOR") return "/supervisor/shopowner";
+
   return "/staff/shopowner";
 }
 
@@ -107,6 +108,7 @@ function hasTextValue(value?: string | null) {
 
 function getProfileMetrics(item: ShopOwnerListItem) {
   const address = item.address || {};
+
   const addressComplete = [
     address.state,
     address.district,
@@ -130,6 +132,7 @@ function getProfileMetrics(item: ShopOwnerListItem) {
   const totalCount = trackedSections.length;
   const filledCount = trackedSections.filter(Boolean).length;
   const emptyCount = totalCount - filledCount;
+
   const percent = totalCount
     ? Math.round((filledCount / totalCount) * 100)
     : 0;
@@ -146,6 +149,7 @@ function getProfileProgressTone(percent: number) {
   if (percent >= 100) return "bg-emerald-500";
   if (percent >= 70) return "bg-sky-500";
   if (percent >= 40) return "bg-amber-500";
+
   return "bg-rose-500";
 }
 
@@ -220,12 +224,6 @@ export default function ShopOwnerListPage() {
     }
 
     const currentStatus = item.isActive ?? false;
-    const actionText = currentStatus ? "deactivate" : "activate";
-    const confirmed = window.confirm(
-      `Are you sure you want to ${actionText} this shop owner?`
-    );
-
-    if (!confirmed) return;
 
     try {
       setActionLoading(item._id);
@@ -322,6 +320,7 @@ export default function ShopOwnerListPage() {
 
     return data.filter((item) => {
       const address = item.address || {};
+
       const searchValues = [
         item.name,
         item.username,
@@ -345,6 +344,7 @@ export default function ShopOwnerListPage() {
   const totalCount = data.length;
   const verifiedEmailCount = data.filter((item) => item.verifyEmail).length;
   const activeCount = data.filter((item) => item.isActive).length;
+
   const averageProfileCompletion = useMemo(() => {
     if (data.length === 0) return 0;
 
@@ -359,7 +359,6 @@ export default function ShopOwnerListPage() {
   return (
     <div className="page-shell">
       <div className="mx-auto w-full max-w-9xl space-y-5">
-
         <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
@@ -375,6 +374,7 @@ export default function ShopOwnerListPage() {
                 <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
                   Shop Owner List
                 </h1>
+
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
                   Review all shop owners with quick visibility into email
                   verification, active status, and direct actions.
@@ -419,6 +419,7 @@ export default function ShopOwnerListPage() {
 
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Directory</h2>
+
                 <p className="text-sm text-slate-500">
                   Search by shop owner name, mobile, username, email, or address.
                 </p>
@@ -427,6 +428,7 @@ export default function ShopOwnerListPage() {
 
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
               <input
                 type="text"
                 placeholder="Search shop owner..."
@@ -449,9 +451,11 @@ export default function ShopOwnerListPage() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                 <CircleOff className="h-8 w-8 text-slate-400" />
               </div>
+
               <h3 className="text-lg font-semibold text-slate-900">
                 No shop owners found
               </h3>
+
               <p className="mt-2 max-w-md text-sm text-slate-500">
                 No shop owner matches your current search.
               </p>
@@ -464,7 +468,9 @@ export default function ShopOwnerListPage() {
                     <tr className="border-b border-slate-200 text-left text-slate-600">
                       <th className="px-5 py-4 font-semibold">S.No</th>
                       <th className="px-5 py-4 font-semibold">Avatar</th>
-                      <th className="px-5 py-4 font-semibold">Shop Owner Name</th>
+                      <th className="px-5 py-4 font-semibold">
+                        Shop Owner Name
+                      </th>
                       <th className="px-5 py-4 font-semibold">Mobile Number</th>
                       <th className="px-5 py-4 font-semibold">Username</th>
                       <th className="px-5 py-4 font-semibold">Email ID</th>
@@ -473,7 +479,9 @@ export default function ShopOwnerListPage() {
                         Profile Progress
                       </th>
                       <th className="px-5 py-4 font-semibold">Status</th>
-                      <th className="px-5 py-4 text-right font-semibold">Action</th>
+                      <th className="px-5 py-4 text-right font-semibold">
+                        Action
+                      </th>
                     </tr>
                   </thead>
 
@@ -542,6 +550,7 @@ export default function ShopOwnerListPage() {
                               ) : (
                                 <MailX className="h-3.5 w-3.5" />
                               )}
+
                               {isEmailVerified ? "Verified" : "Pending"}
                             </span>
                           </td>
@@ -552,6 +561,7 @@ export default function ShopOwnerListPage() {
                                 <span className="text-sm font-semibold text-slate-900">
                                   {profileMetrics.percent}%
                                 </span>
+
                                 <span className="text-xs text-slate-500">
                                   {profileMetrics.filledCount}/
                                   {profileMetrics.totalCount} sections complete
@@ -561,7 +571,9 @@ export default function ShopOwnerListPage() {
                               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                   className={`h-full rounded-full transition-all ${progressTone}`}
-                                  style={{ width: `${profileMetrics.percent}%` }}
+                                  style={{
+                                    width: `${profileMetrics.percent}%`,
+                                  }}
                                 />
                               </div>
 
@@ -576,21 +588,57 @@ export default function ShopOwnerListPage() {
                           </td>
 
                           <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
-                                isActive
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                  : "border-slate-200 bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {isActive ? "Active" : "Inactive"}
-                            </span>
+                            <div className="flex min-w-[165px] items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(item)}
+                                disabled={isBusy}
+                                aria-label={
+                                  isActive
+                                    ? "Deactivate shop owner"
+                                    : "Activate shop owner"
+                                }
+                                title={
+                                  isActive
+                                    ? "Click to deactivate"
+                                    : "Click to activate"
+                                }
+                                className={`relative inline-flex h-8 w-16 shrink-0 items-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  isActive
+                                    ? "border-emerald-300 bg-emerald-500 shadow-[0_8px_18px_rgba(16,185,129,0.25)]"
+                                    : "border-slate-300 bg-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-md transition-transform duration-300 ${
+                                    isActive
+                                      ? "translate-x-9"
+                                      : "translate-x-1"
+                                  }`}
+                                >
+                                  {isBusy ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
+                                  ) : null}
+                                </span>
+                              </button>
+
+                              <span
+                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                                  isActive
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : "border-slate-200 bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="px-5 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <Link
                                 href={`${panelBasePath}/view?id=${item._id}`}
+                                title="View"
                                 className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-700 transition hover:bg-slate-50"
                               >
                                 <Eye className="h-4 w-4" />
@@ -598,6 +646,7 @@ export default function ShopOwnerListPage() {
 
                               <Link
                                 href={`${panelBasePath}/edit/${item._id}`}
+                                title="Edit"
                                 className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-700 transition hover:bg-slate-50"
                               >
                                 <Pencil className="h-4 w-4" />
@@ -605,21 +654,9 @@ export default function ShopOwnerListPage() {
 
                               <button
                                 type="button"
-                                onClick={() => handleToggleStatus(item)}
-                                disabled={isBusy}
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {isBusy ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Power className="h-4 w-4" />
-                                )}
-                              </button>
-
-                              <button
-                                type="button"
                                 onClick={() => handleDelete(item)}
                                 disabled={isBusy}
+                                title="Delete"
                                 className="inline-flex h-9 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <Trash2 className="h-4 w-4" />

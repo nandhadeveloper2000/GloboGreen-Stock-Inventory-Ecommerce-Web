@@ -6,12 +6,15 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ComponentType,
   type FormEvent,
   type RefObject,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
   Boxes,
+  Check,
+  ChevronDown,
   Cpu,
   FolderTree,
   Info,
@@ -20,6 +23,7 @@ import {
   PackagePlus,
   Plus,
   Save,
+  Search,
   ShieldCheck,
   Sparkles,
   Tags,
@@ -614,6 +618,170 @@ function TopLabelInput({
   );
 }
 
+function SearchableSingleSelectCard({
+  title,
+  description,
+  icon: Icon,
+  iconClassName,
+  label,
+  placeholder,
+  disabled = false,
+  loading = false,
+  options,
+  value,
+  selectedName,
+  search,
+  open,
+  emptyText,
+  onToggle,
+  onSearchChange,
+  onSelect,
+  dropdownRef,
+  searchInputRef,
+}: {
+  title: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  iconClassName: string;
+  label: string;
+  placeholder: string;
+  disabled?: boolean;
+  loading?: boolean;
+  options: Array<{ _id: string; name: string }>;
+  value: string;
+  selectedName: string;
+  search: string;
+  open: boolean;
+  emptyText: string;
+  onToggle: () => void;
+  onSearchChange: (value: string) => void;
+  onSelect: (value: string) => void;
+  dropdownRef: RefObject<HTMLDivElement | null>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <div
+      ref={dropdownRef}
+      className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm"
+    >
+      <div className="mb-4 flex items-start gap-3">
+        <div
+          className={[
+            "flex h-10 w-10 items-center justify-center rounded-xl",
+            iconClassName,
+          ].join(" ")}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+
+        <div>
+          <h3 className="text-base font-extrabold text-slate-900">{title}</h3>
+          <p className="text-sm text-slate-500">{description}</p>
+        </div>
+      </div>
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={disabled || loading}
+          className={[
+            "relative flex h-14 w-full items-center justify-between rounded-2xl border bg-white px-4 text-left shadow-sm outline-none transition",
+            open
+              ? "border-violet-500 ring-4 ring-violet-100"
+              : "border-slate-200 hover:border-violet-300",
+            disabled || loading
+              ? "cursor-not-allowed bg-slate-50 text-slate-400"
+              : "text-slate-900",
+          ].join(" ")}
+        >
+          <span className="min-w-0">
+            <span className="mb-1 block text-[11px] font-semibold text-slate-500">
+              {label}
+            </span>
+            <span
+              className={[
+                "block truncate text-sm font-bold",
+                selectedName ? "text-slate-900" : "text-slate-400",
+              ].join(" ")}
+            >
+              {loading ? "Loading..." : selectedName || placeholder}
+            </span>
+          </span>
+
+          <ChevronDown
+            className={[
+              "h-4 w-4 shrink-0 text-slate-400 transition",
+              open ? "rotate-180" : "",
+            ].join(" ")}
+          />
+        </button>
+
+        {open ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-40 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+            <div className="border-b border-slate-100 p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={searchInputRef}
+                  value={search}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Search..."
+                  disabled={disabled || loading}
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                />
+              </div>
+            </div>
+
+            <div className="max-h-64 overflow-y-auto p-2">
+              {options.length ? (
+                options.map((option) => {
+                  const selected = value === option._id;
+
+                  return (
+                    <button
+                      key={option._id}
+                      type="button"
+                      onClick={() => onSelect(option._id)}
+                      disabled={disabled || loading}
+                      className={[
+                        "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-bold transition",
+                        selected
+                          ? "bg-violet-50 text-violet-700"
+                          : "text-slate-700 hover:bg-slate-50",
+                      ].join(" ")}
+                    >
+                      <span className="truncate">{option.name}</span>
+
+                      {selected ? (
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-400">
+                  {emptyText}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {selectedName ? (
+        <div className="mt-3">
+          <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
+            {selectedName}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function CompatibilityRowsEditor({
   rows,
   brandMap,
@@ -737,8 +905,8 @@ export default function CreateProductPage({
   const [masterCategoryId, setMasterCategoryId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
-  const [brandIds, setBrandIds] = useState<string[]>([]);
-  const [modelIds, setModelIds] = useState<string[]>([]);
+  const [brandId, setBrandId] = useState("");
+  const [modelId, setModelId] = useState("");
   const [categoryMappingMode, setCategoryMappingMode] =
     useState<CategoryMappingMode>("variant");
 
@@ -830,10 +998,10 @@ export default function CreateProductPage({
   }, [brands, searchMap.brandId]);
 
   const availablePrimaryModelOptions = useMemo(() => {
-    return brandIds.length
-      ? models.filter((item) => brandIds.includes(getBrandIdFromModel(item)))
+    return brandId
+      ? models.filter((item) => getBrandIdFromModel(item) === brandId)
       : [];
-  }, [brandIds, models]);
+  }, [brandId, models]);
 
   const filteredPrimaryModelOptions = useMemo(() => {
     const query = searchMap.modelId.trim().toLowerCase();
@@ -866,17 +1034,13 @@ export default function CreateProductPage({
     return map;
   }, [models]);
 
-  const selectedBrandNames = useMemo(() => {
-    return brands
-      .filter((item) => brandIds.includes(item._id))
-      .map((item) => item.name);
-  }, [brandIds, brands]);
+  const selectedBrandName = useMemo(() => {
+    return brands.find((item) => item._id === brandId)?.name || "";
+  }, [brandId, brands]);
 
-  const selectedModelNames = useMemo(() => {
-    return models
-      .filter((item) => modelIds.includes(item._id))
-      .map((item) => item.name);
-  }, [modelIds, models]);
+  const selectedModelName = useMemo(() => {
+    return models.find((item) => item._id === modelId)?.name || "";
+  }, [modelId, models]);
 
   const defaultVariantCompatibilityRows = useMemo(() => {
     return buildCompatibilityRows(brands, undefined);
@@ -948,8 +1112,12 @@ const fetchExistingProduct = useEffectEvent(
       const nextMasterCategoryId = getReferenceId(item.masterCategoryId);
       const nextCategoryId = getReferenceId(item.categoryId);
       const nextSubcategoryId = getReferenceId(item.subcategoryId);
-      const nextBrandIds = getReferenceIds(item.brandId);
-      const nextModelIds = getReferenceIds(item.modelId);
+      const nextBrandId = getReferenceId(
+        Array.isArray(item.brandId) ? item.brandId[0] : item.brandId
+      );
+      const nextModelId = getReferenceId(
+        Array.isArray(item.modelId) ? item.modelId[0] : item.modelId
+      );
 
       setItemName(nextItemName);
       setItemModelNumber(nextItemModelNumber);
@@ -964,8 +1132,8 @@ const fetchExistingProduct = useEffectEvent(
       setMasterCategoryId(nextMasterCategoryId);
       setCategoryId(nextCategoryId);
       setSubcategoryId(nextSubcategoryId);
-      setBrandIds(nextBrandIds);
-      setModelIds(nextModelIds);
+      setBrandId(nextBrandId);
+      setModelId(nextModelId);
 
       skipNextPresetSyncRef.current = true;
       setCategoryMappingMode(resolveCategoryMappingMode(item));
@@ -1168,12 +1336,16 @@ useEffect(() => {
   }, [compatibilityBrandSearch]);
 
   useEffect(() => {
-    setModelIds((prev) =>
-      prev.filter((id) =>
-        availablePrimaryModelOptions.some((item) => item._id === id)
-      )
+    if (!modelId) return;
+
+    const exists = availablePrimaryModelOptions.some(
+      (item) => item._id === modelId
     );
-  }, [availablePrimaryModelOptions]);
+
+    if (!exists) {
+      setModelId("");
+    }
+  }, [availablePrimaryModelOptions, modelId]);
 
   async function fetchMasterCategories() {
     try {
@@ -1378,20 +1550,20 @@ useEffect(() => {
     setOpenDropdown(null);
   }
 
-  function handlePrimaryBrandChange(values: string[]) {
-    setBrandIds(values);
-    setModelIds((prev) =>
-      prev.filter((id) =>
-        models.some(
-          (item) =>
-            item._id === id && values.includes(getBrandIdFromModel(item))
-        )
-      )
+  function handlePrimaryBrandChange(value: string) {
+    setBrandId(value);
+
+    const currentModelStillValid = models.some(
+      (item) => item._id === modelId && getBrandIdFromModel(item) === value
     );
+
+    if (!currentModelStillValid) {
+      setModelId("");
+    }
   }
 
-  function handlePrimaryModelChange(values: string[]) {
-    setModelIds(values);
+  function handlePrimaryModelChange(value: string) {
+    setModelId(value);
   }
 
   function updateVariant(
@@ -2249,13 +2421,13 @@ useEffect(() => {
       return false;
     }
 
-    if (!brandIds.length) {
-      toast.error("Please select at least one brand");
+    if (!brandId) {
+      toast.error("Please select product brand");
       return false;
     }
 
-    if (!modelIds.length) {
-      toast.error("Please select at least one model");
+    if (!usesCompatibilityMapping && !modelId) {
+      toast.error("Please select model");
       return false;
     }
 
@@ -2384,8 +2556,8 @@ useEffect(() => {
       masterCategoryId,
       categoryId,
       subcategoryId,
-      brandId: brandIds,
-      modelId: modelIds,
+      brandId: brandId as unknown as ProductPayload["brandId"],
+      modelId: (usesCompatibilityMapping ? null : modelId) as unknown as ProductPayload["modelId"],
       images: usesProductMediaInformation ? buildMediaPayload(productImages) : [],
       videos: usesProductMediaInformation ? buildMediaPayload(productVideos) : [],
       compatible: usesVariantCompatibilityMapping
@@ -2729,127 +2901,67 @@ useEffect(() => {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
-                <div className="mb-3 flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                    <Tags className="h-5 w-5" />
-                  </div>
+              <SearchableSingleSelectCard
+                title="Brands"
+                description="Select one brand for this product."
+                icon={Tags}
+                iconClassName="bg-violet-100 text-violet-600"
+                label="Brand"
+                placeholder="Select brand"
+                disabled={submitting}
+                loading={loadingBrands}
+                options={filteredBrandOptions.map((item) => ({
+                  _id: item._id,
+                  name: item.name,
+                }))}
+                value={brandId}
+                selectedName={selectedBrandName}
+                search={searchMap.brandId}
+                open={openDropdown === "brandId"}
+                emptyText="No brands found"
+                onToggle={() => handleToggleDropdown("brandId")}
+                onSearchChange={(value) => handleSearchChange("brandId", value)}
+                onSelect={(value) => {
+                  handlePrimaryBrandChange(value);
+                  handleSearchChange("brandId", "");
+                  setOpenDropdown(null);
+                }}
+                dropdownRef={brandDropdownRef}
+                searchInputRef={brandSearchInputRef}
+              />
 
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Brands
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      Select one or more brands for this product mapping.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <TopLabelInput
-                    label="Brand Search"
-                    value={searchMap.brandId}
-                    onChange={(e) =>
-                      handleSearchChange("brandId", e.target.value)
-                    }
-                    placeholder="Search brands"
-                    disabled={submitting || loadingBrands}
-                  />
-
-                  <ModelCheckboxSelector
-                    options={filteredBrandOptions.map((item) => ({
-                      _id: item._id,
-                      name: item.name,
-                    }))}
-                    values={brandIds}
-                    onChange={handlePrimaryBrandChange}
-                    disabled={submitting || loadingBrands}
-                    emptyText="No brands found"
-                    allLabel="Select all brands"
-                  />
-
-                  {selectedBrandNames.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedBrandNames.map((name) => (
-                        <span
-                          key={name}
-                          className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"
-                        >
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
-                <div className="mb-3 flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                    <Cpu className="h-5 w-5" />
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Models
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      Select one or more models from the chosen brands.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <TopLabelInput
-                    label="Model Search"
-                    value={searchMap.modelId}
-                    onChange={(e) =>
-                      handleSearchChange("modelId", e.target.value)
-                    }
-                    placeholder={
-                      brandIds.length
-                        ? "Search models"
-                        : "Select brands first to load models"
-                    }
-                    disabled={
-                      submitting || loadingModels || brandIds.length === 0
-                    }
-                  />
-
-                  <ModelCheckboxSelector
-                    options={filteredPrimaryModelOptions.map((item) => ({
-                      _id: item._id,
-                      name: item.name,
-                    }))}
-                    values={modelIds}
-                    onChange={handlePrimaryModelChange}
-                    disabled={
-                      submitting || loadingModels || brandIds.length === 0
-                    }
-                    emptyText={
-                      brandIds.length
-                        ? "No models found for the selected brands"
-                        : "Select at least one brand to choose models"
-                    }
-                    allLabel="Select all models"
-                  />
-
-                  {selectedModelNames.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedModelNames.map((name) => (
-                        <span
-                          key={name}
-                          className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
-                        >
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+              <SearchableSingleSelectCard
+                title="Models"
+                description="Select one model from the chosen brand."
+                icon={Cpu}
+                iconClassName="bg-sky-100 text-sky-600"
+                label="Model"
+                placeholder={brandId ? "Select model" : "Select brand first"}
+                disabled={submitting || !brandId}
+                loading={loadingModels}
+                options={filteredPrimaryModelOptions.map((item) => ({
+                  _id: item._id,
+                  name: item.name,
+                }))}
+                value={modelId}
+                selectedName={selectedModelName}
+                search={searchMap.modelId}
+                open={openDropdown === "modelId"}
+                emptyText={brandId ? "No models found" : "Select brand to choose model"}
+                onToggle={() => {
+                  if (!brandId) return;
+                  handleToggleDropdown("modelId");
+                }}
+                onSearchChange={(value) => handleSearchChange("modelId", value)}
+                onSelect={(value) => {
+                  handlePrimaryModelChange(value);
+                  handleSearchChange("modelId", "");
+                  setOpenDropdown(null);
+                }}
+                dropdownRef={modelDropdownRef}
+                searchInputRef={modelSearchInputRef}
+              />
             </div>
-
           </section>
 
           {usesProductMediaInformation ? (

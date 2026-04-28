@@ -246,6 +246,18 @@ function isWarehouseRetailShop(shop?: ShopItem | null) {
   return normalizeValue(shop?.shopType) === "WAREHOUSE_RETAIL_SHOP";
 }
 
+function isWholesaleShop(shop?: ShopItem | null) {
+  return normalizeValue(shop?.shopType) === "WHOLESALE_SHOP";
+}
+
+function canShowMyShopProduct(shop?: ShopItem | null) {
+  return isWarehouseRetailShop(shop) || isWholesaleShop(shop);
+}
+
+function canShowShopManagement(shop?: ShopItem | null) {
+  return isWarehouseRetailShop(shop);
+}
+
 function resolveDefaultShopForSidebar(shops: ShopItem[], storedId?: string) {
   if (!shops.length) return null;
 
@@ -257,15 +269,15 @@ function resolveDefaultShopForSidebar(shops: ShopItem[], storedId?: string) {
     if (matchedStoredShop) return matchedStoredShop;
   }
 
-  const warehouseRetailShop = shops.find((shop) =>
-    isWarehouseRetailShop(shop)
-  );
+  const warehouseRetailShop = shops.find((shop) => isWarehouseRetailShop(shop));
 
   if (warehouseRetailShop) return warehouseRetailShop;
 
-  const mainWarehouseShop = shops.find((shop) =>
-    Boolean(shop.isMainWarehouse)
-  );
+  const wholesaleShop = shops.find((shop) => isWholesaleShop(shop));
+
+  if (wholesaleShop) return wholesaleShop;
+
+  const mainWarehouseShop = shops.find((shop) => Boolean(shop.isMainWarehouse));
 
   if (mainWarehouseShop) return mainWarehouseShop;
 
@@ -298,19 +310,25 @@ export default function AppSidebar({ role }: AppSidebarProps) {
   const authUser = (user ?? {}) as AuthUser;
   const items = useMemo(() => SIDEBAR_MENU[role] ?? [], [role]);
   const currentRole = normalizeRole(authUser.role || role);
+
   const [selectedShop, setSelectedShop] = useState<ShopItem | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+
   const visibleItems = useMemo(() => {
     if (currentRole !== "SHOP_OWNER") {
       return items;
     }
 
     return items.filter((item) => {
-      if (item.label !== "Shop Management") {
-        return true;
+      if (item.label === "Shop Management") {
+        return canShowShopManagement(selectedShop);
       }
 
-      return isWarehouseRetailShop(selectedShop);
+      if (item.label === "My Shop Product") {
+        return canShowMyShopProduct(selectedShop);
+      }
+
+      return true;
     });
   }, [currentRole, items, selectedShop]);
 
@@ -446,9 +464,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         const shopListEntry = getSummaryEntry("shop_list");
 
         if (!shopListEntry) {
-          if (!ignore) {
-            setSidebarLoading(false);
-          }
+          if (!ignore) setSidebarLoading(false);
           return;
         }
 
@@ -463,9 +479,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         );
 
         if (!shopListRes.ok) {
-          if (!ignore) {
-            setSidebarLoading(false);
-          }
+          if (!ignore) setSidebarLoading(false);
           return;
         }
 
@@ -473,6 +487,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         let shops = readShopList(shopListJson);
 
         const ownerId = getId(selfUser?._id) || getId(selfUser?.id);
+
         const allowedShopIds = Array.isArray(selfUser?.shopIds)
           ? selfUser.shopIds.map((item) => getId(item)).filter(Boolean)
           : [];
@@ -486,7 +501,11 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
             const shopId = String(shop._id || "");
 
-            if (ownerId && shopOwnerId && String(shopOwnerId) === String(ownerId)) {
+            if (
+              ownerId &&
+              shopOwnerId &&
+              String(shopOwnerId) === String(ownerId)
+            ) {
               return true;
             }
 
@@ -497,8 +516,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
             return false;
           });
         } else {
-          const currentShopId =
-            getId(selfUser?.shopId) || getId(authUser.shopId);
+          const currentShopId = getId(selfUser?.shopId) || getId(authUser.shopId);
 
           shops = currentShopId
             ? shops.filter((shop) => String(shop._id) === String(currentShopId))
