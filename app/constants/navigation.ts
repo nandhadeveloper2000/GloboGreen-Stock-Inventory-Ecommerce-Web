@@ -90,13 +90,15 @@ const MASTER_ADMIN_MENU: NavItem[] = [
 
 const SHOP_OWNER_MENU: NavItem[] = [
   { label: "Dashboard", href: "/shopowner/dashboard" },
-    {
+
+  {
     label: "Shop Staff Management",
     children: [
       { label: "Create Shop Staff", href: "/shopowner/shopstaff/create" },
       { label: "Shop Staff List", href: "/shopowner/shopstaff/list" },
     ],
   },
+
   {
     label: "Shop Management",
     children: [
@@ -104,6 +106,7 @@ const SHOP_OWNER_MENU: NavItem[] = [
       { label: "Shop List", href: "/shopowner/shopprofile/list" },
     ],
   },
+
   {
     label: "Supplier / Vendor",
     children: [
@@ -111,7 +114,46 @@ const SHOP_OWNER_MENU: NavItem[] = [
       { label: "Vendor List", href: "/shopowner/vendors/list" },
     ],
   },
-    {
+
+  {
+    label: "My Category",
+    children: [
+      { label: "Add My Category", href: "/shopowner/my-category/create" },
+      { label: "My Category List", href: "/shopowner/my-category/list" },
+    ],
+  },
+
+  {
+    label: "My Subcategory",
+    children: [
+      {
+        label: "Add My Subcategory",
+        href: "/shopowner/my-subcategory/create",
+      },
+      {
+        label: "My Subcategory List",
+        href: "/shopowner/my-subcategory/list",
+      },
+    ],
+  },
+
+  {
+    label: "My Brand",
+    children: [
+      { label: "Add My Brand", href: "/shopowner/my-brand/create" },
+      { label: "My Brand List", href: "/shopowner/my-brand/list" },
+    ],
+  },
+
+  {
+    label: "My Model",
+    children: [
+      { label: "Add My Model", href: "/shopowner/my-model/create" },
+      { label: "My Model List", href: "/shopowner/my-model/list" },
+    ],
+  },
+
+  {
     label: "My Shop Product",
     children: [
       { label: "Add Shop Product", href: "/shopowner/myshoppage/create" },
@@ -119,6 +161,13 @@ const SHOP_OWNER_MENU: NavItem[] = [
     ],
   },
 
+  {
+    label: "Purchase",
+    children: [
+      { label: "Create Purchase", href: "/shopowner/purchase/create" },
+      { label: "Purchase List", href: "/shopowner/purchase/list" },
+    ],
+  },
 ];
 
 const SHOP_MANAGER_MENU: NavItem[] = [

@@ -446,7 +446,7 @@ export default function ShopStaffListPage() {
           </div>
 
           {!selectedShopId ? (
-            <div className="mt-6 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+            <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-700">
                 <Store className="h-7 w-7" />
               </div>
@@ -456,7 +456,7 @@ export default function ShopStaffListPage() {
               </p>
             </div>
           ) : filteredList.length === 0 ? (
-            <div className="mt-6 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+            <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-700">
                 <Users2 className="h-7 w-7" />
               </div>

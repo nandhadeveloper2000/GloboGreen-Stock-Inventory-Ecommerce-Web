@@ -645,6 +645,218 @@ vendors: {
     method: "get",
   }),
 },
+purchase_list: {
+  method: "GET",
+  url: (shopId: string) => `/api/purchase/${shopId}`,
+},
+
+purchase_detail: {
+  method: "GET",
+  url: (shopId: string, id: string) => `/api/purchase/${shopId}/${id}`,
+},
+
+purchase_create: {
+  method: "POST",
+  url: (shopId: string) => `/api/purchase/${shopId}`,
+},
+
+purchase_update: {
+  method: "PUT",
+  url: (shopId: string, id: string) => `/api/purchase/${shopId}/${id}`,
+},
+
+purchase_cancel: {
+  method: "PATCH",
+  url: (shopId: string, id: string) =>
+    `/api/purchase/${shopId}/${id}/cancel`,
+},
+
+
+  /* ===================== SHOP CATEGORY MAPS ===================== */
+shopCategoryMapList: {
+  method: "GET",
+  url: `${API_BASE}/shop-category-maps`,
+},
+
+shopCategoryMapCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-category-maps`,
+},
+
+shopCategoryMapBulkCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-category-maps/bulk`,
+},
+
+shopCategoryMapByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-category-maps/shop/${shopId}`,
+},
+
+shopCategoryMapById: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/shop-category-maps/${id}`,
+},
+
+shopCategoryMapUpdate: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-category-maps/${id}`,
+},
+
+shopCategoryMapToggleActive: {
+  method: "PATCH",
+  url: (id: string) =>
+    `${API_BASE}/shop-category-maps/${id}/toggle-active`,
+},
+
+shopCategoryMapDelete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/shop-category-maps/${id}`,
+},
+
+shopCategoriesByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-category-maps/shop/${shopId}`,
+},
+
+/* ===================== SHOP SUB CATEGORY MAPS ===================== */
+shopSubCategoryMapList: {
+  method: "GET",
+  url: `${API_BASE}/shop-sub-category-maps`,
+},
+
+shopSubCategoryMapCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-sub-category-maps`,
+},
+
+shopSubCategoryMapBulkCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-sub-category-maps/bulk`,
+},
+
+shopSubCategoryMapByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-sub-category-maps/shop/${shopId}`,
+},
+
+shopSubCategoryMapById: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/shop-sub-category-maps/${id}`,
+},
+
+shopSubCategoryMapUpdate: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-sub-category-maps/${id}`,
+},
+
+shopSubCategoryMapToggleActive: {
+  method: "PATCH",
+  url: (id: string) =>
+    `${API_BASE}/shop-sub-category-maps/${id}/toggle-active`,
+},
+
+shopSubCategoryMapDelete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/shop-sub-category-maps/${id}`,
+},
+
+shopSubCategoriesByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-sub-category-maps/shop/${shopId}`,
+},
+
+/* ===================== SHOP BRAND MAPS ===================== */
+shopBrandMapList: {
+  method: "GET",
+  url: `${API_BASE}/shop-brand-maps`,
+},
+
+shopBrandMapCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-brand-maps`,
+},
+
+shopBrandMapBulkCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-brand-maps/bulk`,
+},
+
+shopBrandMapByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-brand-maps/shop/${shopId}`,
+},
+
+shopBrandMapById: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/shop-brand-maps/${id}`,
+},
+
+shopBrandMapUpdate: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-brand-maps/${id}`,
+},
+
+shopBrandMapToggleActive: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-brand-maps/${id}/toggle-active`,
+},
+
+shopBrandMapDelete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/shop-brand-maps/${id}`,
+},
+
+shopBrandsByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-brand-maps/shop/${shopId}`,
+},
+
+/* ===================== SHOP MODEL MAPS ===================== */
+shopModelMapList: {
+  method: "GET",
+  url: `${API_BASE}/shop-model-maps`,
+},
+
+shopModelMapCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-model-maps`,
+},
+
+shopModelMapBulkCreate: {
+  method: "POST",
+  url: `${API_BASE}/shop-model-maps/bulk`,
+},
+
+shopModelMapByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-model-maps/shop/${shopId}`,
+},
+
+shopModelMapById: {
+  method: "GET",
+  url: (id: string) => `${API_BASE}/shop-model-maps/${id}`,
+},
+
+shopModelMapUpdate: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-model-maps/${id}`,
+},
+
+shopModelMapToggleActive: {
+  method: "PATCH",
+  url: (id: string) => `${API_BASE}/shop-model-maps/${id}/toggle-active`,
+},
+
+shopModelMapDelete: {
+  method: "DELETE",
+  url: (id: string) => `${API_BASE}/shop-model-maps/${id}`,
+},
+
+shopModelsByShop: {
+  method: "GET",
+  url: (shopId: string) => `${API_BASE}/shop-model-maps/shop/${shopId}`,
+},
 };
 
 export default SummaryApi;

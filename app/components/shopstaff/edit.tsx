@@ -1345,7 +1345,7 @@ setIdProofPreview(staff.idProofUrl || staff.idProof?.url || "");
                 </div>
               </div>
 
-              <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-5">
+              <section className="rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-5">
                 <SectionHeader
                   icon={<MapPin className="h-5 w-5" />}
                   title="Address Details"
@@ -1536,7 +1536,7 @@ setIdProofPreview(staff.idProofUrl || staff.idProof?.url || "");
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="inline-flex items-center gap-2 text-sm text-slate-500">
                 <Sparkles className="h-4 w-4 text-violet-600" />

@@ -24,7 +24,7 @@ export default function RootLayout({
                 title: "!text-sm !font-semibold !text-slate-900",
                 description: "!text-xs !text-slate-600",
                 actionButton:
-                  "!bg-[var(--primary)] !text-white !rounded-xl",
+                  "!bg-primary !text-white !rounded-xl",
                 cancelButton:
                   "!bg-slate-100 !text-slate-700 !rounded-xl",
                 success:

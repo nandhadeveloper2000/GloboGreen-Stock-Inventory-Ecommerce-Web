@@ -574,7 +574,7 @@ export default function SubCategoryListPage() {
                   return (
                     <div
                       key={itemId || item.nameKey}
-                      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
+                      className="overflow-hidden rounded-card border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
                     >
                       <div className="p-5">
                         <div className="flex items-start gap-4">

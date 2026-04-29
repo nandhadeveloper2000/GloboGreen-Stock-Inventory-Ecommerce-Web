@@ -95,8 +95,8 @@ export type VariantItem = {
 export type ProductPayload = {
   configurationMode: CategoryMappingMode;
   itemName: string;
-  itemModelNumber: string;
-  itemKey: string;
+  sku: string;
+  hsnCode: string;
   description: string;
   searchKeys: string[];
   masterCategoryId: string;

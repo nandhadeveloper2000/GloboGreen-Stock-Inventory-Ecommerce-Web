@@ -125,7 +125,7 @@ function StatCard({
   iconWrapClassName: string;
 }) {
   return (
-    <div className="premium-card-solid rounded-[28px] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+    <div className="premium-card-solid rounded-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{title}</p>
@@ -718,7 +718,7 @@ export default function BrandListPage() {
                   return (
                     <div
                       key={itemId || `card-${index}`}
-                      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
+                      className="overflow-hidden rounded-card border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
                     >
                       <div className="p-5">
                         <div className="mb-4 flex items-center justify-between">

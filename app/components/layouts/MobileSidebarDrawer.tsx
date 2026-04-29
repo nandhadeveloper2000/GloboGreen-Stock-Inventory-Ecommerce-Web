@@ -179,7 +179,7 @@ export default function MobileSidebarDrawer({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-10 w-10 rounded-2xl text-secondary-text transition-all hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+            className="h-10 w-10 rounded-2xl text-secondary-text transition-all hover:bg-primary-soft hover:text-primary"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -203,7 +203,7 @@ export default function MobileSidebarDrawer({
                       "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                       parentActive
                         ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(236,6,119,0.18)]"
-                        : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                        : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                     )}
                   >
                     <span
@@ -211,7 +211,7 @@ export default function MobileSidebarDrawer({
                         "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                         parentActive
                           ? "bg-white/15 text-white"
-                          : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                          : "bg-primary-soft text-primary group-hover:bg-primary-light"
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -230,16 +230,16 @@ export default function MobileSidebarDrawer({
                     className={cn(
                       "group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200",
                       parentActive || isOpen
-                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                        : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                        ? "bg-primary-soft text-primary"
+                        : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                         parentActive || isOpen
-                          ? "bg-white text-[var(--primary)] shadow-sm"
-                          : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                          ? "bg-white text-primary shadow-sm"
+                          : "bg-primary-soft text-primary group-hover:bg-primary-light"
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -270,7 +270,7 @@ export default function MobileSidebarDrawer({
                               "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                               childActive
                                 ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(236,6,119,0.16)]"
-                                : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                                : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                             )}
                           >
                             <span
@@ -278,7 +278,7 @@ export default function MobileSidebarDrawer({
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
                                 childActive
                                   ? "bg-white/15 text-white"
-                                  : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                                  : "bg-primary-soft text-primary group-hover:bg-primary-light"
                               )}
                             >
                               <ChildIcon className="h-4 w-4" />

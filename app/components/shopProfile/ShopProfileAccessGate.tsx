@@ -83,7 +83,7 @@ export default function ShopProfileAccessGate({
   ) {
     return (
       <div className="page-shell">
-        <div className="mx-auto w-full max-w-4xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mx-auto w-full max-w-4xl rounded-card border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
             <ShieldAlert className="h-7 w-7" />
           </div>

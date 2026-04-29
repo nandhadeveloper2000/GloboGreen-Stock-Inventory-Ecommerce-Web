@@ -199,8 +199,8 @@ export default function ChangePin() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
       <div className="w-full max-w-md">
-        <Card className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          <div className="h-1.5 w-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]" />
+        <Card className="overflow-hidden rounded-card border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <div className="h-1.5 w-full bg-linear-to-r from-primary to-secondary" />
 
           <CardHeader className="space-y-3 px-6 pb-2 pt-6">
             <div className="flex items-start justify-between gap-3">
@@ -213,7 +213,7 @@ export default function ChangePin() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-r from-primary to-secondary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function ChangePin() {
                     inputMode="numeric"
                     maxLength={6}
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                   <button
                     type="button"
@@ -270,7 +270,7 @@ export default function ChangePin() {
                     inputMode="numeric"
                     maxLength={6}
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                   <button
                     type="button"
@@ -303,7 +303,7 @@ export default function ChangePin() {
                     inputMode="numeric"
                     maxLength={6}
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-12 text-sm tracking-[0.24em] text-slate-900 outline-none transition placeholder:tracking-normal focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                   <button
                     type="button"
@@ -323,7 +323,7 @@ export default function ChangePin() {
               <div className="flex items-center justify-start">
                 <Link
                   href={backPath}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-[var(--primary)] transition hover:text-[var(--accent)]"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-primary transition hover:text-secondary"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -333,7 +333,7 @@ export default function ChangePin() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="group h-12 w-full rounded-2xl border-0 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-12 w-full rounded-2xl border-0 bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span className="flex items-center justify-center gap-2">
                   {loading ? "Updating..." : "Change PIN"}

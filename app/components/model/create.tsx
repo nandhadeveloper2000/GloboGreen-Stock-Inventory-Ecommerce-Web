@@ -310,7 +310,7 @@ export default function CreateModelPage() {
         </section>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <BadgePlus className="h-5 w-5" />
@@ -421,7 +421,7 @@ export default function CreateModelPage() {
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"

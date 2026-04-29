@@ -702,7 +702,7 @@ export default function ShopListPage() {
           </div>
         </section>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
@@ -794,7 +794,7 @@ export default function ShopListPage() {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Link
                                     href={`${shopBasePath}/view?id=${shop._id}`}
-                                    className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-[color:var(--primary)]"
+                                    className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-primary"
                                     title={shop.name || "Shop"}
                                   >
                                     {shop.name || "Shop"}
@@ -1012,7 +1012,7 @@ export default function ShopListPage() {
                                         <div className="flex flex-wrap items-center gap-2">
                                           <Link
                                             href={`${shopBasePath}/view?id=${shop._id}`}
-                                            className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-[color:var(--primary)]"
+                                            className="max-w-[220px] truncate font-semibold text-slate-900 transition hover:text-primary"
                                             title={shop.name || "Shop"}
                                           >
                                             {shop.name || "Shop"}

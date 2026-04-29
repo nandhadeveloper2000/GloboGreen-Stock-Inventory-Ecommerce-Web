@@ -1279,7 +1279,7 @@ export default function EditTeamMemberPage() {
         </section>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <SectionHeader
               icon={<User2 className="h-5 w-5" />}
               title="Basic Information"
@@ -1366,7 +1366,7 @@ export default function EditTeamMemberPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
@@ -1531,7 +1531,7 @@ export default function EditTeamMemberPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <SectionHeader
               icon={<UploadCloud className="h-5 w-5" />}
               title="Profile Uploads"
@@ -1673,7 +1673,7 @@ export default function EditTeamMemberPage() {
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="inline-flex items-center gap-2 text-sm text-slate-500">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />

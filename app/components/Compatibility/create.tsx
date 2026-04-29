@@ -933,7 +933,7 @@ export default function ProductCompatibilityCreatePage({
 
         <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-12">
           <div className="lg:col-span-8 space-y-5">
-            <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <section className="premium-card-solid rounded-card p-4 md:p-5">
               <div className="mb-5 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                   <Shapes className="h-5 w-5" />
@@ -973,7 +973,7 @@ export default function ProductCompatibilityCreatePage({
               </div>
             </section>
 
-            <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+            <section className="premium-card-solid rounded-card p-4 md:p-5">
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
@@ -1151,7 +1151,7 @@ export default function ProductCompatibilityCreatePage({
           </div>
 
           <div className="lg:col-span-4">
-            <section className="premium-card-solid sticky top-24 rounded-[28px] p-4 md:p-5">
+            <section className="premium-card-solid sticky top-24 rounded-card p-4 md:p-5">
               <div className="mb-5 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                   <ShieldCheck className="h-5 w-5" />

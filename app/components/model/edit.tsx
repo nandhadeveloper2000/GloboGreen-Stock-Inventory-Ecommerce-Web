@@ -424,7 +424,7 @@ export default function ModelEditPage() {
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-5 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-5 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="text-sm text-slate-500">
                 Save the updated model name and brand assignment.

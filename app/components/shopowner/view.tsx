@@ -551,7 +551,7 @@ export default function ShopOwnerViewPage() {
     return (
       <div className="page-shell">
         <div className="mx-auto flex min-h-80 w-full max-w-7xl items-center justify-center">
-          <div className="premium-card-solid flex w-full max-w-xl items-center gap-4 rounded-[28px] p-6">
+          <div className="premium-card-solid flex w-full max-w-xl items-center gap-4 rounded-card p-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
@@ -697,7 +697,7 @@ export default function ShopOwnerViewPage() {
           </Link>
         </div>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <SectionHeader
             icon={<User2 className="h-5 w-5" />}
             title="Basic Information"
@@ -726,7 +726,7 @@ export default function ShopOwnerViewPage() {
           </div>
         </section>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <SectionHeader
             icon={<MapPin className="h-5 w-5" />}
             title="Address Details"
@@ -750,7 +750,7 @@ export default function ShopOwnerViewPage() {
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <SectionHeader
               icon={<FileBadge2 className="h-5 w-5" />}
               title="Documents"
@@ -887,7 +887,7 @@ export default function ShopOwnerViewPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <SectionHeader
               icon={<ShoppingBag className="h-5 w-5" />}
               title="Linked Shops"

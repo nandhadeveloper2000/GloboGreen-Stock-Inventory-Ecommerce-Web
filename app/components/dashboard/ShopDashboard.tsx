@@ -305,7 +305,7 @@ function StatCard({
 }) {
   return (
     <div className="rounded-[22px] border border-[rgba(15,23,42,0.08)] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
         <Icon className="h-5 w-5" />
       </div>
 
@@ -335,7 +335,7 @@ function MiniMetricCard({
 }) {
   return (
     <div className="rounded-[20px] border border-[rgba(15,23,42,0.08)] bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
         <Icon className="h-5 w-5" />
       </div>
 
@@ -700,7 +700,7 @@ export default function ShopDashboard() {
 
   return (
     <section className="space-y-5">
-      <section className="premium-hero premium-glow relative overflow-hidden rounded-[28px] px-5 py-5 md:px-6 md:py-6">
+      <section className="premium-hero premium-glow relative overflow-hidden rounded-card px-5 py-5 md:px-6 md:py-6">
         <div className="premium-grid-bg premium-bg-animate opacity-40" />
         <div className="premium-bg-overlay" />
 
@@ -722,7 +722,7 @@ export default function ShopDashboard() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="min-w-[210px] rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+            <div className="min-w-52.5 rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                   <Store className="h-5 w-5" />
@@ -742,7 +742,7 @@ export default function ShopDashboard() {
               </div>
             </div>
 
-            <div className="min-w-[210px] rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+            <div className="min-w-52.5 rounded-[22px] border border-white/25 bg-white/10 px-4 py-3 text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] backdrop-blur-xl">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                   <ShieldCheck className="h-5 w-5" />
@@ -798,7 +798,7 @@ export default function ShopDashboard() {
         />
       </section>
 
-      <section className="rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-[0_16px_44px_rgba(15,23,42,0.05)] md:p-6">
+      <section className="rounded-card border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-[0_16px_44px_rgba(15,23,42,0.05)] md:p-6">
         <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-slate-500">
@@ -834,7 +834,7 @@ export default function ShopDashboard() {
                 <Button
                   type="button"
                   onClick={() => setSwitchMenuOpen((prev) => !prev)}
-                  className="h-10 rounded-xl bg-[var(--primary)] px-4 text-white hover:bg-[var(--primary-dark)]"
+                  className="h-10 rounded-xl bg-primary px-4 text-white hover:bg-primary-dark"
                 >
                   <Store className="mr-2 h-4 w-4" />
                   Switch Shop
@@ -862,7 +862,7 @@ export default function ShopDashboard() {
                             disabled={isSwitching}
                             className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition ${
                               isActive
-                                ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                                ? "bg-primary-soft text-primary"
                                 : "hover:bg-slate-50"
                             }`}
                           >
@@ -895,7 +895,7 @@ export default function ShopDashboard() {
 
         <div className="mt-5">
           {loading ? (
-            <div className="flex min-h-[220px] items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50">
+            <div className="flex min-h-55 items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50">
               <div className="flex items-center gap-3 text-slate-500">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm font-medium">Loading dashboard...</span>
@@ -903,7 +903,7 @@ export default function ShopDashboard() {
             </div>
           ) : selectedShop ? (
             <div className="space-y-5">
-              <div className="rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)] md:p-5">
+              <div className="rounded-3xl border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)] md:p-5">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="flex min-w-0 items-start gap-4">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
@@ -916,7 +916,7 @@ export default function ShopDashboard() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[var(--primary-soft)] text-[var(--primary)]">
+                        <div className="flex h-full w-full items-center justify-center bg-primary-soft text-primary">
                           <Store className="h-6 w-6" />
                         </div>
                       )}
@@ -940,7 +940,7 @@ export default function ShopDashboard() {
                       </div>
 
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[var(--primary-soft)] px-3 py-1 text-xs font-bold text-[var(--primary)]">
+                        <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
                           {shopTypeLabel}
                         </span>
 
@@ -1021,8 +1021,8 @@ export default function ShopDashboard() {
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)]">
+            <div className="flex min-h-55 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                 <Store className="h-6 w-6" />
               </div>
 

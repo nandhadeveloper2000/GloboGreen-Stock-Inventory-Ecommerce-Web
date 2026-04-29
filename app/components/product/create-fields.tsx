@@ -64,7 +64,7 @@ export function ProductDropdown({
           type="button"
           onClick={() => onToggle(config.key)}
           disabled={config.loading || config.disabled}
-          className="flex h-14 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 pb-2 pt-6 text-left text-sm text-slate-900 shadow-sm transition outline-none focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-left text-sm text-slate-900 shadow-sm transition outline-none focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
         >
           <div className="flex min-w-0 items-center gap-3">
             <Icon className="h-4 w-4 shrink-0 text-slate-400" />
@@ -82,7 +82,7 @@ export function ProductDropdown({
           />
         </button>
 
-        <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
+        <label className="pointer-events-none absolute left-3 top-1.5 bg-white px-1 text-[10px] font-semibold leading-none text-slate-500">
           {config.label} <span className="text-rose-500">*</span>
         </label>
 

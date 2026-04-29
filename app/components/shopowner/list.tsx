@@ -410,7 +410,7 @@ export default function ShopOwnerListPage() {
           </div>
         </section>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
@@ -518,7 +518,7 @@ export default function ShopOwnerListPage() {
                           </td>
 
                           <td className="px-5 py-4">
-                            <p className="min-w-[180px] break-words font-semibold text-slate-900">
+                            <p className="min-w-[180px] wrap-break-word font-semibold text-slate-900">
                               {item.name || "-"}
                             </p>
                           </td>

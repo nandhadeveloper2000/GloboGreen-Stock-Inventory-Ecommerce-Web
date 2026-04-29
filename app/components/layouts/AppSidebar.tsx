@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ChevronDown,
   Building2,
+  ReceiptText,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -105,6 +106,7 @@ function getIcon(label: string) {
   if (label.includes("Dashboard")) return LayoutDashboard;
   if (label.includes("Staff")) return Users;
   if (label.includes("Shop")) return Store;
+  if (label.includes("Purchase")) return ReceiptText;
   if (label.includes("Master Category")) return Layers3;
   if (label.includes("Subcategory")) return Boxes;
   if (label.includes("Category")) return Shapes;
@@ -254,6 +256,10 @@ function canShowMyShopProduct(shop?: ShopItem | null) {
   return isWarehouseRetailShop(shop) || isWholesaleShop(shop);
 }
 
+function canShowPurchase(shop?: ShopItem | null) {
+  return canShowMyShopProduct(shop);
+}
+
 function canShowShopManagement(shop?: ShopItem | null) {
   return isWarehouseRetailShop(shop);
 }
@@ -326,6 +332,10 @@ export default function AppSidebar({ role }: AppSidebarProps) {
 
       if (item.label === "My Shop Product") {
         return canShowMyShopProduct(selectedShop);
+      }
+
+      if (item.label === "Purchase") {
+        return canShowPurchase(selectedShop);
       }
 
       return true;
@@ -603,7 +613,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                 priority
               />
             ) : isShopRole ? (
-              <div className="flex h-full w-full items-center justify-center bg-[var(--primary-soft)] text-[var(--primary)]">
+              <div className="flex h-full w-full items-center justify-center bg-primary-soft text-primary">
                 <Building2 className="h-5 w-5" />
               </div>
             ) : (
@@ -651,7 +661,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                     "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200",
                     parentActive
                       ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(236,6,119,0.18)]"
-                      : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                      : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                   )}
                 >
                   <span
@@ -659,7 +669,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                       parentActive
                         ? "bg-white/15 text-white"
-                        : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                        : "bg-primary-soft text-primary group-hover:bg-primary-light"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -678,16 +688,16 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                   className={cn(
                     "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition-all duration-200",
                     parentActive || isOpen
-                      ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                      : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                      ? "bg-primary-soft text-primary"
+                      : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                   )}
                 >
                   <span
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
                       parentActive || isOpen
-                        ? "bg-white text-[var(--primary)] shadow-sm"
-                        : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                        ? "bg-white text-primary shadow-sm"
+                        : "bg-primary-soft text-primary group-hover:bg-primary-light"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -717,7 +727,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                             "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                             childActive
                               ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(236,6,119,0.16)]"
-                              : "text-secondary-text hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                              : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                           )}
                         >
                           <span
@@ -725,7 +735,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
                               childActive
                                 ? "bg-white/15 text-white"
-                                : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover:bg-[var(--primary-light)]"
+                                : "bg-primary-soft text-primary group-hover:bg-primary-light"
                             )}
                           >
                             <ChildIcon className="h-4 w-4" />
@@ -744,8 +754,8 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       </div>
 
       <div className="border-t border-token px-4 py-4">
-        <div className="rounded-2xl border border-[rgba(46,49,146,0.12)] bg-[var(--primary-soft)] px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]">
+        <div className="rounded-2xl border border-[rgba(46,49,146,0.12)] bg-primary-soft px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
             Secure Access
           </p>
 

@@ -412,8 +412,8 @@ export default function MasterDashboardPage() {
         </div>
 
         {error ? (
-          <div className="flex items-start gap-3 rounded-[18px] border border-(--warning) bg-(--warning-soft) px-4 py-3 text-sm text-(--primary-text)">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-(--warning)" />
+          <div className="flex items-start gap-3 rounded-[18px] border border-warning bg-warning-soft px-4 py-3 text-sm text-primary-text">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div>
               <p className="font-semibold">Some dashboard data could not load.</p>
               <p className="mt-1 text-secondary-text">{error}</p>
@@ -437,7 +437,7 @@ export default function MasterDashboardPage() {
                   className="flex items-center justify-between gap-3 rounded-2xl border border-token bg-soft-token px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--primary-soft) text-(--primary)">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary">
                       <Icon className="h-4 w-4" />
                     </div>
                     <span className="text-heading text-sm font-semibold">{item.label}</span>

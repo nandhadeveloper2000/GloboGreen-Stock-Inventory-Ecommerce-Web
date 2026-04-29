@@ -278,7 +278,7 @@ export default function MasterCategoryListPage() {
         </section>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <section className="premium-card-solid rounded-[28px] p-5">
+          <section className="premium-card-solid rounded-card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Total</p>
@@ -292,7 +292,7 @@ export default function MasterCategoryListPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-5">
+          <section className="premium-card-solid rounded-card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Active</p>
@@ -306,7 +306,7 @@ export default function MasterCategoryListPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-5">
+          <section className="premium-card-solid rounded-card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">Inactive</p>
@@ -321,7 +321,7 @@ export default function MasterCategoryListPage() {
           </section>
         </div>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">

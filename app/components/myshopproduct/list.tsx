@@ -807,7 +807,7 @@ export default function MyShopProductListPage() {
           </div>
         </section>
 
-        <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+        <section className="premium-card-solid rounded-card p-4 md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-slate-950">
@@ -961,7 +961,7 @@ export default function MyShopProductListPage() {
               return (
                 <article
                   key={item._id}
-                  className="premium-card-solid group overflow-hidden rounded-[28px] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]"
+                  className="premium-card-solid group overflow-hidden rounded-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-4">

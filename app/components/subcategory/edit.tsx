@@ -553,7 +553,7 @@ export default function EditSubCategoryPage() {
   if (loading) {
     return (
       <div className="page-shell">
-        <div className="mx-auto flex max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-center rounded-card border border-slate-200 bg-white py-24 shadow-sm">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
             <span className="text-sm font-medium">Loading sub category...</span>
@@ -601,7 +601,7 @@ export default function EditSubCategoryPage() {
         </section>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                 <Tag className="h-5 w-5" />
@@ -723,7 +723,7 @@ export default function EditSubCategoryPage() {
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <div className="mb-5 flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-fuchsia-600">
                 <ImagePlus className="h-6 w-6" />
@@ -748,7 +748,7 @@ export default function EditSubCategoryPage() {
                   onDragOver={handleImageDragOver}
                   onDragLeave={handleImageDragLeave}
                   onDrop={handleImageDrop}
-                  className={`group flex min-h-55 w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 text-center transition ${
+                  className={`group flex min-h-55 w-full cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed px-6 text-center transition ${
                     isDraggingImage
                       ? "border-violet-500 bg-violet-50 shadow-sm"
                       : "border-slate-300 bg-slate-50 hover:border-violet-300 hover:bg-violet-50/40"
@@ -782,7 +782,7 @@ export default function EditSubCategoryPage() {
                 </label>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-card border border-slate-200 bg-slate-50 p-4">
                 <h4 className="mb-4 text-lg font-semibold text-slate-900">
                   Preview
                 </h4>
@@ -830,7 +830,7 @@ export default function EditSubCategoryPage() {
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"

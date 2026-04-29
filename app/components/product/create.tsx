@@ -16,6 +16,7 @@ import {
   Check,
   ChevronDown,
   Cpu,
+  ExternalLink,
   FolderTree,
   Info,
   Layers3,
@@ -28,6 +29,7 @@ import {
   Sparkles,
   Tags,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,7 +37,7 @@ import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
 import {
-  buildAutoModelNumber,
+  buildAutoSku,
   ROWS_PER_PAGE,
   PRODUCT_MEDIA_ACCEPT,
   buildAutoSearchKeys,
@@ -90,9 +92,9 @@ import type {
 type ProductReference =
   | string
   | {
-      _id?: string;
-      name?: string;
-    };
+    _id?: string;
+    name?: string;
+  };
 
 type ProductApiMedia = {
   url?: string;
@@ -141,8 +143,8 @@ type ExistingProductData = {
   _id: string;
   configurationMode?: CategoryMappingMode;
   itemName?: string;
-  itemModelNumber?: string;
-  itemKey?: string;
+sku?: string;
+  hsnCode?: string;
   description?: string;
   searchKeys?: string[];
   masterCategoryId?: ProductReference;
@@ -174,20 +176,14 @@ function getReferenceName(value?: ProductReference | null) {
 }
 
 function toReferenceArray(
-  value?: ProductReference | ProductReference[] | null
+  value?: ProductReference | ProductReference[] | null,
 ): ProductReference[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
 
-function getReferenceIds(value?: ProductReference | ProductReference[] | null) {
-  return toReferenceArray(value)
-    .map((item) => getReferenceId(item))
-    .filter(Boolean);
-}
-
 function getReferenceNames(
-  value?: ProductReference | ProductReference[] | null
+  value?: ProductReference | ProductReference[] | null,
 ) {
   return toReferenceArray(value)
     .map((item) => getReferenceName(item))
@@ -202,7 +198,7 @@ function toTextValue(value: unknown) {
 function createExistingMediaItem(
   media: ProductApiMedia,
   prefix: string,
-  index: number
+  index: number,
 ): ProductMediaItem | null {
   const url = String(media?.url || "").trim();
   if (!url) return null;
@@ -224,50 +220,52 @@ function createExistingMediaItem(
 
 function normalizeExistingMedia(
   value: ProductApiMedia[] | undefined,
-  prefix: string
+  prefix: string,
 ) {
   return Array.isArray(value)
     ? value
-        .map((media, index) => createExistingMediaItem(media, prefix, index))
-        .filter((media): media is ProductMediaItem => Boolean(media))
+      .map((media, index) => createExistingMediaItem(media, prefix, index))
+      .filter((media): media is ProductMediaItem => Boolean(media))
     : [];
 }
 
 function normalizeExistingImages(
   value: ProductApiImage[] | undefined,
-  prefix: string
+  prefix: string,
 ) {
   return normalizeExistingMedia(value, prefix) as ProductImageItem[];
 }
 
 function normalizeExistingVideos(
   value: ProductApiVideo[] | undefined,
-  prefix: string
+  prefix: string,
 ) {
   return normalizeExistingMedia(value, prefix) as ProductVideoItem[];
 }
 
 function normalizeExistingProductInformation(
   sections: NormalizableProductInfoSection[] | undefined,
-  fallbackSections?: NormalizableProductInfoSection[]
+  fallbackSections?: NormalizableProductInfoSection[],
 ) {
   const normalized = Array.isArray(sections)
     ? sections
-        .map((section) => ({
-          title: String(section?.title || ""),
-          fields: Array.isArray(section?.fields) && section.fields.length
+      .map((section) => ({
+        title: String(section?.title || ""),
+        fields:
+          Array.isArray(section?.fields) && section.fields.length
             ? section.fields.map((field) => ({
-                label: String(field?.label || ""),
-                value: toTextValue(field?.value),
-              }))
+              label: String(field?.label || ""),
+              value: toTextValue(field?.value),
+            }))
             : [{ label: "", value: "" }],
-        }))
-        .filter((section) =>
+      }))
+      .filter(
+        (section) =>
           section.title.trim() ||
           section.fields.some(
-            (field) => field.label.trim() || field.value.trim()
-          )
-        )
+            (field) => field.label.trim() || field.value.trim(),
+          ),
+      )
     : [];
 
   if (normalized.length) {
@@ -285,56 +283,63 @@ function normalizeExistingVariants(
   value: ExistingProductVariant[] | undefined,
   fallbackSections?: NormalizableProductInfoSection[],
   brandsList: OptionItem[] = [],
-  fallbackCompatibility?: ExistingCompatibilityItem[]
+  fallbackCompatibility?: ExistingCompatibilityItem[],
 ) {
   const normalized = Array.isArray(value)
     ? value.map((item, index) => ({
-        id: `existing-variant-${index}-${Math.random()
-          .toString(36)
-          .slice(2, 8)}`,
-        title: String(item?.title || ""),
-        description: String(item?.description || ""),
-        attributes:
-          Array.isArray(item?.attributes) && item.attributes.length
-            ? item.attributes.map((attribute, attributeIndex) => ({
-                id: `existing-variant-attribute-${index}-${attributeIndex}-${Math.random()
-                  .toString(36)
-                  .slice(2, 8)}`,
-                label: String(attribute?.label || ""),
-                value: String(attribute?.value || ""),
-              }))
-            : [createVariantAttribute()],
-        images: normalizeExistingImages(item?.images, `variant-${index}`),
-        videos: normalizeExistingVideos(item?.videos, `variant-video-${index}`),
-        compatibility: buildCompatibilityRows(
-          brandsList,
-          item?.compatible?.length ? item.compatible : fallbackCompatibility
-        ),
-        productInformation: normalizeExistingProductInformation(
-          item?.productInformation,
-          fallbackSections
-        ),
-        isActive: item?.isActive !== false,
-      }))
+      id: `existing-variant-${index}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
+      title: String(item?.title || ""),
+      description: String(item?.description || ""),
+      attributes:
+        Array.isArray(item?.attributes) && item.attributes.length
+          ? item.attributes.map((attribute, attributeIndex) => ({
+            id: `existing-variant-attribute-${index}-${attributeIndex}-${Math.random()
+              .toString(36)
+              .slice(2, 8)}`,
+            label: String(attribute?.label || ""),
+            value: String(attribute?.value || ""),
+          }))
+          : [createVariantAttribute()],
+      images: normalizeExistingImages(item?.images, `variant-${index}`),
+      videos: normalizeExistingVideos(item?.videos, `variant-video-${index}`),
+      compatibility: buildCompatibilityRows(
+        brandsList,
+        item?.compatible?.length ? item.compatible : fallbackCompatibility,
+      ),
+      productInformation: normalizeExistingProductInformation(
+        item?.productInformation,
+        fallbackSections,
+      ),
+      isActive: item?.isActive !== false,
+    }))
     : [];
 
   return normalized.length
     ? normalized
-    : [createVariantItem([], buildCompatibilityRows(brandsList, fallbackCompatibility))];
+    : [
+      createVariantItem(
+        [],
+        buildCompatibilityRows(brandsList, fallbackCompatibility),
+      ),
+    ];
 }
 
 function hasSharedMediaData(item?: ExistingProductData | null) {
   return Boolean(
     (item?.images?.length ?? 0) > 0 ||
-      (item?.videos?.length ?? 0) > 0 ||
-      (item?.productInformation?.length ?? 0) > 0
+    (item?.videos?.length ?? 0) > 0 ||
+    (item?.productInformation?.length ?? 0) > 0,
   );
 }
 
 function hasCompatibilityData(item?: ExistingProductData | null) {
   return Boolean(
     (item?.compatible?.length ?? 0) > 0 ||
-      item?.variant?.some((variantItem) => (variantItem?.compatible?.length ?? 0) > 0)
+    item?.variant?.some(
+      (variantItem) => (variantItem?.compatible?.length ?? 0) > 0,
+    ),
   );
 }
 
@@ -343,7 +348,7 @@ function hasVariantData(item?: ExistingProductData | null) {
 }
 
 function resolveCategoryMappingMode(
-  item?: ExistingProductData | null
+  item?: ExistingProductData | null,
 ): CategoryMappingMode {
   if (
     item?.configurationMode === "variant" ||
@@ -375,7 +380,7 @@ function resolveCategoryMappingMode(
 
 function buildCompatibilityRows(
   brandsList: OptionItem[],
-  compatibilityItems: ExistingCompatibilityItem[] | undefined
+  compatibilityItems: ExistingCompatibilityItem[] | undefined,
 ) {
   const compatibilityMap = new Map<
     string,
@@ -415,7 +420,7 @@ function buildCompatibilityRows(
 
 function mergeCompatibilityRowsWithBrands(
   brandsList: OptionItem[],
-  currentRows: CompatibilityTableRow[]
+  currentRows: CompatibilityTableRow[],
 ) {
   const currentMap = new Map(
     currentRows.map((row) => [
@@ -426,7 +431,7 @@ function mergeCompatibilityRowsWithBrands(
         isActive: row.isActive,
         enabled: row.enabled,
       },
-    ])
+    ]),
   );
 
   return brandsList.map((brand) => {
@@ -456,7 +461,7 @@ function hasEnabledCompatibilityRows(rows: CompatibilityTableRow[]) {
 
 function buildInitialManualSearchKeys(item: ExistingProductData) {
   const nextSearchKeys = normalizeSearchKeys(
-    (Array.isArray(item.searchKeys) ? item.searchKeys : []).join(",")
+    (Array.isArray(item.searchKeys) ? item.searchKeys : []).join(","),
   );
   const autoKeys = new Set(
     buildAutoSearchKeys({
@@ -464,16 +469,16 @@ function buildInitialManualSearchKeys(item: ExistingProductData) {
       subcategoryName: getReferenceName(item.subcategoryId),
       brandName: getReferenceNames(item.brandId).join(", "),
       modelName: getReferenceNames(item.modelId).join(", "),
-    })
+    }),
   );
   const excludedKeys = new Set(
     normalizeSearchKeys(
-      [item.itemModelNumber, item.itemKey].filter(Boolean).join(",")
-    )
+      [item.sku].filter(Boolean).join(","),
+    ),
   );
 
   return nextSearchKeys.filter(
-    (key) => !autoKeys.has(key) && !excludedKeys.has(key)
+    (key) => !autoKeys.has(key) && !excludedKeys.has(key),
   );
 }
 
@@ -496,19 +501,19 @@ function getMediaIdentity(item: ProductMediaItem) {
 
 function hasFilledProductInfoSections(sections: ProductInformationSection[]) {
   return sections.some((section) =>
-    section.fields.some((field) => isFilledInfoField(field))
+    section.fields.some((field) => isFilledInfoField(field)),
   );
 }
 
 function hasMeaningfulVariantData(item: VariantItem) {
   return Boolean(
     item.title.trim() ||
-      item.description.trim() ||
-      isFilledVariant(item) ||
-      item.images.length > 0 ||
-      item.videos.length > 0 ||
-      hasEnabledCompatibilityRows(item.compatibility) ||
-      hasFilledProductInfoSections(item.productInformation)
+    item.description.trim() ||
+    isFilledVariant(item) ||
+    item.images.length > 0 ||
+    item.videos.length > 0 ||
+    hasEnabledCompatibilityRows(item.compatibility) ||
+    hasFilledProductInfoSections(item.productInformation),
   );
 }
 
@@ -531,17 +536,11 @@ function classifyProductMediaFile(file: File): "image" | "video" | null {
   const fileType = file.type.toLowerCase();
   const fileName = file.name.toLowerCase();
 
-  if (
-    fileType.startsWith("image/") ||
-    /\.(png|jpe?g|webp)$/.test(fileName)
-  ) {
+  if (fileType.startsWith("image/") || /\.(png|jpe?g|webp)$/.test(fileName)) {
     return "image";
   }
 
-  if (
-    fileType.startsWith("video/") ||
-    /\.(mp4|mov|webm)$/.test(fileName)
-  ) {
+  if (fileType.startsWith("video/") || /\.(mp4|mov|webm)$/.test(fileName)) {
     return "video";
   }
 
@@ -570,7 +569,7 @@ function splitProductMediaFiles(files: FileList | File[] | null) {
       images: [] as File[],
       videos: [] as File[],
       unsupported: [] as string[],
-    }
+    },
   );
 }
 
@@ -584,6 +583,7 @@ function TopLabelInput({
   type = "text",
   maxLength,
   hint,
+  rightAction,
 }: {
   label: string;
   value: string;
@@ -594,9 +594,16 @@ function TopLabelInput({
   type?: string;
   maxLength?: number;
   hint?: string;
+  rightAction?: {
+    label: string;
+    icon: ComponentType<{ className?: string }>;
+    onClick: () => void;
+  };
 }) {
+  const RightIcon = rightAction?.icon;
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <div className="relative">
         <input
           type={type}
@@ -605,15 +612,31 @@ function TopLabelInput({
           placeholder={disabled ? "" : placeholder}
           disabled={disabled}
           maxLength={maxLength}
-          className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 pb-2 pt-6 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          className={[
+            "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+            rightAction ? "pr-11" : "",
+          ].join(" ")}
         />
 
-        <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
+        <label className="pointer-events-none absolute left-3 top-1.5 bg-white px-1 text-[10px] font-semibold leading-none text-slate-500">
           {label} {required ? <span className="text-rose-500">*</span> : null}
         </label>
+
+        {rightAction && RightIcon ? (
+          <button
+            type="button"
+            onClick={rightAction.onClick}
+            disabled={disabled}
+            aria-label={rightAction.label}
+            title={rightAction.label}
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RightIcon className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
-      {hint ? <p className="px-1 text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="px-1 text-[11px] text-slate-500">{hint}</p> : null}
     </div>
   );
 }
@@ -662,21 +685,21 @@ function SearchableSingleSelectCard({
   return (
     <div
       ref={dropdownRef}
-      className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm"
+      className="rounded-3xl border border-slate-200/90 bg-linear-to-br from-white via-white to-slate-50/60 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
     >
-      <div className="mb-4 flex items-start gap-3">
+      <div className="mb-3 flex items-start gap-3">
         <div
           className={[
-            "flex h-10 w-10 items-center justify-center rounded-xl",
+            "flex h-9 w-9 items-center justify-center rounded-xl",
             iconClassName,
           ].join(" ")}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-4 w-4" />
         </div>
 
         <div>
           <h3 className="text-base font-extrabold text-slate-900">{title}</h3>
-          <p className="text-sm text-slate-500">{description}</p>
+          <p className="text-xs leading-5 text-slate-500">{description}</p>
         </div>
       </div>
 
@@ -686,7 +709,7 @@ function SearchableSingleSelectCard({
           onClick={onToggle}
           disabled={disabled || loading}
           className={[
-            "relative flex h-14 w-full items-center justify-between rounded-2xl border bg-white px-4 text-left shadow-sm outline-none transition",
+            "relative flex h-12 w-full items-center justify-between rounded-2xl border bg-white px-4 text-left shadow-sm outline-none transition",
             open
               ? "border-violet-500 ring-4 ring-violet-100"
               : "border-slate-200 hover:border-violet-300",
@@ -696,7 +719,7 @@ function SearchableSingleSelectCard({
           ].join(" ")}
         >
           <span className="min-w-0">
-            <span className="mb-1 block text-[11px] font-semibold text-slate-500">
+            <span className="mb-0.5 block text-[11px] font-semibold text-slate-500">
               {label}
             </span>
             <span
@@ -770,14 +793,69 @@ function SearchableSingleSelectCard({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
 
-      {selectedName ? (
-        <div className="mt-3">
-          <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
-            {selectedName}
-          </span>
+function HsnLookupModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm">
+      <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">
+              HSN code lookup
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Search by product name or HSN code, then copy the code and paste
+              it into the HSN Code field.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Close HSN lookup"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-      ) : null}
+
+        <iframe
+          title="HSN code lookup"
+          src="https://hsn.codes/"
+          className="min-h-0 flex-1 border-0"
+        />
+
+        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+          <a
+            href="https://hsn.codes/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-violet-700 hover:text-violet-900"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open in new tab
+          </a>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center justify-center rounded-xl bg-violet-600 px-4 text-xs font-bold text-white transition hover:bg-violet-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -888,12 +966,13 @@ export default function CreateProductPage({
     useState(isEditMode);
 
   const [itemName, setItemName] = useState("");
-  const [itemModelNumber, setItemModelNumber] = useState("");
-  const [itemKey, setItemKey] = useState("");
+  const [sku, setsku] = useState("");
+  const [hsnCode, setHsnCode] = useState("");
+  const [hsnLookupOpen, setHsnLookupOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [searchKeysInput, setSearchKeysInput] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [modelNumberManuallyEdited, setModelNumberManuallyEdited] =
+const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
     useState(false);
 
   const [masterCategories, setMasterCategories] = useState<OptionItem[]>([]);
@@ -916,8 +995,9 @@ export default function CreateProductPage({
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [loadingModels, setLoadingModels] = useState(true);
 
-  const [openDropdown, setOpenDropdown] =
-    useState<DropdownConfig["key"] | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<
+    DropdownConfig["key"] | null
+  >(null);
   const [searchMap, setSearchMap] = useState<
     Record<DropdownConfig["key"], string>
   >({
@@ -962,11 +1042,10 @@ export default function CreateProductPage({
     return keyOf(itemName);
   }, [itemName]);
 
-  const autoItemModelNumber = useMemo(() => {
-    return buildAutoModelNumber(itemName);
+  const autosku = useMemo(() => {
+    return buildAutoSku(itemName);
   }, [itemName]);
 
-  const itemKeyPreview = itemKey.trim() ? keyOf(itemKey) : autoItemKey;
 
   const selectedSubcategoryName = useMemo(() => {
     return subcategories.find((item) => item._id === subcategoryId)?.name || "";
@@ -981,8 +1060,7 @@ export default function CreateProductPage({
   const usesProductCompatibilityMapping =
     categoryMappingMode === "productMediaInfoCompatibility";
   const usesVariantConfiguration =
-    categoryMappingMode === "variant" ||
-    usesVariantCompatibilityMapping;
+    categoryMappingMode === "variant" || usesVariantCompatibilityMapping;
   const usesCompatibilityMapping =
     usesVariantCompatibilityMapping || usesProductCompatibilityMapping;
   const usesProductMediaInformation =
@@ -1008,8 +1086,8 @@ export default function CreateProductPage({
 
     return query
       ? availablePrimaryModelOptions.filter((item) =>
-          item.name.toLowerCase().includes(query)
-        )
+        item.name.toLowerCase().includes(query),
+      )
       : availablePrimaryModelOptions;
   }, [availablePrimaryModelOptions, searchMap.modelId]);
 
@@ -1063,156 +1141,163 @@ export default function CreateProductPage({
   const totalCompatibilityRows = filteredCompatibilityRows.length;
   const totalCompatibilityPages = Math.max(
     1,
-    Math.ceil(totalCompatibilityRows / ROWS_PER_PAGE)
+    Math.ceil(totalCompatibilityRows / ROWS_PER_PAGE),
   );
   const safeCompatibilityPage = Math.min(
     compatibilityCurrentPage,
-    totalCompatibilityPages
+    totalCompatibilityPages,
   );
-  const compatibilityStartIndex =
-    (safeCompatibilityPage - 1) * ROWS_PER_PAGE;
+  const compatibilityStartIndex = (safeCompatibilityPage - 1) * ROWS_PER_PAGE;
   const paginatedCompatibilityRows = filteredCompatibilityRows.slice(
     compatibilityStartIndex,
-    compatibilityStartIndex + ROWS_PER_PAGE
+    compatibilityStartIndex + ROWS_PER_PAGE,
   );
 
-const fetchExistingProduct = useEffectEvent(
-  async (brandsList: OptionItem[]) => {
-    if (!isEditMode) {
-      setLoadingExistingProduct(false);
-      return;
-    }
+  const fetchExistingProduct = useEffectEvent(
+    async (brandsList: OptionItem[]) => {
+      if (!isEditMode) {
+        setLoadingExistingProduct(false);
+        return;
+      }
 
-    if (!productId?.trim()) {
-      toast.error("Invalid product id");
-      setLoadingExistingProduct(false);
-      return;
-    }
+      if (!productId?.trim()) {
+        toast.error("Invalid product id");
+        setLoadingExistingProduct(false);
+        return;
+      }
 
-    try {
-      setLoadingExistingProduct(true);
+      try {
+        setLoadingExistingProduct(true);
 
-      const response = await apiClient.get<ProductGetResponse>(
-        SummaryApi.product_get.url(productId),
-        {
-          headers: {
-            Accept: "application/json",
+        const response = await apiClient.get<ProductGetResponse>(
+          SummaryApi.product_get.url(productId),
+          {
+            headers: {
+              Accept: "application/json",
+            },
           },
+        );
+
+        if (!response.data?.success || !response.data?.data) {
+          throw new Error(response.data?.message || "Failed to load product");
         }
-      );
 
-      if (!response.data?.success || !response.data?.data) {
-        throw new Error(response.data?.message || "Failed to load product");
+        const item = response.data.data;
+
+        const nextItemName = String(item.itemName || "");
+        const nextsku = String(item.sku || "");
+        const nextMasterCategoryId = getReferenceId(item.masterCategoryId);
+        const nextCategoryId = getReferenceId(item.categoryId);
+        const nextSubcategoryId = getReferenceId(item.subcategoryId);
+        const nextBrandId = getReferenceId(
+          Array.isArray(item.brandId) ? item.brandId[0] : item.brandId,
+        );
+        const nextModelId = getReferenceId(
+          Array.isArray(item.modelId) ? item.modelId[0] : item.modelId,
+        );
+
+        setItemName(nextItemName);
+        setsku(nextsku);
+        setSkuManuallyEdited(
+          Boolean(nextsku.trim()) &&
+          nextsku.trim() !== buildAutoSku(nextItemName),
+        );
+        setHsnCode(String(item.hsnCode || ""));
+        setDescription(String(item.description || ""));
+        setSearchKeysInput(buildInitialManualSearchKeys(item).join(", "));
+
+        setMasterCategoryId(nextMasterCategoryId);
+        setCategoryId(nextCategoryId);
+        setSubcategoryId(nextSubcategoryId);
+        setBrandId(nextBrandId);
+        setModelId(nextModelId);
+
+        skipNextPresetSyncRef.current = true;
+        setCategoryMappingMode(resolveCategoryMappingMode(item));
+
+        const nextVariant = normalizeExistingVariants(
+          item.variant,
+          item.productInformation,
+          brandsList,
+          item.compatible,
+        );
+        const nextProductImages = normalizeExistingImages(
+          item.images,
+          "product-image",
+        );
+        const nextProductVideos = normalizeExistingVideos(
+          item.videos,
+          "product-video",
+        );
+        const nextProductInformation = normalizeExistingProductInformation(
+          item.productInformation,
+        );
+
+        setVariant(nextVariant);
+        setProductImages(nextProductImages);
+        setProductVideos(nextProductVideos);
+        setProductInformation(nextProductInformation);
+        setCompatibilityRows(
+          buildCompatibilityRows(brandsList, item.compatible),
+        );
+        setIsActive(Boolean(item.isActiveGlobal ?? item.isActive));
+
+        if (nextMasterCategoryId) {
+          await fetchCategories(nextMasterCategoryId, {
+            categoryId: nextCategoryId,
+            subcategoryId: nextSubcategoryId,
+          });
+        }
+
+        if (nextCategoryId) {
+          await fetchSubcategories(nextCategoryId, {
+            subcategoryId: nextSubcategoryId,
+          });
+        }
+      } catch (error: unknown) {
+        console.error("Failed to load product", error);
+        toast.error(getErrorMessage(error, "Failed to load product"));
+      } finally {
+        setLoadingExistingProduct(false);
       }
+    },
+  );
 
-      const item = response.data.data;
+  const fetchInitialOptions = useEffectEvent(async () => {
+    const [, brandsList] = await Promise.all([
+      fetchMasterCategories(),
+      fetchBrandsAndSeedCompatibility(),
+      fetchModels(),
+    ]);
 
-      const nextItemName = String(item.itemName || "");
-      const nextItemModelNumber = String(item.itemModelNumber || "");
-      const nextMasterCategoryId = getReferenceId(item.masterCategoryId);
-      const nextCategoryId = getReferenceId(item.categoryId);
-      const nextSubcategoryId = getReferenceId(item.subcategoryId);
-      const nextBrandId = getReferenceId(
-        Array.isArray(item.brandId) ? item.brandId[0] : item.brandId
-      );
-      const nextModelId = getReferenceId(
-        Array.isArray(item.modelId) ? item.modelId[0] : item.modelId
-      );
-
-      setItemName(nextItemName);
-      setItemModelNumber(nextItemModelNumber);
-      setModelNumberManuallyEdited(
-        Boolean(nextItemModelNumber.trim()) &&
-          nextItemModelNumber.trim() !== buildAutoModelNumber(nextItemName)
-      );
-      setItemKey(String(item.itemKey || ""));
-      setDescription(String(item.description || ""));
-      setSearchKeysInput(buildInitialManualSearchKeys(item).join(", "));
-
-      setMasterCategoryId(nextMasterCategoryId);
-      setCategoryId(nextCategoryId);
-      setSubcategoryId(nextSubcategoryId);
-      setBrandId(nextBrandId);
-      setModelId(nextModelId);
-
-      skipNextPresetSyncRef.current = true;
-      setCategoryMappingMode(resolveCategoryMappingMode(item));
-
-      const nextVariant = normalizeExistingVariants(
-        item.variant,
-        item.productInformation,
-        brandsList,
-        item.compatible
-      );
-      const nextProductImages = normalizeExistingImages(
-        item.images,
-        "product-image"
-      );
-      const nextProductVideos = normalizeExistingVideos(
-        item.videos,
-        "product-video"
-      );
-      const nextProductInformation = normalizeExistingProductInformation(
-        item.productInformation
-      );
-
-      setVariant(nextVariant);
-      setProductImages(nextProductImages);
-      setProductVideos(nextProductVideos);
-      setProductInformation(nextProductInformation);
-      setCompatibilityRows(buildCompatibilityRows(brandsList, item.compatible));
-      setIsActive(Boolean(item.isActiveGlobal ?? item.isActive));
-
-      if (nextMasterCategoryId) {
-        await fetchCategories(nextMasterCategoryId, {
-          categoryId: nextCategoryId,
-          subcategoryId: nextSubcategoryId,
-        });
-      }
-
-      if (nextCategoryId) {
-        await fetchSubcategories(nextCategoryId, {
-          subcategoryId: nextSubcategoryId,
-        });
-      }
-    } catch (error: unknown) {
-      console.error("Failed to load product", error);
-      toast.error(getErrorMessage(error, "Failed to load product"));
-    } finally {
-      setLoadingExistingProduct(false);
+    if (isEditMode) {
+      await fetchExistingProduct(brandsList || []);
+      return;
     }
-  }
-);
 
-const fetchInitialOptions = useEffectEvent(async () => {
-  const [, brandsList] = await Promise.all([
-    fetchMasterCategories(),
-    fetchBrandsAndSeedCompatibility(),
-    fetchModels(),
-  ]);
+    setLoadingExistingProduct(false);
+  });
 
-  if (isEditMode) {
-    await fetchExistingProduct(brandsList || []);
-    return;
-  }
-
-  setLoadingExistingProduct(false);
-});
-
-useEffect(() => {
-  if (isEditMode && !productId?.trim()) return;
-  void fetchInitialOptions();
-}, [isEditMode, productId]);
+  useEffect(() => {
+    if (isEditMode && !productId?.trim()) return;
+    void fetchInitialOptions();
+  }, [isEditMode, productId]);
 
   useEffect(() => {
     variantRef.current = variant;
   }, [variant]);
 
   useEffect(() => {
-    if (!modelNumberManuallyEdited) {
-      setItemModelNumber(autoItemModelNumber);
-    }
-  }, [autoItemModelNumber, modelNumberManuallyEdited]);
+    if (isEditMode) return;
+    if (skuManuallyEdited) return;
+    if (sku === autosku) return;
+    setsku(autosku);
+  }, [
+    autosku,
+    isEditMode,
+    sku,
+    skuManuallyEdited,
+  ]);
 
   useEffect(() => {
     productImagesRef.current = productImages;
@@ -1306,7 +1391,10 @@ useEffect(() => {
     if (!selectedSubcategoryPreset) {
       revokeVariantMedia(variantRef.current);
       setVariant([
-        createVariantItem([], cloneCompatibilityRows(defaultVariantCompatibilityRows)),
+        createVariantItem(
+          [],
+          cloneCompatibilityRows(defaultVariantCompatibilityRows),
+        ),
       ]);
       setProductInformation([{ ...initialProductInfoSection }]);
       return;
@@ -1316,11 +1404,11 @@ useEffect(() => {
 
     const sections = buildPresetProductInfoSections(
       selectedSubcategoryPreset.sections,
-      selectedSubcategoryPreset.itemTypeName
+      selectedSubcategoryPreset.itemTypeName,
     );
 
     const presetVariants = buildPresetVariantRows(
-      selectedSubcategoryPreset.variantLabels
+      selectedSubcategoryPreset.variantLabels,
     ).map((item) => ({
       ...item,
       compatibility: cloneCompatibilityRows(defaultVariantCompatibilityRows),
@@ -1339,7 +1427,7 @@ useEffect(() => {
     if (!modelId) return;
 
     const exists = availablePrimaryModelOptions.some(
-      (item) => item._id === modelId
+      (item) => item._id === modelId,
     );
 
     if (!exists) {
@@ -1352,13 +1440,13 @@ useEffect(() => {
       setLoadingMasterCategories(true);
 
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
-        SummaryApi.master_category_list.url
+        SummaryApi.master_category_list.url,
       );
 
       const rows = filterActive(
         toOptionArray(
-          res.data?.data || res.data?.categories || res.data?.masterCategories
-        )
+          res.data?.data || res.data?.categories || res.data?.masterCategories,
+        ),
       );
 
       setMasterCategories(rows);
@@ -1377,27 +1465,32 @@ useEffect(() => {
     selectedValues?: {
       categoryId?: string;
       subcategoryId?: string;
-    }
+    },
   ) {
     try {
       setLoadingCategories(true);
 
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
-        SummaryApi.category_list.url
+        SummaryApi.category_list.url,
       );
 
       const rows = filterActive(toOptionArray(res.data?.data)).filter(
-        (item: OptionItem & { masterCategoryId?: string | { _id?: string } }) => {
+        (
+          item: OptionItem & { masterCategoryId?: string | { _id?: string } },
+        ) => {
           const value = item.masterCategoryId;
-          if (typeof value === "string") return value === selectedMasterCategoryId;
+          if (typeof value === "string")
+            return value === selectedMasterCategoryId;
           return value?._id === selectedMasterCategoryId;
-        }
+        },
       );
 
       setCategories(rows);
       const nextCategoryId = selectedValues?.categoryId ?? categoryId;
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
-      const hasSelectedCategory = rows.some((item) => item._id === nextCategoryId);
+      const hasSelectedCategory = rows.some(
+        (item) => item._id === nextCategoryId,
+      );
 
       if (!hasSelectedCategory) {
         setCategoryId("");
@@ -1422,13 +1515,13 @@ useEffect(() => {
     selectedCategoryId: string,
     selectedValues?: {
       subcategoryId?: string;
-    }
+    },
   ) {
     try {
       setLoadingSubcategories(true);
 
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
-        SummaryApi.sub_category_list.url
+        SummaryApi.sub_category_list.url,
       );
 
       const rows = filterActive(toOptionArray(res.data?.data)).filter(
@@ -1436,13 +1529,13 @@ useEffect(() => {
           const value = item.categoryId;
           if (typeof value === "string") return value === selectedCategoryId;
           return value?._id === selectedCategoryId;
-        }
+        },
       );
 
       setSubcategories(rows);
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
       const hasSelectedSubcategory = rows.some(
-        (item) => item._id === nextSubcategoryId
+        (item) => item._id === nextSubcategoryId,
       );
 
       if (!hasSelectedSubcategory) {
@@ -1466,25 +1559,25 @@ useEffect(() => {
       setLoadingBrands(true);
 
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
-        SummaryApi.brand_list.url
+        SummaryApi.brand_list.url,
       );
 
       const activeBrands = filterActive(
-        toOptionArray(res.data?.data || res.data?.brands)
+        toOptionArray(res.data?.data || res.data?.brands),
       );
 
       setBrands(activeBrands);
       setCompatibilityRows((prev) =>
-        mergeCompatibilityRowsWithBrands(activeBrands, prev)
+        mergeCompatibilityRowsWithBrands(activeBrands, prev),
       );
       setVariant((prev) =>
         prev.map((item) => ({
           ...item,
           compatibility: mergeCompatibilityRowsWithBrands(
             activeBrands,
-            item.compatibility
+            item.compatibility,
           ),
-        }))
+        })),
       );
       return activeBrands;
     } catch (error: unknown) {
@@ -1495,7 +1588,7 @@ useEffect(() => {
         prev.map((item) => ({
           ...item,
           compatibility: [],
-        }))
+        })),
       );
       return [];
     } finally {
@@ -1508,10 +1601,12 @@ useEffect(() => {
       setLoadingModels(true);
 
       const res = await apiClient.get<ApiResponse<ModelItem[]>>(
-        SummaryApi.model_list.url
+        SummaryApi.model_list.url,
       );
 
-      const rows = filterActive(toModelArray(res.data?.data || res.data?.models));
+      const rows = filterActive(
+        toModelArray(res.data?.data || res.data?.models),
+      );
       setModels(rows);
       return rows;
     } catch (error: unknown) {
@@ -1536,11 +1631,36 @@ useEffect(() => {
 
   function handleSelectDropdownValue(
     key: DropdownConfig["key"],
-    value: string
+    value: string,
   ) {
-    if (key === "masterCategoryId") setMasterCategoryId(value);
-    if (key === "categoryId") setCategoryId(value);
-    if (key === "subcategoryId") setSubcategoryId(value);
+    if (key === "masterCategoryId") {
+      setMasterCategoryId(value);
+      setCategoryId("");
+      setSubcategoryId("");
+      setBrandId("");
+      setModelId("");
+    }
+
+    if (key === "categoryId") {
+      setCategoryId(value);
+      setSubcategoryId("");
+      setBrandId("");
+      setModelId("");
+    }
+
+    if (key === "subcategoryId") {
+      setSubcategoryId(value);
+      setBrandId("");
+      setModelId("");
+    }
+
+    if (key === "brandId") {
+      handlePrimaryBrandChange(value);
+    }
+
+    if (key === "modelId") {
+      handlePrimaryModelChange(value);
+    }
 
     setSearchMap((prev) => ({
       ...prev,
@@ -1554,7 +1674,7 @@ useEffect(() => {
     setBrandId(value);
 
     const currentModelStillValid = models.some(
-      (item) => item._id === modelId && getBrandIdFromModel(item) === value
+      (item) => item._id === modelId && getBrandIdFromModel(item) === value,
     );
 
     if (!currentModelStillValid) {
@@ -1566,10 +1686,7 @@ useEffect(() => {
     setModelId(value);
   }
 
-  function updateVariant(
-    variantId: string,
-    patch: Partial<VariantItem>
-  ) {
+  function updateVariant(variantId: string, patch: Partial<VariantItem>) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
@@ -1581,21 +1698,23 @@ useEffect(() => {
         }
 
         return next;
-      })
+      }),
     );
   }
 
   function updateVariantAttributeLabel(
     variantId: string,
     attributeId: string,
-    value: string
+    value: string,
   ) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
 
         const nextAttributes = item.attributes.map((attribute) =>
-          attribute.id === attributeId ? { ...attribute, label: value } : attribute
+          attribute.id === attributeId
+            ? { ...attribute, label: value }
+            : attribute,
         );
 
         return {
@@ -1603,21 +1722,21 @@ useEffect(() => {
           attributes: nextAttributes,
           title: item.title.trim() || buildVariantTitle(nextAttributes),
         };
-      })
+      }),
     );
   }
 
   function updateVariantAttributeValue(
     variantId: string,
     attributeId: string,
-    value: string
+    value: string,
   ) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
 
         const nextAttributes = item.attributes.map((attribute) =>
-          attribute.id === attributeId ? { ...attribute, value } : attribute
+          attribute.id === attributeId ? { ...attribute, value } : attribute,
         );
 
         return {
@@ -1625,7 +1744,7 @@ useEffect(() => {
           attributes: nextAttributes,
           title: buildVariantTitle(nextAttributes),
         };
-      })
+      }),
     );
   }
 
@@ -1634,11 +1753,11 @@ useEffect(() => {
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              attributes: [...item.attributes, createVariantAttribute()],
-            }
-          : item
-      )
+            ...item,
+            attributes: [...item.attributes, createVariantAttribute()],
+          }
+          : item,
+      ),
     );
   }
 
@@ -1650,22 +1769,23 @@ useEffect(() => {
         const nextAttributes =
           item.attributes.length === 1
             ? [createVariantAttribute()]
-            : item.attributes.filter((attribute) => attribute.id !== attributeId);
+            : item.attributes.filter(
+              (attribute) => attribute.id !== attributeId,
+            );
 
         return {
           ...item,
           attributes: nextAttributes,
           title: buildVariantTitle(nextAttributes),
         };
-      })
+      }),
     );
   }
 
   function buildDraftVariant(sourceVariant?: VariantItem) {
-    const presetLabels =
-      selectedSubcategoryPreset?.variantLabels?.length
-        ? selectedSubcategoryPreset.variantLabels
-        : [];
+    const presetLabels = selectedSubcategoryPreset?.variantLabels?.length
+      ? selectedSubcategoryPreset.variantLabels
+      : [];
 
     const defaultProductInfo =
       selectedSubcategoryPreset && productInformation.length
@@ -1673,7 +1793,7 @@ useEffect(() => {
         : [{ ...initialProductInfoSection }];
 
     const defaultCompatibility = cloneCompatibilityRows(
-      defaultVariantCompatibilityRows
+      defaultVariantCompatibilityRows,
     );
 
     const nextVariant = createVariantItem(presetLabels, defaultCompatibility);
@@ -1687,8 +1807,8 @@ useEffect(() => {
 
     const nextAttributes = sourceVariant.attributes.length
       ? sourceVariant.attributes.map((attribute) =>
-          createVariantAttribute(attribute.label, attribute.value)
-        )
+        createVariantAttribute(attribute.label, attribute.value),
+      )
       : nextVariant.attributes;
 
     return {
@@ -1731,7 +1851,10 @@ useEffect(() => {
     });
   }
 
-  function addVariantImages(variantId: string, files: FileList | File[] | null) {
+  function addVariantImages(
+    variantId: string,
+    files: FileList | File[] | null,
+  ) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
 
@@ -1774,7 +1897,7 @@ useEffect(() => {
           ...item,
           images: [...item.images, ...additions],
         };
-      })
+      }),
     );
 
     errors.forEach((message) => toast.error(message));
@@ -1792,15 +1915,20 @@ useEffect(() => {
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              images: item.images.filter((imageItem) => imageItem.id !== imageId),
-            }
-          : item
-      )
+            ...item,
+            images: item.images.filter(
+              (imageItem) => imageItem.id !== imageId,
+            ),
+          }
+          : item,
+      ),
     );
   }
 
-  function addVariantVideos(variantId: string, files: FileList | File[] | null) {
+  function addVariantVideos(
+    variantId: string,
+    files: FileList | File[] | null,
+  ) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
 
@@ -1842,7 +1970,7 @@ useEffect(() => {
           ...item,
           videos: [...item.videos, ...additions],
         };
-      })
+      }),
     );
 
     errors.forEach((message) => toast.error(message));
@@ -1860,11 +1988,13 @@ useEffect(() => {
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              videos: item.videos.filter((videoItem) => videoItem.id !== videoId),
-            }
-          : item
-      )
+            ...item,
+            videos: item.videos.filter(
+              (videoItem) => videoItem.id !== videoId,
+            ),
+          }
+          : item,
+      ),
     );
   }
 
@@ -1881,7 +2011,7 @@ useEffect(() => {
 
     unsupported.forEach((fileName) => {
       toast.error(
-        `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`
+        `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`,
       );
     });
   }
@@ -1889,7 +2019,7 @@ useEffect(() => {
   function removeVariantMedia(
     variantId: string,
     mediaKind: "image" | "video",
-    itemId: string
+    itemId: string,
   ) {
     if (mediaKind === "image") {
       removeVariantImage(variantId, itemId);
@@ -1990,7 +2120,7 @@ useEffect(() => {
     }
 
     setProductImages((prev) =>
-      prev.filter((imageItem) => imageItem.id !== imageId)
+      prev.filter((imageItem) => imageItem.id !== imageId),
     );
   }
 
@@ -2002,7 +2132,7 @@ useEffect(() => {
     }
 
     setProductVideos((prev) =>
-      prev.filter((videoItem) => videoItem.id !== videoId)
+      prev.filter((videoItem) => videoItem.id !== videoId),
     );
   }
 
@@ -2019,7 +2149,7 @@ useEffect(() => {
 
     unsupported.forEach((fileName) => {
       toast.error(
-        `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`
+        `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`,
       );
     });
   }
@@ -2053,8 +2183,8 @@ useEffect(() => {
   function updateProductInfoSectionTitle(index: number, value: string) {
     setProductInformation((prev) =>
       prev.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, title: value } : item
-      )
+        itemIndex === index ? { ...item, title: value } : item,
+      ),
     );
   }
 
@@ -2063,11 +2193,11 @@ useEffect(() => {
       prev.map((section, index) =>
         index === sectionIndex
           ? {
-              ...section,
-              fields: [...section.fields, { label: "", value: "" }],
-            }
-          : section
-      )
+            ...section,
+            fields: [...section.fields, { label: "", value: "" }],
+          }
+          : section,
+      ),
     );
   }
 
@@ -2087,7 +2217,7 @@ useEffect(() => {
           ...section,
           fields: section.fields.filter((_, idx) => idx !== fieldIndex),
         };
-      })
+      }),
     );
   }
 
@@ -2095,7 +2225,7 @@ useEffect(() => {
     sectionIndex: number,
     fieldIndex: number,
     key: keyof ProductInformationField,
-    value: string
+    value: string,
   ) {
     setProductInformation((prev) =>
       prev.map((section, index) => {
@@ -2104,10 +2234,10 @@ useEffect(() => {
         return {
           ...section,
           fields: section.fields.map((field, idx) =>
-            idx === fieldIndex ? { ...field, [key]: value } : field
+            idx === fieldIndex ? { ...field, [key]: value } : field,
           ),
         };
-      })
+      }),
     );
   }
 
@@ -2116,18 +2246,21 @@ useEffect(() => {
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              productInformation: [
-                ...item.productInformation,
-                { title: "", fields: [{ label: "", value: "" }] },
-              ],
-            }
-          : item
-      )
+            ...item,
+            productInformation: [
+              ...item.productInformation,
+              { title: "", fields: [{ label: "", value: "" }] },
+            ],
+          }
+          : item,
+      ),
     );
   }
 
-  function removeVariantProductInfoSection(variantId: string, sectionIndex: number) {
+  function removeVariantProductInfoSection(
+    variantId: string,
+    sectionIndex: number,
+  ) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
@@ -2142,29 +2275,32 @@ useEffect(() => {
         return {
           ...item,
           productInformation: item.productInformation.filter(
-            (_, index) => index !== sectionIndex
+            (_, index) => index !== sectionIndex,
           ),
         };
-      })
+      }),
     );
   }
 
   function updateVariantProductInfoSectionTitle(
     variantId: string,
     sectionIndex: number,
-    value: string
+    value: string,
   ) {
     setVariant((prev) =>
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              productInformation: item.productInformation.map((section, index) =>
-                index === sectionIndex ? { ...section, title: value } : section
-              ),
-            }
-          : item
-      )
+            ...item,
+            productInformation: item.productInformation.map(
+              (section, index) =>
+                index === sectionIndex
+                  ? { ...section, title: value }
+                  : section,
+            ),
+          }
+          : item,
+      ),
     );
   }
 
@@ -2173,25 +2309,26 @@ useEffect(() => {
       prev.map((item) =>
         item.id === variantId
           ? {
-              ...item,
-              productInformation: item.productInformation.map((section, index) =>
+            ...item,
+            productInformation: item.productInformation.map(
+              (section, index) =>
                 index === sectionIndex
                   ? {
-                      ...section,
-                      fields: [...section.fields, { label: "", value: "" }],
-                    }
-                  : section
-              ),
-            }
-          : item
-      )
+                    ...section,
+                    fields: [...section.fields, { label: "", value: "" }],
+                  }
+                  : section,
+            ),
+          }
+          : item,
+      ),
     );
   }
 
   function removeVariantProductInfoField(
     variantId: string,
     sectionIndex: number,
-    fieldIndex: number
+    fieldIndex: number,
   ) {
     setVariant((prev) =>
       prev.map((item) => {
@@ -2215,7 +2352,7 @@ useEffect(() => {
             };
           }),
         };
-      })
+      }),
     );
   }
 
@@ -2224,7 +2361,7 @@ useEffect(() => {
     sectionIndex: number,
     fieldIndex: number,
     key: keyof ProductInformationField,
-    value: string
+    value: string,
   ) {
     setVariant((prev) =>
       prev.map((item) => {
@@ -2238,18 +2375,18 @@ useEffect(() => {
             return {
               ...section,
               fields: section.fields.map((field, idx) =>
-                idx === fieldIndex ? { ...field, [key]: value } : field
+                idx === fieldIndex ? { ...field, [key]: value } : field,
               ),
             };
           }),
         };
-      })
+      }),
     );
   }
 
   function updateCompatibilityRow(
     rowId: string,
-    patch: Partial<CompatibilityTableRow>
+    patch: Partial<CompatibilityTableRow>,
   ) {
     setCompatibilityRows((prev) =>
       prev.map((item) => {
@@ -2266,14 +2403,14 @@ useEffect(() => {
         }
 
         return next;
-      })
+      }),
     );
   }
 
   function updateVariantCompatibilityRow(
     variantId: string,
     rowId: string,
-    patch: Partial<CompatibilityTableRow>
+    patch: Partial<CompatibilityTableRow>,
   ) {
     setVariant((prev) =>
       prev.map((item) => {
@@ -2297,7 +2434,7 @@ useEffect(() => {
             return next;
           }),
         };
-      })
+      }),
     );
   }
 
@@ -2325,14 +2462,12 @@ useEffect(() => {
 
     items.forEach((item) => {
       buildCompatibilityPayload(item.compatibility).forEach((row) => {
-        const existing =
-          compatibilityMap.get(row.brandId) ||
-          {
-            brandId: row.brandId,
-            modelId: new Set<string>(),
-            notes: new Set<string>(),
-            isActive: false,
-          };
+        const existing = compatibilityMap.get(row.brandId) || {
+          brandId: row.brandId,
+          modelId: new Set<string>(),
+          notes: new Set<string>(),
+          isActive: false,
+        };
 
         row.modelId.forEach((modelId) => existing.modelId.add(modelId));
 
@@ -2355,14 +2490,14 @@ useEffect(() => {
 
   function validateProductInfoSections(
     sections: ProductInformationSection[],
-    errorPrefix: string
+    errorPrefix: string,
   ) {
     const invalid = sections.some((section) => {
       const hasCompletedField = section.fields.some((field) =>
-        isFilledInfoField(field)
+        isFilledInfoField(field),
       );
       const hasValueWithoutLabel = section.fields.some(
-        (field) => field.value.trim() && !field.label.trim()
+        (field) => field.value.trim() && !field.label.trim(),
       );
 
       if (hasValueWithoutLabel) return true;
@@ -2372,7 +2507,9 @@ useEffect(() => {
     });
 
     if (invalid) {
-      toast.error(`${errorPrefix} section must have a title and complete fields`);
+      toast.error(
+        `${errorPrefix} section must have a title and complete fields`,
+      );
       return false;
     }
 
@@ -2380,7 +2517,7 @@ useEffect(() => {
   }
 
   function buildFilledProductInformation(
-    sections: ProductInformationSection[]
+    sections: ProductInformationSection[],
   ): ProductPayload["productInformation"] {
     return sections
       .map((section) => ({
@@ -2398,11 +2535,6 @@ useEffect(() => {
   function validateForm() {
     if (!itemName.trim()) {
       toast.error("Please enter product name");
-      return false;
-    }
-
-    if (!itemModelNumber.trim()) {
-      toast.error("Please enter model number");
       return false;
     }
 
@@ -2433,7 +2565,7 @@ useEffect(() => {
 
     if (usesVariantConfiguration) {
       const hasConfiguredVariant = variant.some((item) =>
-        hasMeaningfulVariantData(item)
+        hasMeaningfulVariantData(item),
       );
 
       if (!hasConfiguredVariant) {
@@ -2463,7 +2595,7 @@ useEffect(() => {
 
         return !validateProductInfoSections(
           item.productInformation,
-          "Each variant product information"
+          "Each variant product information",
         );
       });
 
@@ -2474,7 +2606,10 @@ useEffect(() => {
 
     if (usesProductMediaInformation) {
       if (
-        !validateProductInfoSections(productInformation, "Each product information")
+        !validateProductInfoSections(
+          productInformation,
+          "Each product information",
+        )
       ) {
         return false;
       }
@@ -2485,7 +2620,9 @@ useEffect(() => {
         hasFilledProductInfoSections(productInformation);
 
       if (!hasProductMediaOrInfo) {
-        toast.error("Add product images, videos, or product information for this option");
+        toast.error(
+          "Add product images, videos, or product information for this option",
+        );
         return false;
       }
     }
@@ -2494,14 +2631,13 @@ useEffect(() => {
       const missingVariantCompatibilityIndex = variant.findIndex(
         (item) =>
           hasMeaningfulVariantData(item) &&
-          !hasEnabledCompatibilityRows(item.compatibility)
+          !hasEnabledCompatibilityRows(item.compatibility),
       );
 
       if (missingVariantCompatibilityIndex >= 0) {
         toast.error(
-          `Select at least one compatible brand for Variant ${
-            missingVariantCompatibilityIndex + 1
-          }`
+          `Select at least one compatible brand for Variant ${missingVariantCompatibilityIndex + 1
+          }`,
         );
         return false;
       }
@@ -2509,14 +2645,15 @@ useEffect(() => {
       const invalidVariantCompatibilityIndex = variant.findIndex(
         (item) =>
           hasMeaningfulVariantData(item) &&
-          item.compatibility.some((row) => row.enabled && row.modelId.length === 0)
+          item.compatibility.some(
+            (row) => row.enabled && row.modelId.length === 0,
+          ),
       );
 
       if (invalidVariantCompatibilityIndex >= 0) {
         toast.error(
-          `Each selected compatible brand must have at least one model in Variant ${
-            invalidVariantCompatibilityIndex + 1
-          }`
+          `Each selected compatible brand must have at least one model in Variant ${invalidVariantCompatibilityIndex + 1
+          }`,
         );
         return false;
       }
@@ -2531,11 +2668,13 @@ useEffect(() => {
       }
 
       const invalidCompatibility = compatibilityRows.some(
-        (row) => row.enabled && row.modelId.length === 0
+        (row) => row.enabled && row.modelId.length === 0,
       );
 
       if (invalidCompatibility) {
-        toast.error("Each selected compatible brand must have at least one model");
+        toast.error(
+          "Each selected compatible brand must have at least one model",
+        );
         return false;
       }
     }
@@ -2544,55 +2683,63 @@ useEffect(() => {
   }
 
   function buildPayload(): ProductPayload {
-    const filledProductInformation = buildFilledProductInformation(productInformation);
+    const filledProductInformation =
+      buildFilledProductInformation(productInformation);
 
     return {
       configurationMode: categoryMappingMode,
       itemName: itemName.trim(),
-      itemModelNumber: itemModelNumber.trim(),
-      itemKey: itemKeyPreview,
+      sku: sku.trim() || autosku,
+      hsnCode: hsnCode.trim(),
       description: description.trim(),
       searchKeys: manualSearchKeys,
       masterCategoryId,
       categoryId,
       subcategoryId,
-      brandId: brandId as unknown as ProductPayload["brandId"],
-      modelId: (usesCompatibilityMapping ? null : modelId) as unknown as ProductPayload["modelId"],
-      images: usesProductMediaInformation ? buildMediaPayload(productImages) : [],
-      videos: usesProductMediaInformation ? buildMediaPayload(productVideos) : [],
+      brandId: brandId ? [brandId] : [],
+      modelId: usesCompatibilityMapping ? [] : modelId ? [modelId] : [],
+      images: usesProductMediaInformation
+        ? buildMediaPayload(productImages)
+        : [],
+      videos: usesProductMediaInformation
+        ? buildMediaPayload(productVideos)
+        : [],
       compatible: usesVariantCompatibilityMapping
         ? buildMergedCompatibilityPayload(
-            variant.filter((item) => hasMeaningfulVariantData(item))
-          )
+          variant.filter((item) => hasMeaningfulVariantData(item)),
+        )
         : usesProductCompatibilityMapping
           ? buildCompatibilityPayload(compatibilityRows)
-        : [],
+          : [],
       variant: usesVariantConfiguration
         ? variant
-            .filter((item) => hasMeaningfulVariantData(item))
-            .map((item) => ({
-              title: item.title.trim() || buildVariantTitle(item.attributes),
-              description: item.description.trim(),
-              attributes: item.attributes
-                .filter(
-                  (attribute) => attribute.label.trim() && attribute.value.trim()
-                )
-                .map((attribute) => ({
-                  label: attribute.label.trim(),
-                  value: attribute.value.trim(),
-                })),
-              images: buildMediaPayload(item.images),
-              videos: buildMediaPayload(item.videos),
-              compatible: usesVariantCompatibilityMapping
-                ? buildCompatibilityPayload(item.compatibility)
-                : [],
-              productInformation: buildFilledProductInformation(
-                item.productInformation
-              ),
-              isActive: item.isActive,
-            }))
+          .filter((item) => hasMeaningfulVariantData(item))
+          .map((item) => ({
+            title: item.title.trim() || buildVariantTitle(item.attributes),
+            description: item.description.trim(),
+            attributes: item.attributes
+              .filter(
+                (attribute) =>
+                  attribute.label.trim() && attribute.value.trim(),
+              )
+              .map((attribute) => ({
+                label: attribute.label.trim(),
+                value: attribute.value.trim(),
+              })),
+            images: buildMediaPayload(item.images),
+            videos: buildMediaPayload(item.videos),
+            compatible: usesVariantCompatibilityMapping
+              ? buildCompatibilityPayload(item.compatibility)
+              : [],
+            productInformation: buildFilledProductInformation(
+              item.productInformation,
+            ),
+            isActive: item.isActive,
+          }))
         : [],
-      productInformation: usesProductMediaInformation ? filledProductInformation : [],
+      productInformation: usesProductMediaInformation
+        ? filledProductInformation
+        : [],
       isActive,
     };
   }
@@ -2613,37 +2760,37 @@ useEffect(() => {
         payload,
         activeVariantItems,
         usesProductMediaInformation ? productImages : [],
-        usesProductMediaInformation ? productVideos : []
+        usesProductMediaInformation ? productVideos : [],
       );
 
       const response = isEditMode
         ? await apiClient.put<ApiResponse<unknown>>(
-            SummaryApi.product_update.url(productId),
-            formData
-          )
+          SummaryApi.product_update.url(productId),
+          formData,
+        )
         : await apiClient.post<ApiResponse<unknown>>(
-            SummaryApi.product_create.url,
-            formData
-          );
+          SummaryApi.product_create.url,
+          formData,
+        );
 
       if (!response.data?.success) {
         throw new Error(
           response.data?.message ||
-            `Failed to ${isEditMode ? "update" : "create"} product`
+          `Failed to ${isEditMode ? "update" : "create"} product`,
         );
       }
 
       toast.success(
         response.data?.message ||
-          `Product ${isEditMode ? "updated" : "created"} successfully`
+        `Product ${isEditMode ? "updated" : "created"} successfully`,
       );
       router.push(`${basePath}/product/list`);
     } catch (error: unknown) {
       toast.error(
         getErrorMessage(
           error,
-          `Failed to ${isEditMode ? "update" : "create"} product`
-        )
+          `Failed to ${isEditMode ? "update" : "create"} product`,
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -2686,6 +2833,30 @@ useEffect(() => {
       loading: loadingSubcategories,
       disabled: !categoryId,
     },
+    {
+      key: "brandId",
+      label: "Brand",
+      placeholder: subcategoryId ? "Select brand" : "Select subcategory first",
+      icon: Tags,
+      options: filteredBrandOptions,
+      value: brandId,
+      search: searchMap.brandId,
+      open: openDropdown === "brandId",
+      loading: loadingBrands,
+      disabled: !subcategoryId,
+    },
+    {
+      key: "modelId",
+      label: "Model",
+      placeholder: brandId ? "Select model" : "Select brand first",
+      icon: Cpu,
+      options: filteredPrimaryModelOptions,
+      value: modelId,
+      search: searchMap.modelId,
+      open: openDropdown === "modelId",
+      loading: loadingModels,
+      disabled: !brandId,
+    },
   ];
 
   const dropdownRefs = {
@@ -2710,42 +2881,42 @@ useEffect(() => {
     description: string;
     icon: typeof Boxes;
   }> = [
-    {
-      value: "variant",
-      title: "Variant",
-      description:
-        "Use Variant Title,   , Variant Images & Media, and Variant Product Information.",
-      icon: Boxes,
-    },
-    {
-      value: "variantCompatibility",
-      title: "Variant & Compatible Brands & Models",
-      description:
-        "Use Variant Title, Variant Product Description, Variant Images & Media, Variant Product Information, and per-variant compatible brands and models.",
-      icon: ShieldCheck,
-    },
-    {
-      value: "productMediaInfoCompatibility",
-      title:
-        "Product Description & Product Images & Product Information & Compatible Brands & Models",
-      description:
-        "Use Product Description, Product Images & Media, and Product Information with compatible brands and models.",
-      icon: ShieldCheck,
-    },
-    {
-      value: "productMediaInfo",
-      title: "Product Description & Product Images & Product Information",
-      description:
-        "Use Product Description, Product Images & Media, and Product Information without creating variants.",
-      icon: Info,
-    },
-  ];
+      {
+        value: "variant",
+        title: "Variant",
+        description:
+          "Use Variant Title,   , Variant Images & Media, and Variant Product Information.",
+        icon: Boxes,
+      },
+      {
+        value: "variantCompatibility",
+        title: "Variant & Compatible Brands & Models",
+        description:
+          "Use Variant Title, Variant Product Description, Variant Images & Media, Variant Product Information, and per-variant compatible brands and models.",
+        icon: ShieldCheck,
+      },
+      {
+        value: "productMediaInfoCompatibility",
+        title:
+          "Product Description & Product Images & Product Information & Compatible Brands & Models",
+        description:
+          "Use Product Description, Product Images & Media, and Product Information with compatible brands and models.",
+        icon: ShieldCheck,
+      },
+      {
+        value: "productMediaInfo",
+        title: "Product Description & Product Images & Product Information",
+        description:
+          "Use Product Description, Product Images & Media, and Product Information without creating variants.",
+        icon: Info,
+      },
+    ];
 
   if (isEditMode && loadingExistingProduct) {
     return (
       <div className="page-shell">
         <div className="mx-auto flex min-h-80 w-full max-w-7xl items-center justify-center">
-          <div className="premium-card-solid flex w-full max-w-xl items-center gap-4 rounded-[28px] p-6">
+          <div className="premium-card-solid flex w-full max-w-xl items-center gap-4 rounded-card p-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
@@ -2765,646 +2936,636 @@ useEffect(() => {
   }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-[30px] px-4 py-4 md:px-5 md:py-5">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
+    <>
+      <HsnLookupModal
+        open={hsnLookupOpen}
+        onClose={() => setHsnLookupOpen(false)}
+      />
+      <div className="page-shell">
+        <div className="mx-auto w-full max-w-7xl space-y-4">
+          <section className="premium-hero premium-glow relative overflow-hidden rounded-[30px] px-4 py-4 md:px-5 md:py-5">
+            <div className="premium-grid-bg premium-bg-animate opacity-40" />
+            <div className="premium-bg-overlay" />
 
-          <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-2">
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/95">
-                <Sparkles className="h-3.5 w-3.5" />
-                Product Management
-              </span>
+            <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="space-y-2">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/95">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Product Management
+                </span>
 
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl">
-                  {isEditMode ? "Edit Product" : "Create Product"}
-                </h1>
-                <p className="mt-1 max-w-2xl text-xs leading-5 text-white/80 md:text-sm">
-                  {isEditMode
-                    ? "Update product details, configuration mode, compatibility mapping, and shared media without losing existing data."
-                    : "Create one product with the right setup for variants, compatibility mapping, or shared product media and information."}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <form onSubmit={handleSubmit} className="product-create-form-compact space-y-4">
-          <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-            <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                <PackagePlus className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Product Basics
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Enter the base product details here, then choose whether this
-                  item uses variants, compatibility mapping, or shared media and
-                  product information.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TopLabelInput
-                label="Product Name"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-                placeholder="e.g. OnePlus Nord 5"
-                disabled={submitting}
-                required
-              />
-
-              <TopLabelInput
-                label="Model Number"
-                value={itemModelNumber}
-                onChange={(e) => {
-                  const nextValue = e.target.value;
-                  setItemModelNumber(nextValue);
-                  setModelNumberManuallyEdited(
-                    Boolean(nextValue.trim()) &&
-                      nextValue.trim() !== autoItemModelNumber
-                  );
-                }}
-                placeholder="Auto generated from product name"
-                disabled={submitting}
-                required
-                hint="Auto generated from product name. You can still edit it if needed."
-              />
-
-              <TopLabelInput
-                label="Item Key"
-                value={itemKey}
-                onChange={(e) => setItemKey(e.target.value)}
-                placeholder="Auto generated from name"
-                disabled={submitting}
-              />
-
-              <div className="space-y-1.5">
-                <TopLabelInput
-                  label="Search Keys"
-                  value={searchKeysInput}
-                  onChange={(e) => setSearchKeysInput(e.target.value)}
-                  placeholder="Add custom search keys, separated by commas"
-                  disabled={submitting}
-                  hint="Enter only the custom search keys you want to store for this product."
-                />
-
-                {manualSearchKeys.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {manualSearchKeys.map((key) => (
-                      <span
-                        key={key}
-                        className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-                      >
-                        {key}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl">
+                    {isEditMode ? "Edit Product" : "Create Product"}
+                  </h1>
+                  <p className="mt-1 max-w-2xl text-xs leading-5 text-white/80 md:text-sm">
+                    {isEditMode
+                      ? "Update product details, configuration mode, compatibility mapping, and shared media without losing existing data."
+                      : "Create one product with the right setup for variants, compatibility mapping, or shared product media and information."}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-            <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <FolderTree className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Category Mapping</h2>
-                <p className="text-sm text-slate-500">
-                  Select the product hierarchy and primary brand/model.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {dropdownConfigs.map((config) => (
-                <ProductDropdown
-                  key={config.key}
-                  config={config}
-                  onToggle={handleToggleDropdown}
-                  onSearchChange={handleSearchChange}
-                  onSelect={handleSelectDropdownValue}
-                  dropdownRef={dropdownRefs[config.key]}
-                  searchInputRef={searchInputRefs[config.key]}
-                />
-              ))}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <SearchableSingleSelectCard
-                title="Brands"
-                description="Select one brand for this product."
-                icon={Tags}
-                iconClassName="bg-violet-100 text-violet-600"
-                label="Brand"
-                placeholder="Select brand"
-                disabled={submitting}
-                loading={loadingBrands}
-                options={filteredBrandOptions.map((item) => ({
-                  _id: item._id,
-                  name: item.name,
-                }))}
-                value={brandId}
-                selectedName={selectedBrandName}
-                search={searchMap.brandId}
-                open={openDropdown === "brandId"}
-                emptyText="No brands found"
-                onToggle={() => handleToggleDropdown("brandId")}
-                onSearchChange={(value) => handleSearchChange("brandId", value)}
-                onSelect={(value) => {
-                  handlePrimaryBrandChange(value);
-                  handleSearchChange("brandId", "");
-                  setOpenDropdown(null);
-                }}
-                dropdownRef={brandDropdownRef}
-                searchInputRef={brandSearchInputRef}
-              />
-
-              <SearchableSingleSelectCard
-                title="Models"
-                description="Select one model from the chosen brand."
-                icon={Cpu}
-                iconClassName="bg-sky-100 text-sky-600"
-                label="Model"
-                placeholder={brandId ? "Select model" : "Select brand first"}
-                disabled={submitting || !brandId}
-                loading={loadingModels}
-                options={filteredPrimaryModelOptions.map((item) => ({
-                  _id: item._id,
-                  name: item.name,
-                }))}
-                value={modelId}
-                selectedName={selectedModelName}
-                search={searchMap.modelId}
-                open={openDropdown === "modelId"}
-                emptyText={brandId ? "No models found" : "Select brand to choose model"}
-                onToggle={() => {
-                  if (!brandId) return;
-                  handleToggleDropdown("modelId");
-                }}
-                onSearchChange={(value) => handleSearchChange("modelId", value)}
-                onSelect={(value) => {
-                  handlePrimaryModelChange(value);
-                  handleSearchChange("modelId", "");
-                  setOpenDropdown(null);
-                }}
-                dropdownRef={modelDropdownRef}
-                searchInputRef={modelSearchInputRef}
-              />
-            </div>
-          </section>
-
-          {usesProductMediaInformation ? (
+          <form
+            onSubmit={handleSubmit}
+            className="product-create-form-compact space-y-4"
+          >
             <section className="premium-card-solid rounded-3xl p-3 md:p-4">
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
-                  <Info className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                  <PackagePlus className="h-5 w-5" />
                 </div>
 
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">
-                    Product Description
+                    Product Basics
                   </h2>
                   <p className="text-sm text-slate-500">
-                    {usesCompatibilityMapping
-                      ? "Add a shared product summary for product-level media, information, and compatibility details."
-                      : "Add a shared product summary for product-level media and information."}
+                    Enter the base product details here, then choose whether
+                    this item uses variants, compatibility mapping, or shared
+                    media and product information.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-cyan-50/60 p-4 shadow-sm">
-                <label className="mb-2 block text-sm font-semibold text-slate-800">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write a simple product description, highlights, use case, or selling summary..."
-                  className="premium-textarea min-h-36 w-full rounded-2xl border-slate-200 bg-white/90"
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <TopLabelInput
+                  label="Product Name"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  placeholder="e.g. OnePlus Nord 5"
                   disabled={submitting}
-                  maxLength={1200}
+                  required
                 />
 
-                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
-                  <p>
-                    This description is stored with the product and can be reused
-                    in future product views or listings.
-                  </p>
-                  <span className="shrink-0 font-medium text-slate-400">
-                    {description.trim().length}/1200
-                  </span>
+                <TopLabelInput
+                  label="SKU (Auto-generated if empty)"
+                  value={sku}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setsku(nextValue);
+                    setSkuManuallyEdited(Boolean(nextValue.trim()));
+                  }}
+                  placeholder={autosku || "Auto generated"}
+                  disabled={submitting}
+                  hint={
+                    skuManuallyEdited
+                      ? "Custom SKU will be saved."
+                      : autosku
+                        ? `Auto SKU: ${autosku}`
+                        : "Enter product name to generate SKU."
+                  }
+                />
+
+                <TopLabelInput
+                  label="HSN Code"
+                  value={hsnCode}
+                  onChange={(e) => setHsnCode(e.target.value)}
+                  placeholder="Search or enter HSN code"
+                  disabled={submitting}
+                  maxLength={12}
+                  rightAction={{
+                    label: "Search HSN code",
+                    icon: Search,
+                    onClick: () => setHsnLookupOpen(true),
+                  }}
+                />
+
+                <div className="space-y-1">
+                  <TopLabelInput
+                    label="Search Keys"
+                    value={searchKeysInput}
+                    onChange={(e) => setSearchKeysInput(e.target.value)}
+                    placeholder="Custom search keys"
+                    disabled={submitting}
+                  />
+
+                  {manualSearchKeys.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {manualSearchKeys.map((key) => (
+                        <span
+                          key={key}
+                          className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700"
+                        >
+                          {key}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </section>
-          ) : null}
 
-          <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-            <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                <Layers3 className="h-5 w-5" />
+            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <FolderTree className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Category Mapping
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Select the product hierarchy and primary brand/model.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Configuration Option
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Choose how product details should be stored before entering
-                  the matching description, media, and compatibility data.
-                </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {dropdownConfigs.map((config) => (
+                  <ProductDropdown
+                    key={config.key}
+                    config={config}
+                    onToggle={handleToggleDropdown}
+                    onSearchChange={handleSearchChange}
+                    onSelect={handleSelectDropdownValue}
+                    dropdownRef={dropdownRefs[config.key]}
+                    searchInputRef={searchInputRefs[config.key]}
+                  />
+                ))}
               </div>
-            </div>
+            </section>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
-              {categoryMappingOptions.map((option) => {
-                const Icon = option.icon;
-                const selected = categoryMappingMode === option.value;
+            {usesProductMediaInformation ? (
+              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
+                    <Info className="h-5 w-5" />
+                  </div>
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setCategoryMappingMode(option.value)}
-                    className={`rounded-3xl border p-4 text-left transition ${
-                      selected
-                        ? "border-violet-500 bg-violet-50 shadow-[0_18px_40px_rgba(139,92,246,0.14)]"
-                        : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/50"
-                    }`}
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Product Description
+                    </h2>
+                    <p className="text-sm text-slate-500">
+                      {usesCompatibilityMapping
+                        ? "Add a shared product summary for product-level media, information, and compatibility details."
+                        : "Add a shared product summary for product-level media and information."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-cyan-50/60 p-4 shadow-sm">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800">
+                    Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Write a simple product description, highlights, use case, or selling summary..."
+                    className="premium-textarea min-h-36 w-full rounded-2xl border-slate-200 bg-white/90"
                     disabled={submitting}
-                  >
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                    maxLength={1200}
+                  />
+
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <p>
+                      This description is stored with the product and can be
+                      reused in future product views or listings.
+                    </p>
+                    <span className="shrink-0 font-medium text-slate-400">
+                      {description.trim().length}/1200
+                    </span>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <div className="mb-3 flex items-start gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                  <Layers3 className="h-4.5 w-4.5" />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-extrabold text-slate-900">
+                    Configuration Option
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Choose how product details should be stored.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+                {categoryMappingOptions.map((option) => {
+                  const Icon = option.icon;
+                  const selected = categoryMappingMode === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setCategoryMappingMode(option.value)}
+                      disabled={submitting}
+                      className={[
+                        "group flex min-h-[92px] items-center gap-3 rounded-2xl border p-3 text-left transition",
+                        selected
+                          ? "border-violet-500 bg-violet-50 shadow-[0_12px_28px_rgba(139,92,246,0.13)]"
+                          : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40",
+                        submitting ? "cursor-not-allowed opacity-70" : "",
+                      ].join(" ")}
+                    >
                       <div
-                        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                        className={[
+                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
                           selected
                             ? "bg-violet-600 text-white"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
+                            : "bg-slate-100 text-slate-600 group-hover:bg-violet-100 group-hover:text-violet-700",
+                        ].join(" ")}
                       >
                         <Icon className="h-5 w-5" />
                       </div>
 
+                      <div className="min-w-0 flex-1">
+                        <h4 className="line-clamp-2 text-sm font-extrabold leading-5 text-slate-900">
+                          {option.title}
+                        </h4>
+                      </div>
+
                       <span
-                        className={`inline-flex h-5 w-5 shrink-0 rounded-full border-2 ${
+                        className={[
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
                           selected
                             ? "border-violet-600 bg-violet-600"
-                            : "border-slate-300 bg-white"
-                        }`}
+                            : "border-slate-300 bg-white",
+                        ].join(" ")}
                       >
-                        <span className="m-auto h-2 w-2 rounded-full bg-white" />
+                        {selected ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
                       </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {usesVariantConfiguration ? (
+              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                      <Boxes className="h-5 w-5" />
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-900">
-                      {option.title}
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      {option.description}
-                    </p>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {usesVariantCompatibilityMapping
+                          ? "Variants & Compatible Brands & Models"
+                          : "Variants"}
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        {usesVariantCompatibilityMapping
+                          ? "Each variant can have its own title, description, attributes, media, product information, and compatible brands and models."
+                          : "Each variant can have its own title, description, attributes, media, and product information."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addVariantRow}
+                    className="premium-btn-secondary h-10 gap-1.5 px-3.5"
+                    disabled={submitting}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Variant
                   </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {usesVariantConfiguration ? (
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  <Boxes className="h-5 w-5" />
                 </div>
 
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    {usesVariantCompatibilityMapping
-                      ? "Variants & Compatible Brands & Models"
-                      : "Variants"}
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    {usesVariantCompatibilityMapping
-                      ? "Each variant can have its own title, description, attributes, media, product information, and compatible brands and models."
-                      : "Each variant can have its own title, description, attributes, media, and product information."}
-                  </p>
+                <div className="space-y-4">
+                  {variant.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="rounded-3xl border border-slate-200 bg-slate-50/50 p-4"
+                    >
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                            Variant {index + 1}
+                          </p>
+                          <h3 className="text-lg font-bold text-slate-900">
+                            {item.title.trim() || "New Variant"}
+                          </h3>
+                          {usesVariantCompatibilityMapping ? (
+                            <p className="mt-1 text-sm text-slate-500">
+                              Variant {index + 1} compatible brands & models
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeVariantRow(item.id)}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-rose-600 transition hover:bg-rose-100"
+                          disabled={submitting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <label className="premium-label">Variant Title</label>
+                          <input
+                            value={item.title}
+                            onChange={(e) =>
+                              updateVariant(item.id, { title: e.target.value })
+                            }
+                            placeholder="Auto generated from attributes"
+                            className="premium-input"
+                            disabled={submitting}
+                          />
+                        </div>
+
+                        <div className="rounded-[22px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-amber-50/50 p-3 shadow-sm">
+                          <label className="premium-label">
+                            Variant Product Description
+                          </label>
+                          <textarea
+                            value={item.description}
+                            onChange={(e) =>
+                              updateVariant(item.id, {
+                                description: e.target.value,
+                              })
+                            }
+                            placeholder="Write a short description for this variant..."
+                            className="premium-textarea min-h-28 w-full resize-none rounded-2xl border-slate-200 bg-white/90"
+                            disabled={submitting}
+                            maxLength={1200}
+                          />
+
+                          <div className="mt-2 flex justify-end text-xs font-medium text-slate-400">
+                            {item.description.trim().length}/1200
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="premium-label">
+                            Variant Attributes
+                          </label>
+                          <VariantAttributesEditor
+                            attributes={item.attributes}
+                            disabled={submitting}
+                            onChangeLabel={(attributeId, value) =>
+                              updateVariantAttributeLabel(
+                                item.id,
+                                attributeId,
+                                value,
+                              )
+                            }
+                            onChangeValue={(attributeId, value) =>
+                              updateVariantAttributeValue(
+                                item.id,
+                                attributeId,
+                                value,
+                              )
+                            }
+                            onAddAttribute={() => addVariantAttribute(item.id)}
+                            onRemoveAttribute={(attributeId) =>
+                              removeVariantAttribute(item.id, attributeId)
+                            }
+                            resolveOptions={getPresetValueOptions}
+                            allowCustom={(label) => isColourField(label)}
+                            resolveCustomOption={(label, value) =>
+                              resolvePresetValueOption(label, value)
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="premium-label">
+                            Variant Images & Media
+                          </label>
+                          <VariantMediaUploader
+                            inputId={`variant-media-${item.id}`}
+                            images={item.images}
+                            videos={item.videos}
+                            accept={PRODUCT_MEDIA_ACCEPT}
+                            disabled={submitting}
+                            onFilesSelected={(files) =>
+                              addVariantMedia(item.id, files)
+                            }
+                            onRemove={(mediaKind, itemId) =>
+                              removeVariantMedia(item.id, mediaKind, itemId)
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="premium-label">
+                            Variant Product Information
+                          </label>
+                          <VariantProductInformationEditor
+                            sections={item.productInformation}
+                            disabled={submitting}
+                            onChangeSectionTitle={(sectionIndex, value) =>
+                              updateVariantProductInfoSectionTitle(
+                                item.id,
+                                sectionIndex,
+                                value,
+                              )
+                            }
+                            onAddSection={() =>
+                              addVariantProductInfoSection(item.id)
+                            }
+                            onRemoveSection={(sectionIndex) =>
+                              removeVariantProductInfoSection(
+                                item.id,
+                                sectionIndex,
+                              )
+                            }
+                            onAddField={(sectionIndex) =>
+                              addVariantProductInfoField(item.id, sectionIndex)
+                            }
+                            onRemoveField={(sectionIndex, fieldIndex) =>
+                              removeVariantProductInfoField(
+                                item.id,
+                                sectionIndex,
+                                fieldIndex,
+                              )
+                            }
+                            onChangeField={(
+                              sectionIndex,
+                              fieldIndex,
+                              key,
+                              value,
+                            ) =>
+                              updateVariantProductInfoField(
+                                item.id,
+                                sectionIndex,
+                                fieldIndex,
+                                key,
+                                value,
+                              )
+                            }
+                            resolveOptions={getPresetValueOptions}
+                            allowCustomValue={(label) => isColourField(label)}
+                            resolveCustomValueOption={(label, value) =>
+                              resolvePresetValueOption(label, value)
+                            }
+                          />
+                        </div>
+
+                        {usesVariantCompatibilityMapping ? (
+                          <div>
+                            <label className="premium-label">
+                              Variant {index + 1} Compatible Brands & Models
+                            </label>
+                            <CompatibilityRowsEditor
+                              rows={item.compatibility}
+                              brandMap={brandMap}
+                              modelMapByBrand={modelMapByBrand}
+                              disabled={submitting}
+                              onUpdateRow={(rowId, patch) =>
+                                updateVariantCompatibilityRow(
+                                  item.id,
+                                  rowId,
+                                  patch,
+                                )
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </section>
+            ) : null}
+
+            {usesProductMediaInformation ? (
+              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600">
+                    <Info className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Product Images & Media
+                    </h2>
+                    <p className="text-sm text-slate-500">
+                      Use shared product media and common details when this
+                      product does not need separate variant cards.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
+                  <div>
+                    <label className="premium-label">
+                      Product Images & Media
+                    </label>
+                    <VariantMediaUploader
+                      inputId="product-media"
+                      images={productImages}
+                      videos={productVideos}
+                      accept={PRODUCT_MEDIA_ACCEPT}
+                      disabled={submitting}
+                      title="Upload product images & media"
+                      description="Drag and drop or click to browse shared PNG, JPG, JPEG, WEBP, MP4, MOV, or WEBM files."
+                      emptyStateText="Shared product media previews will appear here after upload."
+                      onFilesSelected={addProductMedia}
+                      onRemove={removeProductMedia}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="premium-label">Product Information</label>
+                    <VariantProductInformationEditor
+                      sections={productInformation}
+                      disabled={submitting}
+                      onChangeSectionTitle={updateProductInfoSectionTitle}
+                      onAddSection={addProductInfoSection}
+                      onRemoveSection={removeProductInfoSection}
+                      onAddField={addProductInfoField}
+                      onRemoveField={removeProductInfoField}
+                      onChangeField={updateProductInfoField}
+                      resolveOptions={getPresetValueOptions}
+                      allowCustomValue={(label) => isColourField(label)}
+                      resolveCustomValueOption={(label, value) =>
+                        resolvePresetValueOption(label, value)
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {usesProductCompatibilityMapping ? (
+              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Compatible Brands & Models
+                    </h2>
+                    <p className="text-sm text-slate-500">
+                      Select supported brands and models for
+                      compatibility-driven products.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <TopLabelInput
+                    label="Compatibility"
+                    value={compatibilityBrandSearch}
+                    onChange={(e) =>
+                      setCompatibilityBrandSearch(e.target.value)
+                    }
+                    placeholder="Search compatible brand"
+                    disabled={submitting}
+                  />
+                </div>
+
+                <CompatibilityRowsEditor
+                  rows={paginatedCompatibilityRows}
+                  brandMap={brandMap}
+                  modelMapByBrand={modelMapByBrand}
+                  disabled={submitting}
+                  emptyStateText="No compatible brands matched your search."
+                  onUpdateRow={updateCompatibilityRow}
+                />
+              </section>
+            ) : null}
+
+            <section className="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <label className="inline-flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  disabled={submitting}
+                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                />
+                <span className="text-sm font-medium text-slate-800">
+                  Product active
+                </span>
+              </label>
 
               <button
-                type="button"
-                onClick={addVariantRow}
-                className="premium-btn-secondary h-10 gap-1.5 px-3.5"
+                type="submit"
+                className="premium-btn-primary h-11 gap-2 px-5"
                 disabled={submitting}
               >
-                <Plus className="h-4 w-4" />
-                Add Variant
+                <Save className="h-4 w-4" />
+                {submitting
+                  ? "Saving..."
+                  : isEditMode
+                    ? "Update Product"
+                    : "Create Product"}
               </button>
-            </div>
-
-            <div className="space-y-4">
-              {variant.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="rounded-3xl border border-slate-200 bg-slate-50/50 p-4"
-                >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Variant {index + 1}
-                      </p>
-                      <h3 className="text-lg font-bold text-slate-900">
-                        {item.title.trim() || "New Variant"}
-                      </h3>
-                      {usesVariantCompatibilityMapping ? (
-                        <p className="mt-1 text-sm text-slate-500">
-                          Variant {index + 1} compatible brands & models
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => removeVariantRow(item.id)}
-                      className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-rose-600 transition hover:bg-rose-100"
-                      disabled={submitting}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="premium-label">Variant Title</label>
-                      <input
-                        value={item.title}
-                        onChange={(e) =>
-                          updateVariant(item.id, { title: e.target.value })
-                        }
-                        placeholder="Auto generated from attributes"
-                        className="premium-input"
-                        disabled={submitting}
-                      />
-                    </div>
-
-                    <div className="rounded-[22px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-amber-50/50 p-3 shadow-sm">
-                      <label className="premium-label">
-                        Variant Product Description
-                      </label>
-                      <textarea
-                        value={item.description}
-                        onChange={(e) =>
-                          updateVariant(item.id, {
-                            description: e.target.value,
-                          })
-                        }
-                        placeholder="Write a short description for this variant..."
-                        className="premium-textarea min-h-28 w-full resize-none rounded-2xl border-slate-200 bg-white/90"
-                        disabled={submitting}
-                        maxLength={1200}
-                      />
-
-                      <div className="mt-2 flex justify-end text-xs font-medium text-slate-400">
-                        {item.description.trim().length}/1200
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="premium-label">Variant Attributes</label>
-                      <VariantAttributesEditor
-                        attributes={item.attributes}
-                        disabled={submitting}
-                        onChangeLabel={(attributeId, value) =>
-                          updateVariantAttributeLabel(item.id, attributeId, value)
-                        }
-                        onChangeValue={(attributeId, value) =>
-                          updateVariantAttributeValue(item.id, attributeId, value)
-                        }
-                        onAddAttribute={() => addVariantAttribute(item.id)}
-                        onRemoveAttribute={(attributeId) =>
-                          removeVariantAttribute(item.id, attributeId)
-                        }
-                        resolveOptions={getPresetValueOptions}
-                        allowCustom={(label) => isColourField(label)}
-                        resolveCustomOption={(label, value) =>
-                          resolvePresetValueOption(label, value)
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="premium-label">Variant Images & Media</label>
-                      <VariantMediaUploader
-                        inputId={`variant-media-${item.id}`}
-                        images={item.images}
-                        videos={item.videos}
-                        accept={PRODUCT_MEDIA_ACCEPT}
-                        disabled={submitting}
-                        onFilesSelected={(files) => addVariantMedia(item.id, files)}
-                        onRemove={(mediaKind, itemId) =>
-                          removeVariantMedia(item.id, mediaKind, itemId)
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="premium-label">Variant Product Information</label>
-                      <VariantProductInformationEditor
-                        sections={item.productInformation}
-                        disabled={submitting}
-                        onChangeSectionTitle={(sectionIndex, value) =>
-                          updateVariantProductInfoSectionTitle(
-                            item.id,
-                            sectionIndex,
-                            value
-                          )
-                        }
-                        onAddSection={() => addVariantProductInfoSection(item.id)}
-                        onRemoveSection={(sectionIndex) =>
-                          removeVariantProductInfoSection(item.id, sectionIndex)
-                        }
-                        onAddField={(sectionIndex) =>
-                          addVariantProductInfoField(item.id, sectionIndex)
-                        }
-                        onRemoveField={(sectionIndex, fieldIndex) =>
-                          removeVariantProductInfoField(
-                            item.id,
-                            sectionIndex,
-                            fieldIndex
-                          )
-                        }
-                        onChangeField={(sectionIndex, fieldIndex, key, value) =>
-                          updateVariantProductInfoField(
-                            item.id,
-                            sectionIndex,
-                            fieldIndex,
-                            key,
-                            value
-                          )
-                        }
-                        resolveOptions={getPresetValueOptions}
-                        allowCustomValue={(label) => isColourField(label)}
-                        resolveCustomValueOption={(label, value) =>
-                          resolvePresetValueOption(label, value)
-                        }
-                      />
-                    </div>
-
-                    {usesVariantCompatibilityMapping ? (
-                      <div>
-                        <label className="premium-label">
-                          Variant {index + 1} Compatible Brands & Models
-                        </label>
-                        <CompatibilityRowsEditor
-                          rows={item.compatibility}
-                          brandMap={brandMap}
-                          modelMapByBrand={modelMapByBrand}
-                          disabled={submitting}
-                          onUpdateRow={(rowId, patch) =>
-                            updateVariantCompatibilityRow(item.id, rowId, patch)
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
             </section>
-          ) : null}
-
-          {usesProductMediaInformation ? (
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600">
-                  <Info className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Product Images & Media
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    Use shared product media and common details when this product
-                    does not need separate variant cards.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
-                <div>
-                  <label className="premium-label">Product Images & Media</label>
-                  <VariantMediaUploader
-                    inputId="product-media"
-                    images={productImages}
-                    videos={productVideos}
-                    accept={PRODUCT_MEDIA_ACCEPT}
-                    disabled={submitting}
-                    title="Upload product images & media"
-                    description="Drag and drop or click to browse shared PNG, JPG, JPEG, WEBP, MP4, MOV, or WEBM files."
-                    emptyStateText="Shared product media previews will appear here after upload."
-                    onFilesSelected={addProductMedia}
-                    onRemove={removeProductMedia}
-                  />
-                </div>
-
-                <div>
-                  <label className="premium-label">Product Information</label>
-                  <VariantProductInformationEditor
-                    sections={productInformation}
-                    disabled={submitting}
-                    onChangeSectionTitle={updateProductInfoSectionTitle}
-                    onAddSection={addProductInfoSection}
-                    onRemoveSection={removeProductInfoSection}
-                    onAddField={addProductInfoField}
-                    onRemoveField={removeProductInfoField}
-                    onChangeField={updateProductInfoField}
-                    resolveOptions={getPresetValueOptions}
-                    allowCustomValue={(label) => isColourField(label)}
-                    resolveCustomValueOption={(label, value) =>
-                      resolvePresetValueOption(label, value)
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-          ) : null}
-
-          {usesProductCompatibilityMapping ? (
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
-            <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Compatible Brands & Models
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Select supported brands and models for compatibility-driven products.
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <TopLabelInput
-                label="Compatibility"
-                value={compatibilityBrandSearch}
-                onChange={(e) => setCompatibilityBrandSearch(e.target.value)}
-                placeholder="Search compatible brand"
-                disabled={submitting}
-              />
-            </div>
-
-            <CompatibilityRowsEditor
-              rows={paginatedCompatibilityRows}
-              brandMap={brandMap}
-              modelMapByBrand={modelMapByBrand}
-              disabled={submitting}
-              emptyStateText="No compatible brands matched your search."
-              onUpdateRow={updateCompatibilityRow}
-            />
-            </section>
-          ) : null}
-
-          <section className="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="inline-flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                disabled={submitting}
-                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-              />
-              <span className="text-sm font-medium text-slate-800">
-                Product active
-              </span>
-            </label>
-
-            <button
-              type="submit"
-              className="premium-btn-primary h-11 gap-2 px-5"
-              disabled={submitting}
-            >
-              <Save className="h-4 w-4" />
-              {submitting
-                ? "Saving..."
-                : isEditMode
-                  ? "Update Product"
-                  : "Create Product"}
-            </button>
-          </section>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

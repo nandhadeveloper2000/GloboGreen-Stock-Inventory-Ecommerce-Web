@@ -443,7 +443,7 @@ export default function CreateMasterCategoryPage({
   if (loadingExisting) {
     return (
       <div className="page-shell">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-center rounded-[28px] border border-slate-200 bg-white py-24 shadow-sm">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-center rounded-card border border-slate-200 bg-white py-24 shadow-sm">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
             <span className="text-sm font-medium">Loading master category...</span>
@@ -480,7 +480,7 @@ export default function CreateMasterCategoryPage({
         </section>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <Tag className="h-5 w-5" />
@@ -514,7 +514,7 @@ export default function CreateMasterCategoryPage({
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-[28px] p-4 md:p-5">
+          <section className="premium-card-solid rounded-card p-4 md:p-5">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
                 <ImagePlus className="h-5 w-5" />
@@ -622,8 +622,8 @@ export default function CreateMasterCategoryPage({
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-[28px] border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={resetForm}

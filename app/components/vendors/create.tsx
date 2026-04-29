@@ -1121,7 +1121,7 @@ export function VendorForm({
     return (
       <div className="page-shell">
         <div className="mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center">
-          <div className="rounded-[24px] border border-slate-200 bg-white px-8 py-10 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+          <div className="rounded-3xl border border-slate-200 bg-white px-8 py-10 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-violet-100 border-t-violet-700">
               <Loader2 className="h-6 w-6 animate-spin text-violet-700" />
             </div>
@@ -1138,7 +1138,7 @@ export function VendorForm({
     return (
       <div className="page-shell">
         <div className="mx-auto max-w-4xl">
-          <div className="rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-700">
               <Store className="h-7 w-7" />
             </div>
@@ -1164,7 +1164,7 @@ export function VendorForm({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("storage"))}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2e3192] to-[#9116a1] px-4 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-4 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Recheck Selection
@@ -1180,7 +1180,7 @@ export function VendorForm({
     return (
       <div className="page-shell">
         <div className="mx-auto max-w-4xl">
-          <div className="rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-700">
               <Store className="h-7 w-7" />
             </div>

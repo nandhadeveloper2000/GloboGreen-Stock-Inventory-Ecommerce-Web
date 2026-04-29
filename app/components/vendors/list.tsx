@@ -370,8 +370,8 @@ export default function VendorListPage() {
       <div className="page-shell">
         <div className="flex min-h-[60vh] w-full items-center justify-center">
           <div className="premium-card-solid w-full px-8 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-[var(--primary-soft-2)] border-t-[var(--primary)]">
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--primary)]" />
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-primary-soft-2 border-t-primary">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
 
             <p className="mt-4 text-sm font-semibold text-secondary-text">
@@ -390,7 +390,7 @@ export default function VendorListPage() {
           <div className="border-b border-token px-4 py-4 md:px-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(46,49,146,0.14)] bg-[var(--primary-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--primary)]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(46,49,146,0.14)] bg-primary-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                   <Building2 className="h-3.5 w-3.5" />
                   Vendor Panel
                 </div>
@@ -406,19 +406,19 @@ export default function VendorListPage() {
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-token bg-soft-token px-3 text-[12px] font-semibold text-primary-text">
-                    <Store className="h-3.5 w-3.5 text-[var(--primary)]" />
+                    <Store className="h-3.5 w-3.5 text-primary" />
                     {selectedShopName || "No shop selected"}
                   </span>
 
-                  <span className="inline-flex h-8 items-center rounded-lg bg-[var(--primary-soft)] px-3 text-[12px] font-semibold text-[var(--primary)]">
+                  <span className="inline-flex h-8 items-center rounded-lg bg-primary-soft px-3 text-[12px] font-semibold text-primary">
                     Total: {stats.total}
                   </span>
 
-                  <span className="inline-flex h-8 items-center rounded-lg bg-[var(--success-soft)] px-3 text-[12px] font-semibold text-[var(--success-dark)]">
+                  <span className="inline-flex h-8 items-center rounded-lg bg-success-soft px-3 text-[12px] font-semibold text-success-dark">
                     Active: {stats.active}
                   </span>
 
-                  <span className="inline-flex h-8 items-center rounded-lg bg-[var(--danger-soft)] px-3 text-[12px] font-semibold text-[var(--danger)]">
+                  <span className="inline-flex h-8 items-center rounded-lg bg-danger-soft px-3 text-[12px] font-semibold text-danger">
                     Inactive: {stats.inactive}
                   </span>
                 </div>
@@ -461,12 +461,12 @@ export default function VendorListPage() {
                 />
               </div>
 
-              <div className="flex h-10 flex-col items-center justify-center rounded-lg border border-[rgba(46,49,146,0.18)] bg-[var(--primary-soft)] px-3 text-center">
+              <div className="flex h-10 flex-col items-center justify-center rounded-lg border border-[rgba(46,49,146,0.18)] bg-primary-soft px-3 text-center">
                 <span className="text-[10px] font-semibold text-secondary-text">
                   Search by
                 </span>
 
-                <span className="text-[12px] font-bold text-[var(--primary)]">
+                <span className="text-[12px] font-bold text-primary">
                   GST / State
                 </span>
               </div>
@@ -492,7 +492,7 @@ export default function VendorListPage() {
 
           {!selectedShopId ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary-soft)] text-[var(--primary)]">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
                 <Store className="h-6 w-6" />
               </div>
 
@@ -506,7 +506,7 @@ export default function VendorListPage() {
             </div>
           ) : filteredVendors.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary-soft)] text-[var(--primary)]">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
                 <Building2 className="h-6 w-6" />
               </div>
 
@@ -551,14 +551,14 @@ export default function VendorListPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-[var(--divider)] bg-card-token">
+                  <tbody className="divide-y divide-divider bg-card-token">
                     {paginatedVendors.map((vendor, index) => {
                       const addressText = getVendorAddressText(vendor);
 
                       return (
                         <tr
                           key={vendor._id}
-                          className="transition hover:bg-[var(--primary-soft)]/60"
+                          className="transition hover:bg-primary-soft/60"
                         >
                           <td className="px-3 py-3 text-[12px] text-secondary-text">
                             {page * rowsPerPage + index + 1}
@@ -626,7 +626,7 @@ export default function VendorListPage() {
                             <div className="flex items-center justify-center gap-1.5">
                               <Link
                                 href={`/shopowner/vendors/view?id=${vendor._id}`}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-primary-soft hover:text-primary"
                                 title="View"
                               >
                                 <Eye className="h-3.5 w-3.5" />
@@ -634,7 +634,7 @@ export default function VendorListPage() {
 
                               <Link
                                 href={`/shopowner/vendors/edit/${vendor._id}`}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-primary-soft hover:text-primary"
                                 title="Edit"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -643,7 +643,7 @@ export default function VendorListPage() {
                               <button
                                 type="button"
                                 onClick={() => void handleStatusToggle(vendor)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-secondary-text transition hover:bg-primary-soft hover:text-primary"
                                 title={
                                   String(
                                     vendor.status || "ACTIVE"
@@ -658,7 +658,7 @@ export default function VendorListPage() {
                               <button
                                 type="button"
                                 onClick={() => void handleDelete(vendor)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-[var(--danger)] transition hover:bg-[var(--danger-soft)]"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-token bg-white text-danger transition hover:bg-danger-soft"
                                 title="Deactivate vendor"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -684,7 +684,7 @@ export default function VendorListPage() {
                       setRowsPerPage(Number(event.target.value));
                       setPage(0);
                     }}
-                    className="h-8 rounded-md border border-token bg-white px-2 text-[12px] font-semibold text-primary-text outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
+                    className="h-8 rounded-md border border-token bg-white px-2 text-[12px] font-semibold text-primary-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-soft"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>

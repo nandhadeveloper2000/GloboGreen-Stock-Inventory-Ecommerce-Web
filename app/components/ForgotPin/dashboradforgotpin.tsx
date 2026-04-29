@@ -168,7 +168,7 @@ function StepBar({ activeStep }: { activeStep: 1 | 2 | 3 }) {
             key={item}
             className={`h-2 rounded-full transition-all ${
               isActive
-                ? "bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]"
+                ? "bg-linear-to-r from-primary to-secondary"
                 : "bg-slate-200"
             }`}
           />
@@ -186,7 +186,7 @@ function InputShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+    <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
       <Icon className="h-4 w-4 shrink-0 text-slate-400" />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -477,8 +477,8 @@ export default function ForgotPin() {
           </p>
         </div>
 
-        <Card className="overflow-hidden rounded-[28px] border-0 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur">
-          <div className="h-2 w-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]" />
+        <Card className="overflow-hidden rounded-card border-0 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)] backdrop-blur">
+          <div className="h-2 w-full bg-linear-to-r from-primary to-secondary" />
 
           <CardHeader className="space-y-4 px-6 pb-2 pt-6">
             <div className="flex items-start justify-between gap-4">
@@ -493,7 +493,7 @@ export default function ForgotPin() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-lg">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-secondary text-white shadow-lg">
                 {step === 1 && <UserCircle2 className="h-6 w-6" />}
                 {step === 2 && <ShieldCheck className="h-6 w-6" />}
                 {step === 3 && <KeyRound className="h-6 w-6" />}
@@ -568,7 +568,7 @@ export default function ForgotPin() {
                   <label className="text-sm font-semibold text-slate-600">
                     New PIN
                   </label>
-                  <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+                  <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
                     <LockKeyhole className="h-4 w-4 shrink-0 text-slate-400" />
                     <input
                       value={newPin}
@@ -599,7 +599,7 @@ export default function ForgotPin() {
                   <label className="text-sm font-semibold text-slate-600">
                     Confirm PIN
                   </label>
-                  <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+                  <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
                     <LockKeyhole className="h-4 w-4 shrink-0 text-slate-400" />
                     <input
                       value={confirmPin}
@@ -638,7 +638,7 @@ export default function ForgotPin() {
                   type="button"
                   onClick={handleSendOtp}
                   disabled={loading}
-                  className="col-span-1 h-12 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-sm font-semibold text-white shadow-lg hover:opacity-95 sm:col-span-2"
+                  className="col-span-1 h-12 rounded-2xl bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-lg hover:opacity-95 sm:col-span-2"
                 >
                   {loading ? "Sending..." : "Send OTP"}
                   {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
@@ -659,7 +659,7 @@ export default function ForgotPin() {
                     type="button"
                     onClick={handleVerifyOtp}
                     disabled={loading}
-                    className="h-12 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-sm font-semibold text-white shadow-lg hover:opacity-95"
+                    className="h-12 rounded-2xl bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-lg hover:opacity-95"
                   >
                     {loading ? "Verifying..." : "Verify OTP"}
                     {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
@@ -681,7 +681,7 @@ export default function ForgotPin() {
                     type="button"
                     onClick={handleResetPin}
                     disabled={loading}
-                    className="h-12 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-sm font-semibold text-white shadow-lg hover:opacity-95"
+                    className="h-12 rounded-2xl bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-lg hover:opacity-95"
                   >
                     {loading ? "Resetting..." : "Reset PIN"}
                     {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
@@ -693,7 +693,7 @@ export default function ForgotPin() {
             <div className="flex items-center justify-center pt-1">
               <Link
                 href={loginPath}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--primary)] transition hover:text-[var(--accent)]"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-secondary"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to login

@@ -1080,11 +1080,11 @@ export default function Profile() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <aside className="rounded-card border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col items-center text-center">
             <div className="relative">
               {avatarPreview ? (
-                <div className="relative h-32 w-32 overflow-hidden rounded-[28px] border-4 border-slate-100 shadow-lg">
+                <div className="relative h-32 w-32 overflow-hidden rounded-card border-4 border-slate-100 shadow-lg">
                   <Image
                     src={avatarPreview}
                     alt={form.name || "Profile"}
@@ -1094,7 +1094,7 @@ export default function Profile() {
                   />
                 </div>
               ) : (
-                <div className="flex h-32 w-32 items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-4xl font-bold text-white shadow-lg">
+                <div className="flex h-32 w-32 items-center justify-center rounded-card bg-linear-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-4xl font-bold text-white shadow-lg">
                   {initials}
                 </div>
               )}
@@ -1239,7 +1239,7 @@ export default function Profile() {
           </div>
         </aside>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] md:p-7">
+        <section className="rounded-card border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] md:p-7">
           <div className="mb-6">
             <h3 className="text-2xl font-bold tracking-tight text-slate-900">
               Edit Profile
@@ -1369,7 +1369,7 @@ export default function Profile() {
             </div>
 
             {showExtraFields && (
-              <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-5">
+              <section className="rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-5">
                 <SectionHeader
                   icon={<MapPin className="h-5 w-5" />}
                   title="Address Details"
@@ -1550,7 +1550,7 @@ export default function Profile() {
             )}
 
             {showExtraFields && apiConfig?.idProofUpload && (
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 md:p-5">
+              <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm">
                     <FileBadge className="h-5 w-5" />

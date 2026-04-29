@@ -364,7 +364,7 @@ export default function ShopLoginForm() {
               <div className="flex items-center justify-between">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-[var(--primary)] transition hover:text-[var(--accent)]"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-primary transition hover:text-secondary"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -372,7 +372,7 @@ export default function ShopLoginForm() {
 
                 <Link
                   href={`/forgot-pin?role=${encodeURIComponent(selectedRole)}`}
-                  className="text-sm font-medium text-[var(--primary)] transition hover:text-[var(--accent)]"
+                  className="text-sm font-medium text-primary transition hover:text-secondary"
                 >
                   Forgot PIN?
                 </Link>

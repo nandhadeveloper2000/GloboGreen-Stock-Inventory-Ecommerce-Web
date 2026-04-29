@@ -19,11 +19,9 @@ import type {
 } from "./create-types";
 
 export const ROWS_PER_PAGE = 5;
-export const PRODUCT_IMAGE_ACCEPT =
-  "image/png,image/jpeg,image/jpg,image/webp";
+export const PRODUCT_IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
 export const PRODUCT_IMAGE_MAX_SIZE = 3 * 1024 * 1024;
-export const PRODUCT_VIDEO_ACCEPT =
-  "video/mp4,video/webm,video/quicktime,.mov";
+export const PRODUCT_VIDEO_ACCEPT = "video/mp4,video/webm,video/quicktime,.mov";
 export const PRODUCT_MEDIA_ACCEPT = `${PRODUCT_IMAGE_ACCEPT},${PRODUCT_VIDEO_ACCEPT}`;
 export const PRODUCT_VIDEO_MAX_SIZE = 25 * 1024 * 1024;
 
@@ -162,7 +160,7 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
           "Product Features",
           "Flash Memory Supported Size Maximum",
         ],
-      }, 
+      },
       {
         title: "Camera",
         fieldLabels: [
@@ -176,7 +174,7 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
       },
       {
         title: "Battery",
-        fieldLabels: ["Battery Capacity","Battery Power"],
+        fieldLabels: ["Battery Capacity", "Battery Power"],
       },
       {
         title: "Measurements",
@@ -217,9 +215,9 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         title: "Item Details",
         fieldLabels: [
           "Model Year",
-          "Box Contents", 
+          "Box Contents",
           "Specific Uses For Product",
-          "Item Type Name", 
+          "Item Type Name",
           "Unit Count",
           "Warranty Description",
         ],
@@ -249,10 +247,10 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         title: "Features & Specs",
         fieldLabels: [
           "Item Hardness",
-          "Special Features", 
+          "Special Features",
           "Screen Surface Description",
-          "Clarity", 
-          ""
+          "Clarity",
+          "",
         ],
       },
       {
@@ -263,9 +261,14 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         title: "Additional Details",
         fieldLabels: ["Material Type"],
       },
-            {
+      {
         title: "Item Details",
-        fieldLabels: ["Colour","Item Type Name", "Item Weight", "Warranty Description"],
+        fieldLabels: [
+          "Colour",
+          "Item Type Name",
+          "Item Weight",
+          "Warranty Description",
+        ],
       },
     ],
   },
@@ -286,7 +289,7 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
         title: "Style",
         fieldLabels: ["Colour", "Form Factor", "Pattern", "Theme"],
       },
-            {
+      {
         title: "Materials & Care",
         fieldLabels: ["Enclosure Material", "Product Finish Type"],
       },
@@ -297,10 +300,13 @@ const MOBILE_PRODUCT_PRESETS: Record<string, ProductPresetDefinition> = {
 
       {
         title: "Item Details",
-        fieldLabels: ["Box Contents", "Unit Count",
-           "Item Type Name",
-           "Unit Count",
-          "Warranty Description"],
+        fieldLabels: [
+          "Box Contents",
+          "Unit Count",
+          "Item Type Name",
+          "Unit Count",
+          "Warranty Description",
+        ],
       },
     ],
   },
@@ -472,12 +478,17 @@ export function keyOf(value: string) {
     .replace(/\s/g, "-");
 }
 
-export function buildAutoModelNumber(itemName: string) {
+export function buildAutoSku(itemName: string) {
   const base = keyOf(itemName);
 
   if (!base) {
     return "";
   }
+
+  const alphanumeric = base.replace(/[^a-z0-9]/g, "");
+  const lettersOnly = alphanumeric.replace(/[^a-z]/g, "");
+  const prefixSource = (lettersOnly || alphanumeric).slice(0, 3).toUpperCase();
+  const prefix = prefixSource.padEnd(3, "X");
 
   let hash = 0;
 
@@ -486,11 +497,13 @@ export function buildAutoModelNumber(itemName: string) {
   }
 
   const suffix = String((Math.abs(hash) % 9000) + 1000);
-  return `${base}-${suffix}`;
+  return `${prefix}${suffix}`;
 }
 
 function normalizeRole(value?: string | null) {
-  return String(value ?? "").trim().toUpperCase();
+  return String(value ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 export function getErrorMessage(error: unknown, fallback: string) {
@@ -532,7 +545,7 @@ function makeId(prefix = "id") {
 
 export function createVariantAttribute(
   label = "",
-  value = ""
+  value = "",
 ): VariantAttribute {
   return {
     id: makeId("variant-attr"),
@@ -543,7 +556,7 @@ export function createVariantAttribute(
 
 export function createVariantItem(
   attributeLabels: string[] = [],
-  compatibility: VariantItem["compatibility"] = []
+  compatibility: VariantItem["compatibility"] = [],
 ): VariantItem {
   return {
     id: makeId("variant"),
@@ -570,7 +583,9 @@ export function isFilledVariantAttribute(item: VariantAttribute) {
 }
 
 export function isFilledVariant(item: VariantItem) {
-  return item.attributes.some((attribute) => isFilledVariantAttribute(attribute));
+  return item.attributes.some((attribute) =>
+    isFilledVariantAttribute(attribute),
+  );
 }
 
 export function isFilledInfoField(field: ProductInformationField) {
@@ -589,8 +604,8 @@ export function normalizeSearchKeys(value: string) {
       value
         .split(",")
         .map((item) => item.trim().toLowerCase())
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
 }
 
@@ -634,7 +649,7 @@ export function buildProductFormData(
   payload: ProductPayload,
   variantItems: VariantItem[],
   productImages: ProductImageItem[],
-  productVideos: ProductVideoItem[]
+  productVideos: ProductVideoItem[],
 ) {
   const formData = new FormData();
 
@@ -642,26 +657,27 @@ export function buildProductFormData(
     ...item,
     images: item.images.filter(
       (image): image is ProductImageItem & { file: File } =>
-        image.file instanceof File
+        image.file instanceof File,
     ),
     videos: item.videos.filter(
       (video): video is ProductVideoItem & { file: File } =>
-        video.file instanceof File
+        video.file instanceof File,
     ),
   }));
 
   const newProductImages = productImages.filter(
     (image): image is ProductImageItem & { file: File } =>
-      image.file instanceof File
+      image.file instanceof File,
   );
   const newProductVideos = productVideos.filter(
     (video): video is ProductVideoItem & { file: File } =>
-      video.file instanceof File
+      video.file instanceof File,
   );
 
+
   formData.append("itemName", payload.itemName);
-  formData.append("itemModelNumber", payload.itemModelNumber);
-  formData.append("itemKey", payload.itemKey);
+  formData.append("sku", payload.sku);
+  formData.append("hsnCode", payload.hsnCode);
   formData.append("description", payload.description);
   formData.append("configurationMode", payload.configurationMode);
   formData.append("masterCategoryId", payload.masterCategoryId);
@@ -676,7 +692,7 @@ export function buildProductFormData(
   formData.append("variant", JSON.stringify(payload.variant));
   formData.append(
     "productInformation",
-    JSON.stringify(payload.productInformation)
+    JSON.stringify(payload.productInformation),
   );
   formData.append("isActive", String(payload.isActive));
 
@@ -696,8 +712,8 @@ export function buildProductFormData(
           variantIndex: item.variantIndex,
           fieldName: item.imageField,
           fileNames: item.fileNames,
-        }))
-      )
+        })),
+      ),
     );
   }
 
@@ -723,8 +739,8 @@ export function buildProductFormData(
           variantIndex: item.variantIndex,
           fieldName: item.videoField,
           fileNames: item.fileNames,
-        }))
-      )
+        })),
+      ),
     );
   }
 
@@ -764,7 +780,7 @@ export function buildProductFormData(
       JSON.stringify({
         fieldName: productVideoGroup.videoField,
         fileNames: productVideoGroup.fileNames,
-      })
+      }),
     );
   }
 
@@ -787,15 +803,10 @@ export function buildAutoSearchKeys({
   modelName: string;
 }) {
   return normalizeSearchKeys(
-    [
-      itemName,
-      brandName,
-      modelName,
-      subcategoryName,
-    ]
+    [itemName, brandName, modelName, subcategoryName]
       .map((item) => item.trim())
       .filter(Boolean)
-      .join(",")
+      .join(","),
   );
 }
 
@@ -823,7 +834,7 @@ function resolveColourSwatch(value: string) {
   const normalizedValue = normalizePresetLookup(value);
 
   const keywordMatch = COLOUR_KEYWORD_SWATCHES.find((item) =>
-    item.tokens.some((token) => normalizedValue.includes(token))
+    item.tokens.some((token) => normalizedValue.includes(token)),
   );
 
   return keywordMatch?.swatch || hashToPastelSwatch(value);
@@ -857,7 +868,7 @@ export function getPresetValueOptions(label: string) {
 
 export function resolvePresetValueOption(
   label: string,
-  value: string
+  value: string,
 ): PresetValueOption | null {
   const trimmedValue = value.trim();
 
@@ -868,7 +879,7 @@ export function resolvePresetValueOption(
   const matchingOption = getPresetValueOptions(label).find(
     (option) =>
       option.value.toLowerCase() === trimmedValue.toLowerCase() ||
-      option.label.toLowerCase() === trimmedValue.toLowerCase()
+      option.label.toLowerCase() === trimmedValue.toLowerCase(),
   );
 
   if (matchingOption) {
@@ -894,7 +905,7 @@ export function supportsVariantImages(label: string) {
   const normalizedLabel = normalizePresetLookup(label);
 
   return ["colour", "color", "pattern", "theme", "style name"].includes(
-    normalizedLabel
+    normalizedLabel,
   );
 }
 
@@ -906,7 +917,7 @@ export function getItemTypeNameOptions(currentValue: string) {
   }
 
   const hasMatch = ITEM_TYPE_NAME_OPTIONS.some(
-    (option) => option.toLowerCase() === trimmedValue.toLowerCase()
+    (option) => option.toLowerCase() === trimmedValue.toLowerCase(),
   );
 
   return hasMatch
@@ -927,7 +938,7 @@ export function buildPresetVariantRows(labels: string[]) {
 
 export function buildPresetProductInfoSections(
   sections: ProductPresetSection[],
-  itemTypeName: string
+  itemTypeName: string,
 ) {
   return sections.map((section) => ({
     title: section.title,
@@ -946,7 +957,7 @@ export function buildVariantTitle(attributes: VariantAttribute[]) {
 }
 
 export function cloneProductInfoSections(
-  sections: ProductInformationSection[]
+  sections: ProductInformationSection[],
 ): ProductInformationSection[] {
   return sections.map((section) => ({
     title: section.title,
@@ -958,7 +969,7 @@ export function cloneProductInfoSections(
 }
 
 export function resolveMobileSubcategoryPreset(
-  subcategoryName: string
+  subcategoryName: string,
 ): ResolvedProductPreset | null {
   const normalizedName = normalizePresetLookup(subcategoryName);
 

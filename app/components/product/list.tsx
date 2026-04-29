@@ -79,8 +79,7 @@ type ProductItem = {
     | "productMediaInfoCompatibility"
     | "productMediaInfo";
   itemName: string;
-  itemModelNumber?: string;
-  itemKey?: string;
+  sku?: string;
   searchKeys?: string[];
   brandId?: RefItem | RefItem[];
   modelId?: RefItem | RefItem[];
@@ -315,8 +314,7 @@ function buildSearchText(item: ProductItem) {
 
   return [
     item.itemName,
-    item.itemModelNumber,
-    item.itemKey,
+    item.sku,
     ...(item.searchKeys || []),
     getBrandName(item),
     getModelName(item),
@@ -595,10 +593,7 @@ function ProductCard({
               {item.itemName}
             </h3>
             <p className="mt-1 text-xs font-medium text-slate-500">
-              Model No: {item.itemModelNumber || "-"}
-            </p>
-            <p className="mt-1 text-xs font-medium text-slate-500">
-              Key: {item.itemKey || "-"}
+              SKU No: {item.sku || "-"}
             </p>
           </div>
         </div>

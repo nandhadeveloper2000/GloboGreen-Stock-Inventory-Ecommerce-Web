@@ -130,7 +130,7 @@ function StatCard({
   iconWrapClassName: string;
 }) {
   return (
-    <div className="premium-card-solid rounded-[28px] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+    <div className="premium-card-solid rounded-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">{title}</p>
@@ -150,7 +150,7 @@ function StatCard({
 
 function TableSkeleton() {
   return (
-    <div className="premium-card-solid overflow-hidden rounded-[28px] p-0">
+    <div className="premium-card-solid overflow-hidden rounded-card p-0">
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse">
           <thead className="bg-slate-50">
@@ -447,7 +447,7 @@ export default function ModelListPage() {
           </p>
         </div>
 
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-[28px] px-6 py-7 md:px-8">
+        <section className="premium-hero premium-glow relative overflow-hidden rounded-card px-6 py-7 md:px-8">
           <div className="premium-grid-bg premium-bg-animate opacity-40" />
           <div className="premium-bg-overlay" />
 
@@ -514,7 +514,7 @@ export default function ModelListPage() {
           />
         </section>
 
-        <section className="premium-card-solid rounded-[28px] p-0">
+        <section className="premium-card-solid rounded-card p-0">
           <div className="flex flex-col gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between md:p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-700 to-fuchsia-600 text-white shadow-sm">

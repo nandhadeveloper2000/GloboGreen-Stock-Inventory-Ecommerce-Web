@@ -262,14 +262,14 @@ export default function MyShopProductView({
         onClick={onClose}
       />
 
-      <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-[32px] border border-white/20 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.3)]">
+      <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-4xl border border-white/20 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.3)]">
         <div className="premium-hero premium-glow relative overflow-hidden px-5 py-5 md:px-6">
           <div className="premium-grid-bg premium-bg-animate opacity-35" />
           <div className="premium-bg-overlay" />
 
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-18 w-18 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-white/25 bg-white/10">
+              <div className="flex h-18 w-18 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/25 bg-white/10">
                 {previewImage ? (
                   <img
                     src={previewImage}
@@ -342,7 +342,7 @@ export default function MyShopProductView({
           <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
             <section className="space-y-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
                     Quantity
                   </p>
@@ -351,7 +351,7 @@ export default function MyShopProductView({
                   </p>
                 </div>
 
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
                     Min Quantity
                   </p>
@@ -360,7 +360,7 @@ export default function MyShopProductView({
                   </p>
                 </div>
 
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
                     {variantProduct ? "Variants" : "Warranty"}
                   </p>
@@ -373,7 +373,7 @@ export default function MyShopProductView({
               </div>
 
               {variantProduct ? (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
+                <div className="rounded-card border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                       <IndianRupee className="h-5 w-5" />
@@ -397,7 +397,7 @@ export default function MyShopProductView({
                       return (
                         <div
                           key={`${entry.variantIndex ?? index}-${entry.title || "variant"}`}
-                          className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+                          className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
                         >
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div>
@@ -558,7 +558,7 @@ export default function MyShopProductView({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
+                <div className="rounded-card border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                       <IndianRupee className="h-5 w-5" />
@@ -635,7 +635,7 @@ export default function MyShopProductView({
 
             <section className="space-y-5">
               {variantProduct ? (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
+                <div className="rounded-card border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
                       <CalendarDays className="h-5 w-5" />
@@ -690,7 +690,7 @@ export default function MyShopProductView({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
+                <div className="rounded-card border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
                       <CalendarDays className="h-5 w-5" />
@@ -746,7 +746,7 @@ export default function MyShopProductView({
                 </div>
               )}
 
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
+              <div className="rounded-card border border-slate-200 bg-white p-5 shadow-[0_10px_34px_rgba(15,23,42,0.05)]">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
                     <Store className="h-5 w-5" />

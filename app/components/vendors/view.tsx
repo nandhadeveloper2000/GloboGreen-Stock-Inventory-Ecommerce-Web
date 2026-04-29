@@ -127,14 +127,14 @@ function DetailCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
         {icon}
       </div>
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
-      <h3 className="mt-1 break-words text-base font-bold tracking-tight text-slate-900">
+      <h3 className="mt-1 wrap-break-word text-base font-bold tracking-tight text-slate-900">
         {value || "-"}
       </h3>
     </div>
@@ -424,7 +424,7 @@ export default function VendorViewPage() {
         <section className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-6">
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-32 w-32 items-center justify-center rounded-[28px] bg-violet-100 text-violet-700">
+              <div className="flex h-32 w-32 items-center justify-center rounded-card bg-violet-100 text-violet-700">
                 <Building2 className="h-12 w-12" />
               </div>
 

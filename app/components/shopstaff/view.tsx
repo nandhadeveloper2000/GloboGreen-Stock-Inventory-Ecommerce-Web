@@ -98,10 +98,10 @@ function getAppBasePath(role: Role) {
 }
 function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">{icon}</div>
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <h3 className="mt-1 break-words text-base font-bold tracking-tight text-slate-900">{value || "—"}</h3>
+      <h3 className="mt-1 wrap-break-word text-base font-bold tracking-tight text-slate-900">{value || "—"}</h3>
     </div>
   );
 }
@@ -211,7 +211,7 @@ export default function ShopStaffViewPage() {
   }
 
   if (!staff) {
-    return <div className="page-shell"><div className="mx-auto max-w-7xl"><div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center"><h2 className="text-2xl font-bold text-slate-900">Staff not found</h2><p className="mt-2 text-sm text-slate-500">The requested staff record could not be loaded.</p><div className="mt-5"><Link href={`${appBasePath}/shopstaff/list`} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Back to List</Link></div></div></div></div>;
+    return <div className="page-shell"><div className="mx-auto max-w-7xl"><div className="rounded-card border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center"><h2 className="text-2xl font-bold text-slate-900">Staff not found</h2><p className="mt-2 text-sm text-slate-500">The requested staff record could not be loaded.</p><div className="mt-5"><Link href={`${appBasePath}/shopstaff/list`} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Back to List</Link></div></div></div></div>;
   }
 
   return (
@@ -238,7 +238,7 @@ export default function ShopStaffViewPage() {
         <section className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-6">
             <div className="flex flex-col items-center text-center">
-              {staff.avatarUrl ? <img src={staff.avatarUrl} alt={staff.name || "Staff"} className="h-32 w-32 rounded-[28px] object-cover shadow-sm" /> : <div className="flex h-32 w-32 items-center justify-center rounded-[28px] bg-violet-100 text-violet-700"><User2 className="h-12 w-12" /></div>}
+              {staff.avatarUrl ? <img src={staff.avatarUrl} alt={staff.name || "Staff"} className="h-32 w-32 rounded-card object-cover shadow-sm" /> : <div className="flex h-32 w-32 items-center justify-center rounded-card bg-violet-100 text-violet-700"><User2 className="h-12 w-12" /></div>}
               <h2 className="mt-5 text-2xl font-bold text-slate-900">{staff.name || "Unnamed"}</h2>
               <p className="mt-1 text-sm text-slate-500">@{staff.username || "—"}</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
