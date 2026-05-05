@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -213,7 +213,7 @@ export default function ChangePin() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-r from-primary to-secondary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-r from-primary to-secondary text-white shadow-[0_14px_34px_rgba(22,163,74,0.24)]">
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
@@ -333,7 +333,7 @@ export default function ChangePin() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="group h-12 w-full rounded-2xl border-0 bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-12 w-full rounded-2xl border-0 bg-linear-to-r from-primary to-secondary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(22,163,74,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span className="flex items-center justify-center gap-2">
                   {loading ? "Updating..." : "Change PIN"}

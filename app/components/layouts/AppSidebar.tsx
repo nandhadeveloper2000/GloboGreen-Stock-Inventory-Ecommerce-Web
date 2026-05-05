@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -660,7 +660,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                   className={cn(
                     "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200",
                     parentActive
-                      ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(236,6,119,0.18)]"
+                      ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(22,163,74,0.18)]"
                       : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                   )}
                 >
@@ -726,7 +726,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
                           className={cn(
                             "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                             childActive
-                              ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(236,6,119,0.16)]"
+                              ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(22,163,74,0.16)]"
                               : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                           )}
                         >
@@ -754,7 +754,7 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       </div>
 
       <div className="border-t border-token px-4 py-4">
-        <div className="rounded-2xl border border-[rgba(46,49,146,0.12)] bg-primary-soft px-4 py-3">
+        <div className="rounded-2xl border border-[rgba(0,0,139,0.12)] bg-primary-soft px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
             Secure Access
           </p>
@@ -767,3 +767,4 @@ export default function AppSidebar({ role }: AppSidebarProps) {
     </aside>
   );
 }
+

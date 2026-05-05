@@ -326,13 +326,15 @@ export default function BarcodePrinting() {
       const [formatRes, productRes] = await Promise.all([
         apiClient({
           method: SummaryApi.barcode_label_formats.method,
-          url: SummaryApi.barcode_label_formats.url,
-          params: { shopId: currentShopId },
+          url: SummaryApi.barcode_label_formats.url({
+            shopId: currentShopId,
+          }),
         }),
         apiClient({
           method: SummaryApi.barcode_products.method,
-          url: SummaryApi.barcode_products.url,
-          params: { shopId: currentShopId },
+          url: SummaryApi.barcode_products.url({
+            shopId: currentShopId,
+          }),
         }),
       ]);
 

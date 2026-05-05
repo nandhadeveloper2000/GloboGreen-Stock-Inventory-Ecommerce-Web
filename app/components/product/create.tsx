@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import {
   useEffect,
@@ -12,6 +13,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Boxes,
   Check,
   ChevronDown,
@@ -143,7 +145,7 @@ type ExistingProductData = {
   _id: string;
   configurationMode?: CategoryMappingMode;
   itemName?: string;
-sku?: string;
+  sku?: string;
   hsnCode?: string;
   description?: string;
   searchKeys?: string[];
@@ -613,7 +615,7 @@ function TopLabelInput({
           disabled={disabled}
           maxLength={maxLength}
           className={[
-            "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+            "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
             rightAction ? "pr-11" : "",
           ].join(" ")}
         />
@@ -629,7 +631,7 @@ function TopLabelInput({
             disabled={disabled}
             aria-label={rightAction.label}
             title={rightAction.label}
-            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RightIcon className="h-4 w-4" />
           </button>
@@ -685,7 +687,7 @@ function SearchableSingleSelectCard({
   return (
     <div
       ref={dropdownRef}
-      className="rounded-3xl border border-slate-200/90 bg-linear-to-br from-white via-white to-slate-50/60 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
+      className="rounded-3xl border border-slate-200/90 bg-white p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
     >
       <div className="mb-3 flex items-start gap-3">
         <div
@@ -711,8 +713,8 @@ function SearchableSingleSelectCard({
           className={[
             "relative flex h-12 w-full items-center justify-between rounded-2xl border bg-white px-4 text-left shadow-sm outline-none transition",
             open
-              ? "border-violet-500 ring-4 ring-violet-100"
-              : "border-slate-200 hover:border-violet-300",
+              ? "border-[#00008b] ring-4 ring-[#00008b]/10"
+              : "border-slate-200 hover:border-[#00008b]",
             disabled || loading
               ? "cursor-not-allowed bg-slate-50 text-slate-400"
               : "text-slate-900",
@@ -751,7 +753,7 @@ function SearchableSingleSelectCard({
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Search..."
                   disabled={disabled || loading}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:bg-white focus:ring-4 focus:ring-[#00008b]/10"
                 />
               </div>
             </div>
@@ -770,14 +772,14 @@ function SearchableSingleSelectCard({
                       className={[
                         "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-bold transition",
                         selected
-                          ? "bg-violet-50 text-violet-700"
+                          ? "bg-[#00008b]/5 text-[#00008b]"
                           : "text-slate-700 hover:bg-slate-50",
                       ].join(" ")}
                     >
                       <span className="truncate">{option.name}</span>
 
                       {selected ? (
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00008b] text-white">
                           <Check className="h-3.5 w-3.5" />
                         </span>
                       ) : null}
@@ -807,7 +809,7 @@ function HsnLookupModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm">
       <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <div>
@@ -841,7 +843,7 @@ function HsnLookupModal({
             href="https://hsn.codes/"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-violet-700 hover:text-violet-900"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[#00008b] hover:text-[#000070]"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Open in new tab
@@ -850,7 +852,7 @@ function HsnLookupModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 items-center justify-center rounded-xl bg-violet-600 px-4 text-xs font-bold text-white transition hover:bg-violet-700"
+            className="inline-flex h-9 items-center justify-center rounded-xl bg-[#00008b] px-4 text-xs font-bold text-white transition hover:bg-[#000070]"
           >
             Close
           </button>
@@ -910,7 +912,7 @@ function CompatibilityRowsEditor({
                       })
                     }
                     disabled={disabled}
-                    className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                    className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
                   />
                   <span className="font-semibold text-slate-900">
                     {brandName}
@@ -925,7 +927,7 @@ function CompatibilityRowsEditor({
                     })
                   }
                   placeholder="Notes"
-                  className="premium-textarea min-h-25"
+                  className="min-h-25 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                   disabled={disabled || !row.enabled}
                 />
               </div>
@@ -951,9 +953,15 @@ function CompatibilityRowsEditor({
 export default function CreateProductPage({
   mode = "create",
   productId = "",
+  isModal = false,
+  onClose,
+  onSuccess,
 }: {
   mode?: "create" | "edit";
   productId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void | Promise<void>;
 }) {
   const router = useRouter();
   const { role } = useAuth();
@@ -966,14 +974,13 @@ export default function CreateProductPage({
     useState(isEditMode);
 
   const [itemName, setItemName] = useState("");
-  const [sku, setsku] = useState("");
+  const [sku, setSku] = useState("");
   const [hsnCode, setHsnCode] = useState("");
   const [hsnLookupOpen, setHsnLookupOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [searchKeysInput, setSearchKeysInput] = useState("");
   const [isActive, setIsActive] = useState(true);
-const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
-    useState(false);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
   const [masterCategories, setMasterCategories] = useState<OptionItem[]>([]);
   const [categories, setCategories] = useState<OptionItem[]>([]);
@@ -1197,7 +1204,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
         );
 
         setItemName(nextItemName);
-        setsku(nextsku);
+        setSku(nextsku);
         setSkuManuallyEdited(
           Boolean(nextsku.trim()) &&
           nextsku.trim() !== buildAutoSku(nextItemName),
@@ -1291,7 +1298,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
     if (isEditMode) return;
     if (skuManuallyEdited) return;
     if (sku === autosku) return;
-    setsku(autosku);
+    setSku(autosku);
   }, [
     autosku,
     isEditMode,
@@ -2784,6 +2791,12 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
         response.data?.message ||
         `Product ${isEditMode ? "updated" : "created"} successfully`,
       );
+
+      if (isModal && onSuccess) {
+        await onSuccess();
+        return;
+      }
+
       router.push(`${basePath}/product/list`);
     } catch (error: unknown) {
       toast.error(
@@ -2914,10 +2927,15 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
   if (isEditMode && loadingExistingProduct) {
     return (
-      <div className="page-shell">
+      <div
+        className={[
+          isModal ? "max-h-[82vh] overflow-y-auto bg-slate-50" : "min-h-screen bg-slate-50",
+          "px-3 py-3 sm:px-4 lg:px-5",
+        ].join(" ")}
+      >
         <div className="mx-auto flex min-h-80 w-full max-w-7xl items-center justify-center">
-          <div className="premium-card-solid flex w-full max-w-xl items-center gap-4 rounded-card p-6">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+          <div className="flex w-full max-w-xl items-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
 
@@ -2941,24 +2959,42 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
         open={hsnLookupOpen}
         onClose={() => setHsnLookupOpen(false)}
       />
-      <div className="page-shell">
+      <div
+        className={[
+          isModal ? "max-h-[82vh] overflow-y-auto bg-slate-50" : "min-h-screen bg-slate-50",
+          "px-3 py-3 sm:px-4 lg:px-5",
+        ].join(" ")}
+      >
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="premium-hero premium-glow relative overflow-hidden rounded-[30px] px-4 py-4 md:px-5 md:py-5">
-            <div className="premium-grid-bg premium-bg-animate opacity-40" />
-            <div className="premium-bg-overlay" />
+          <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:px-5 md:py-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isModal && onClose) {
+                      onClose();
+                      return;
+                    }
 
-            <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-2">
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/95">
+                    router.push(`${basePath}/product/list`);
+                  }}
+                  className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to List
+                </button>
+
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#00008b]">
                   <Sparkles className="h-3.5 w-3.5" />
                   Product Management
                 </span>
 
                 <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 md:text-4xl">
                     {isEditMode ? "Edit Product" : "Create Product"}
                   </h1>
-                  <p className="mt-1 max-w-2xl text-xs leading-5 text-white/80 md:text-sm">
+                  <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 md:text-sm">
                     {isEditMode
                       ? "Update product details, configuration mode, compatibility mapping, and shared media without losing existing data."
                       : "Create one product with the right setup for variants, compatibility mapping, or shared product media and information."}
@@ -2972,9 +3008,9 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
             onSubmit={handleSubmit}
             className="product-create-form-compact space-y-4"
           >
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
                   <PackagePlus className="h-5 w-5" />
                 </div>
 
@@ -3005,7 +3041,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                   value={sku}
                   onChange={(e) => {
                     const nextValue = e.target.value;
-                    setsku(nextValue);
+                    setSku(nextValue);
                     setSkuManuallyEdited(Boolean(nextValue.trim()));
                   }}
                   placeholder={autosku || "Auto generated"}
@@ -3058,7 +3094,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
               </div>
             </section>
 
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                   <FolderTree className="h-5 w-5" />
@@ -3090,7 +3126,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
             </section>
 
             {usesProductMediaInformation ? (
-              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
                     <Info className="h-5 w-5" />
@@ -3108,7 +3144,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-cyan-50/60 p-4 shadow-sm">
+                <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
                   <label className="mb-2 block text-sm font-semibold text-slate-800">
                     Description
                   </label>
@@ -3134,9 +3170,9 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
               </section>
             ) : null}
 
-            <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
               <div className="mb-3 flex items-start gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
                   <Layers3 className="h-4.5 w-4.5" />
                 </div>
 
@@ -3162,10 +3198,10 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                       onClick={() => setCategoryMappingMode(option.value)}
                       disabled={submitting}
                       className={[
-                        "group flex min-h-[92px] items-center gap-3 rounded-2xl border p-3 text-left transition",
+                        "group flex min-h-23 items-center gap-3 rounded-2xl border p-3 text-left transition",
                         selected
-                          ? "border-violet-500 bg-violet-50 shadow-[0_12px_28px_rgba(139,92,246,0.13)]"
-                          : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40",
+                          ? "border-[#00008b] bg-[#00008b]/5 shadow-[0_12px_28px_rgba(0,0,139,0.10)]"
+                          : "border-slate-200 bg-white hover:border-[#00008b] hover:bg-[#00008b]/5",
                         submitting ? "cursor-not-allowed opacity-70" : "",
                       ].join(" ")}
                     >
@@ -3173,8 +3209,8 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                         className={[
                           "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
                           selected
-                            ? "bg-violet-600 text-white"
-                            : "bg-slate-100 text-slate-600 group-hover:bg-violet-100 group-hover:text-violet-700",
+                            ? "bg-[#00008b] text-white"
+                            : "bg-slate-100 text-slate-600 group-hover:bg-[#00008b]/10 group-hover:text-[#00008b]",
                         ].join(" ")}
                       >
                         <Icon className="h-5 w-5" />
@@ -3190,7 +3226,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                         className={[
                           "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
                           selected
-                            ? "border-violet-600 bg-violet-600"
+                            ? "border-[#00008b] bg-[#00008b]"
                             : "border-slate-300 bg-white",
                         ].join(" ")}
                       >
@@ -3203,7 +3239,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
             </section>
 
             {usesVariantConfiguration ? (
-              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
@@ -3268,7 +3304,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
                       <div className="grid grid-cols-1 gap-4">
                         <div>
-                          <label className="premium-label">Variant Title</label>
+                          <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">Variant Title</label>
                           <input
                             value={item.title}
                             onChange={(e) =>
@@ -3280,8 +3316,8 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                           />
                         </div>
 
-                        <div className="rounded-[22px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-amber-50/50 p-3 shadow-sm">
-                          <label className="premium-label">
+                        <div className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm">
+                          <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Product Description
                           </label>
                           <textarea
@@ -3303,7 +3339,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                         </div>
 
                         <div>
-                          <label className="premium-label">
+                          <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Attributes
                           </label>
                           <VariantAttributesEditor
@@ -3336,7 +3372,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                         </div>
 
                         <div>
-                          <label className="premium-label">
+                          <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Images & Media
                           </label>
                           <VariantMediaUploader
@@ -3355,7 +3391,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                         </div>
 
                         <div>
-                          <label className="premium-label">
+                          <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Product Information
                           </label>
                           <VariantProductInformationEditor
@@ -3411,7 +3447,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
                         {usesVariantCompatibilityMapping ? (
                           <div>
-                            <label className="premium-label">
+                            <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                               Variant {index + 1} Compatible Brands & Models
                             </label>
                             <CompatibilityRowsEditor
@@ -3437,7 +3473,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
             ) : null}
 
             {usesProductMediaInformation ? (
-              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600">
                     <Info className="h-5 w-5" />
@@ -3456,7 +3492,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
                   <div>
-                    <label className="premium-label">
+                    <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                       Product Images & Media
                     </label>
                     <VariantMediaUploader
@@ -3474,7 +3510,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                   </div>
 
                   <div>
-                    <label className="premium-label">Product Information</label>
+                    <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">Product Information</label>
                     <VariantProductInformationEditor
                       sections={productInformation}
                       disabled={submitting}
@@ -3496,7 +3532,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
             ) : null}
 
             {usesProductCompatibilityMapping ? (
-              <section className="premium-card-solid rounded-3xl p-3 md:p-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                     <ShieldCheck className="h-5 w-5" />
@@ -3543,7 +3579,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                   disabled={submitting}
-                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
                 />
                 <span className="text-sm font-medium text-slate-800">
                   Product active
@@ -3552,7 +3588,7 @@ const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
               <button
                 type="submit"
-                className="premium-btn-primary h-11 gap-2 px-5"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={submitting}
               >
                 <Save className="h-4 w-4" />

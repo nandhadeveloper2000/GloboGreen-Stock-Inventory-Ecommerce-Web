@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -450,11 +450,11 @@ export default function ForgotPin() {
 
       <div
         className="absolute -left-20 -top-20 h-72 w-72 rounded-full blur-3xl"
-        style={{ background: "rgba(46,49,146,0.35)" }}
+        style={{ background: "rgba(0,0,139,0.35)" }}
       />
       <div
         className="absolute -right-20 top-10 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(236,6,119,0.25)" }}
+        style={{ background: "rgba(22,163,74,0.25)" }}
       />
       <div
         className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full blur-3xl"
@@ -489,7 +489,7 @@ export default function ForgotPin() {
                   {step === 3 && "Reset your PIN"}
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm text-slate-500">
-                  Step {step} of 3 · {getRoleLabel(selectedRole)}
+                  Step {step} of 3 Â· {getRoleLabel(selectedRole)}
                 </CardDescription>
               </div>
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -202,7 +202,7 @@ export default function MobileSidebarDrawer({
                     className={cn(
                       "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                       parentActive
-                        ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(236,6,119,0.18)]"
+                        ? "bg-gradient-primary text-white shadow-[0_14px_32px_rgba(22,163,74,0.18)]"
                         : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                     )}
                   >
@@ -269,7 +269,7 @@ export default function MobileSidebarDrawer({
                             className={cn(
                               "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                               childActive
-                                ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(236,6,119,0.16)]"
+                                ? "bg-gradient-primary font-semibold text-white shadow-[0_12px_26px_rgba(22,163,74,0.16)]"
                                 : "text-secondary-text hover:bg-primary-soft hover:text-primary"
                             )}
                           >
@@ -299,3 +299,4 @@ export default function MobileSidebarDrawer({
     </div>
   );
 }
+

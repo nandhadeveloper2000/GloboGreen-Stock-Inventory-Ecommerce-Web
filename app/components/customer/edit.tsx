@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -480,7 +480,7 @@ export default function EditCustomerPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#00008b] to-[#9116a1] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#00008b] to-[#16A34A] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,139,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -496,3 +496,4 @@ export default function EditCustomerPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
@@ -1274,7 +1274,7 @@ export default function CreateMyShopProductPage({
       onSubmit={handleSubmit}
       className="product-create-form-compact space-y-5"
     >
-      <div className="relative overflow-hidden rounded-card bg-gradient-hero p-5 text-white shadow-[0_24px_70px_rgba(46,49,146,0.28)]">
+      <div className="relative overflow-hidden rounded-card bg-gradient-hero p-5 text-white shadow-[0_24px_70px_rgba(0,0,139,0.28)]">
         <div className="premium-grid-bg" />
         <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -1288,7 +1288,7 @@ export default function CreateMyShopProductPage({
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm text-white/75">
-              {selectedShopName || "Selected shop"} · {selectedShopTypeLabel}
+              {selectedShopName || "Selected shop"} Â· {selectedShopTypeLabel}
             </p>
           </div>
 
@@ -1842,7 +1842,7 @@ export default function CreateMyShopProductPage({
             <button
               type="submit"
               disabled={disabledForm}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-4 text-[13px] font-black text-white shadow-[0_12px_28px_rgba(236,6,119,0.22)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-4 text-[13px] font-black text-white shadow-[0_12px_28px_rgba(22,163,74,0.22)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1857,3 +1857,4 @@ export default function CreateMyShopProductPage({
     </form>
   );
 }
+

@@ -1,29 +1,35 @@
-"use client";
+﻿"use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  Tag,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
   BadgeCheck,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Sparkles,
   CalendarDays,
+  CheckCircle2,
+  Loader2,
   Package2,
+  Pencil,
+  Plus,
   Power,
-  Shapes,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Tag,
+  Trash2,
+  X,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
-import { useAuth } from "@/context/auth/AuthProvider";
+import CreateBrandsPage from "./create";
 
 type BrandItem = {
   _id?: string;
@@ -56,8 +62,17 @@ type ToggleResponse = {
   data?: BrandItem;
 };
 
+type ModalState = {
+  open: boolean;
+  mode: "create" | "edit";
+  id: string;
+};
+
+const ITEMS_PER_PAGE = 10;
+
 function formatDate(value?: string) {
   if (!value) return "-";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
 
@@ -77,17 +92,15 @@ function getErrorMessage(error: unknown): string {
     typeof error === "object" &&
     error !== null &&
     "response" in error &&
-    typeof (error as { response?: unknown }).response === "object" &&
-    (error as { response?: { data?: { message?: string } } }).response?.data
-      ?.message
+    typeof (error as { response?: unknown }).response === "object"
   ) {
-    return (
-      (error as { response?: { data?: { message?: string } } }).response?.data
-        ?.message || "Something went wrong"
-    );
+    const message = (error as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+
+    if (message) return message;
   }
 
-  if (error instanceof Error) {
+  if (error instanceof Error && error.message) {
     return error.message;
   }
 
@@ -98,21 +111,6 @@ function isValidMongoId(id: unknown): id is string {
   return typeof id === "string" && /^[a-f\d]{24}$/i.test(id.trim());
 }
 
-function normalizeRole(role?: string | null) {
-  return String(role ?? "").trim().toUpperCase();
-}
-
-function getRoleBasePath(role?: string | null) {
-  const normalizedRole = normalizeRole(role);
-
-  if (normalizedRole === "MASTER_ADMIN") return "/master";
-  if (normalizedRole === "MANAGER") return "/manager";
-  if (normalizedRole === "SUPERVISOR") return "/supervisor";
-  if (normalizedRole === "STAFF") return "/staff";
-
-  return "/master";
-}
-
 function StatCard({
   title,
   value,
@@ -121,45 +119,45 @@ function StatCard({
 }: {
   title: string;
   value: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   iconWrapClassName: string;
 }) {
   return (
-    <div className="premium-card-solid rounded-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center justify-between">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <h3 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          <p className="text-xs font-semibold text-slate-500">{title}</p>
+          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
             {value}
           </h3>
         </div>
 
         <div
-          className={`flex h-14 w-14 items-center justify-center rounded-2xl ${iconWrapClassName}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconWrapClassName}`}
         >
           {icon}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 function TableSkeleton() {
   return (
-    <div className="premium-card-solid overflow-hidden rounded-[30px] p-0">
-      <div className="grid grid-cols-1 gap-4 p-6">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="grid grid-cols-1 gap-3 p-4">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="animate-pulse rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+            className="animate-pulse rounded-xl border border-slate-100 bg-slate-50 p-3"
           >
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-slate-200" />
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-slate-200" />
               <div className="flex-1">
-                <div className="h-4 w-40 rounded bg-slate-200" />
-                <div className="mt-3 h-3 w-28 rounded bg-slate-100" />
+                <div className="h-3.5 w-36 rounded bg-slate-200" />
+                <div className="mt-2 h-3 w-24 rounded bg-slate-100" />
               </div>
-              <div className="h-9 w-24 rounded-full bg-slate-200" />
+              <div className="h-8 w-20 rounded-full bg-slate-200" />
             </div>
           </div>
         ))}
@@ -168,68 +166,7 @@ function TableSkeleton() {
   );
 }
 
-function PaginationFooter({
-  currentPage,
-  totalPages,
-  totalEntries,
-  startIndex,
-  itemsPerPage,
-  onPrevious,
-  onNext,
-}: {
-  currentPage: number;
-  totalPages: number;
-  totalEntries: number;
-  startIndex: number;
-  itemsPerPage: number;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  const showingFrom = totalEntries === 0 ? 0 : startIndex + 1;
-  const showingTo =
-    totalEntries === 0 ? 0 : Math.min(startIndex + itemsPerPage, totalEntries);
-
-  return (
-    <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm font-medium text-slate-600">
-        Showing <span className="font-bold text-slate-900">{showingFrom}</span> to{" "}
-        <span className="font-bold text-slate-900">{showingTo}</span> of{" "}
-        <span className="font-bold text-slate-900">{totalEntries}</span> entries
-      </p>
-
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onPrevious}
-          disabled={currentPage === 1 || totalEntries === 0}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Previous
-        </button>
-
-        <div className="inline-flex h-10 min-w-19 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700">
-          {totalEntries === 0 ? 0 : currentPage} / {totalPages || 1}
-        </div>
-
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={currentPage === totalPages || totalEntries === 0}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function BrandListPage() {
-  const router = useRouter();
-  const { role } = useAuth();
-
-  const basePath = getRoleBasePath(role);
-
   const [items, setItems] = useState<BrandItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -238,7 +175,11 @@ export default function BrandListPage() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const itemsPerPage = 10;
+  const [modalState, setModalState] = useState<ModalState>({
+    open: false,
+    mode: "create",
+    id: "",
+  });
 
   const fetchBrands = useCallback(async (showLoader = true) => {
     try {
@@ -278,8 +219,13 @@ export default function BrandListPage() {
     void fetchBrands(true);
   }, [fetchBrands]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     if (!q) return items;
 
     return items.filter((item) => {
@@ -290,17 +236,8 @@ export default function BrandListPage() {
     });
   }, [items, search]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
-  const totalCount = items.length;
-  const activeCount = items.filter((item) => item.isActive).length;
-  const inactiveCount = items.filter((item) => !item.isActive).length;
-  const withImageCount = items.filter((item) => Boolean(getImageUrl(item))).length;
-
   const totalEntries = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -308,15 +245,85 @@ export default function BrandListPage() {
     }
   }, [currentPage, totalPages]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  const handleDelete = async (id?: string) => {
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredItems, startIndex]);
+
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      active: items.filter((item) => item.isActive).length,
+      inactive: items.filter((item) => !item.isActive).length,
+      withImage: items.filter((item) => Boolean(getImageUrl(item))).length,
+    }),
+    [items]
+  );
+
+  const startEntry = totalEntries === 0 ? 0 : startIndex + 1;
+  const endEntry =
+    totalEntries === 0
+      ? 0
+      : Math.min(startIndex + ITEMS_PER_PAGE, totalEntries);
+
+  function openCreateModal() {
+    setModalState({
+      open: true,
+      mode: "create",
+      id: "",
+    });
+  }
+
+  function openEditModal(id?: string) {
     if (!isValidMongoId(id)) {
       toast.error("Invalid brand id");
       return;
     }
 
+    setModalState({
+      open: true,
+      mode: "edit",
+      id,
+    });
+  }
+
+  function closeBrandModal() {
+    setModalState({
+      open: false,
+      mode: "create",
+      id: "",
+    });
+  }
+
+  async function handleBrandSaved() {
+    closeBrandModal();
+    await fetchBrands(false);
+  }
+
+  function handleDelete(id?: string) {
+    if (!isValidMongoId(id)) {
+      toast.error("Invalid brand id");
+      return;
+    }
+
+    toast("Delete brand?", {
+      description: "This action will permanently remove the selected record.",
+      action: {
+        label: deletingId === id ? "Deleting..." : "Delete",
+        onClick: () => {
+          void performDelete(id);
+        },
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => undefined,
+      },
+      duration: 5000,
+    });
+  }
+
+  async function performDelete(id: string) {
     try {
       setDeletingId(id);
 
@@ -344,9 +351,9 @@ export default function BrandListPage() {
     } finally {
       setDeletingId(null);
     }
-  };
+  }
 
-  const handleToggleStatus = async (id?: string, currentStatus?: boolean) => {
+  async function handleToggleStatus(id?: string, currentStatus?: boolean) {
     if (!isValidMongoId(id)) {
       toast.error("Invalid brand id");
       return;
@@ -354,6 +361,8 @@ export default function BrandListPage() {
 
     try {
       setTogglingId(id);
+
+      const nextStatus = !currentStatus;
 
       const toggleUrl =
         typeof SummaryApi.brand_toggle_active.url === "function"
@@ -363,7 +372,7 @@ export default function BrandListPage() {
       const response = await apiClient.put<ToggleResponse>(
         toggleUrl,
         {
-          isActive: !currentStatus,
+          isActive: nextStatus,
         },
         {
           headers: {
@@ -380,7 +389,7 @@ export default function BrandListPage() {
 
       toast.success(
         result?.message ||
-          `Brand ${!currentStatus ? "activated" : "deactivated"} successfully`
+          `Brand ${nextStatus ? "activated" : "deactivated"} successfully`
       );
 
       setItems((prev) =>
@@ -388,7 +397,7 @@ export default function BrandListPage() {
           item._id === id
             ? {
                 ...item,
-                isActive: !currentStatus,
+                isActive: nextStatus,
               }
             : item
         )
@@ -398,61 +407,35 @@ export default function BrandListPage() {
     } finally {
       setTogglingId(null);
     }
-  };
-
-  const handleEdit = (id?: string) => {
-    if (!isValidMongoId(id)) {
-      toast.error("Invalid brand id");
-      return;
-    }
-
-    router.push(`${basePath}/brand/edit/${id}`);
-  };
-
-  const handleCreate = () => {
-    router.push(`${basePath}/brand/create`);
-  };
+  }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            Brand List
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage brand records, monitor status, and navigate to edit screens
-            from one premium dashboard.
-          </p>
-        </div>
-
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-6 py-6 md:px-8 md:py-8">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
-
-          <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm md:px-5 md:py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#00008b]">
                 <Sparkles className="h-3.5 w-3.5" />
                 Catalog Management
               </div>
 
-              <h2 className="text-2xl font-bold tracking-tight text-white md:text-4xl">
+              <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
                 Brands
-              </h2>
+              </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75 md:text-base">
-                View, search, edit, activate, deactivate, and delete brands
-                with a clean professional admin experience.
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                View, search, create, edit, activate, deactivate, and delete
+                brands.
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => void fetchBrands(false)}
                 disabled={refreshing}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition duration-200 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -462,8 +445,8 @@ export default function BrandListPage() {
 
               <button
                 type="button"
-                onClick={handleCreate}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#2e3192] shadow-[0_12px_30px_rgba(255,255,255,0.18)] transition duration-200 hover:scale-[1.01]"
+                onClick={openCreateModal}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#000070] hover:shadow-md"
               >
                 <Plus className="h-4 w-4" />
                 Create Brand
@@ -472,44 +455,47 @@ export default function BrandListPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total Brands"
-            value={totalCount}
-            icon={<Shapes className="h-6 w-6 text-violet-700" />}
-            iconWrapClassName="bg-violet-100"
+            value={stats.total}
+            icon={<Tag className="h-5 w-5" />}
+            iconWrapClassName="bg-[#00008b]/10 text-[#00008b]"
           />
+
           <StatCard
             title="Active"
-            value={activeCount}
-            icon={<CheckCircle2 className="h-6 w-6 text-emerald-700" />}
-            iconWrapClassName="bg-emerald-100"
+            value={stats.active}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            iconWrapClassName="bg-emerald-100 text-emerald-700"
           />
+
           <StatCard
             title="Inactive"
-            value={inactiveCount}
-            icon={<XCircle className="h-6 w-6 text-rose-700" />}
-            iconWrapClassName="bg-rose-100"
+            value={stats.inactive}
+            icon={<XCircle className="h-5 w-5" />}
+            iconWrapClassName="bg-rose-100 text-rose-700"
           />
+
           <StatCard
             title="With Image"
-            value={withImageCount}
-            icon={<Package2 className="h-6 w-6 text-sky-700" />}
-            iconWrapClassName="bg-sky-100"
+            value={stats.withImage}
+            icon={<Package2 className="h-5 w-5" />}
+            iconWrapClassName="bg-sky-100 text-sky-700"
           />
         </div>
 
-        <section className="premium-card-solid rounded-[30px] p-4 md:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#2e3192] to-[#9116a1] text-white shadow-lg">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b] text-white shadow-sm">
                 <Tag className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="text-xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-base font-bold tracking-tight text-slate-900">
                   Brand Directory
-                </h3>
+                </h2>
                 <p className="text-sm text-slate-500">
                   Search by brand name or key.
                 </p>
@@ -517,13 +503,14 @@ export default function BrandListPage() {
             </div>
 
             <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
               <input
                 type="text"
                 placeholder="Search brands..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="premium-input pl-11"
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
               />
             </div>
           </div>
@@ -533,24 +520,26 @@ export default function BrandListPage() {
           {loading ? (
             <TableSkeleton />
           ) : filteredItems.length === 0 ? (
-            <div className="premium-card-solid rounded-[30px] border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <BadgeCheck className="h-10 w-10" />
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <BadgeCheck className="h-8 w-8" />
               </div>
-              <h3 className="mt-5 text-xl font-bold text-slate-900">
+
+              <h3 className="mt-4 text-lg font-bold text-slate-900">
                 No brands found
               </h3>
+
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                 {search.trim()
                   ? "No records matched your search. Try another keyword."
                   : "No brands are available yet. Create your first brand to get started."}
               </p>
 
-              <div className="mt-6">
+              <div className="mt-5">
                 <button
                   type="button"
-                  onClick={handleCreate}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                  onClick={openCreateModal}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#000070] hover:shadow-md"
                 >
                   <Plus className="h-4 w-4" />
                   Create Brand
@@ -559,62 +548,62 @@ export default function BrandListPage() {
             </div>
           ) : (
             <>
-              <div className="hidden overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] lg:block">
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:block">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-slate-50/90">
+                  <table className="min-w-full border-collapse">
+                    <thead className="bg-slate-50">
                       <tr className="text-left">
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           S.No
                         </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           Brand
                         </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           Name Key
                         </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           Status
                         </th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           Updated
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                           Actions
                         </th>
                       </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 bg-white">
                       {paginatedItems.map((item, index) => {
                         const imageUrl = getImageUrl(item);
                         const itemId = item._id;
                         const isToggling = togglingId === itemId;
                         const isDeleting = deletingId === itemId;
-                        const serialNumber = startIndex + index + 1;
 
                         return (
                           <tr
                             key={itemId || `row-${index}`}
-                            className="transition-colors hover:bg-slate-50/70"
+                            className="transition hover:bg-slate-50"
                           >
-                            <td className="px-6 py-5 text-sm font-semibold text-slate-700">
-                              {serialNumber}
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                              {startIndex + index + 1}
                             </td>
 
-                            <td className="px-6 py-5">
-                              <div className="flex items-center gap-4">
-                                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                                   {imageUrl ? (
                                     <Image
                                       src={imageUrl}
                                       alt={item.name}
                                       fill
-                                      sizes="56px"
+                                      sizes="44px"
                                       className="object-cover"
+                                      unoptimized
                                     />
                                   ) : (
-                                    <Tag className="h-6 w-6 text-slate-400" />
+                                    <Tag className="h-5 w-5 text-slate-400" />
                                   )}
                                 </div>
 
@@ -622,67 +611,75 @@ export default function BrandListPage() {
                                   <p className="truncate text-sm font-bold text-slate-900">
                                     {item.name}
                                   </p>
-                                  <p className="mt-1 text-xs font-medium text-slate-500">
+                                  <p className="mt-0.5 text-xs font-medium text-slate-500">
                                     Brand record
                                   </p>
                                 </div>
                               </div>
                             </td>
 
-                            <td className="px-6 py-5">
-                              <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
-                                <Shapes className="h-3.5 w-3.5" />
-                                {item.nameKey || "-"}
-                              </div>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex max-w-45 items-center rounded-full bg-[#00008b]/5 px-2.5 py-1 text-xs font-semibold text-[#00008b]">
+                                <span className="truncate">
+                                  {item.nameKey || "-"}
+                                </span>
+                              </span>
                             </td>
 
-                            <td className="px-6 py-5">
+                            <td className="px-4 py-3">
                               {item.isActive ? (
-                                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                   Active
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
                                   <XCircle className="h-3.5 w-3.5" />
                                   Inactive
                                 </span>
                               )}
                             </td>
 
-                            <td className="px-6 py-5 text-sm font-medium text-slate-600">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-600">
                               <div className="inline-flex items-center gap-2">
                                 <CalendarDays className="h-4 w-4 text-slate-400" />
                                 {formatDate(item.updatedAt || item.createdAt)}
                               </div>
                             </td>
 
-                            <td className="px-6 py-5">
+                            <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    void handleToggleStatus(itemId, item.isActive)
+                                    void handleToggleStatus(
+                                      itemId,
+                                      item.isActive
+                                    )
                                   }
                                   disabled={isToggling}
-                                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                     item.isActive
                                       ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                                       : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                                   }`}
                                 >
-                                  <Power className="h-4 w-4" />
+                                  {isToggling ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Power className="h-4 w-4" />
+                                  )}
                                   {isToggling
                                     ? "Updating..."
                                     : item.isActive
-                                    ? "Deactivate"
-                                    : "Activate"}
+                                      ? "Deactivate"
+                                      : "Activate"}
                                 </button>
 
                                 <button
                                   type="button"
-                                  onClick={() => handleEdit(itemId)}
-                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+                                  onClick={() => openEditModal(itemId)}
+                                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 hover:text-[#00008b]"
                                 >
                                   <Pencil className="h-4 w-4" />
                                   Edit
@@ -690,11 +687,15 @@ export default function BrandListPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => void handleDelete(itemId)}
+                                  onClick={() => handleDelete(itemId)}
                                   disabled={isDeleting}
-                                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  {isDeleting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
                                   {isDeleting ? "Deleting..." : "Delete"}
                                 </button>
                               </div>
@@ -707,67 +708,65 @@ export default function BrandListPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 lg:hidden">
+              <div className="grid grid-cols-1 gap-3 lg:hidden">
                 {paginatedItems.map((item, index) => {
                   const imageUrl = getImageUrl(item);
                   const itemId = item._id;
                   const isToggling = togglingId === itemId;
                   const isDeleting = deletingId === itemId;
-                  const serialNumber = startIndex + index + 1;
 
                   return (
                     <div
                       key={itemId || `card-${index}`}
-                      className="overflow-hidden rounded-card border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)]"
+                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
-                      <div className="p-5">
-                        <div className="mb-4 flex items-center justify-between">
-                          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">
-                            <span>S.No</span>
-                            <span>{serialNumber}</span>
-                          </div>
-
-                          {item.isActive ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Active
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
-                              <XCircle className="h-3 w-3" />
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                      <div className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                             {imageUrl ? (
                               <Image
                                 src={imageUrl}
                                 alt={item.name}
                                 fill
-                                sizes="64px"
+                                sizes="48px"
                                 className="object-cover"
+                                unoptimized
                               />
                             ) : (
-                              <Tag className="h-7 w-7 text-slate-400" />
+                              <Tag className="h-5 w-5 text-slate-400" />
                             )}
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div>
-                              <h3 className="truncate text-base font-bold text-slate-900">
-                                {item.name}
-                              </h3>
-                              <p className="mt-1 text-xs font-medium text-slate-500">
-                                Key: {item.nameKey || "-"}
-                              </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <span className="text-xs font-bold text-slate-400">
+                                  #{startIndex + index + 1}
+                                </span>
+                                <h3 className="truncate text-sm font-bold text-slate-900">
+                                  {item.name}
+                                </h3>
+                                <p className="mt-0.5 text-xs font-medium text-slate-500">
+                                  Key: {item.nameKey || "-"}
+                                </p>
+                              </div>
+
+                              {item.isActive ? (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">
+                                  <XCircle className="h-3 w-3" />
+                                  Inactive
+                                </span>
+                              )}
                             </div>
 
-                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              <div className="rounded-2xl bg-slate-50 p-3">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              <div className="rounded-xl bg-slate-50 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                                   Name Key
                                 </p>
                                 <p className="mt-1 text-sm font-semibold text-slate-700">
@@ -775,8 +774,8 @@ export default function BrandListPage() {
                                 </p>
                               </div>
 
-                              <div className="rounded-2xl bg-slate-50 p-3">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                              <div className="rounded-xl bg-slate-50 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                                   Updated
                                 </p>
                                 <p className="mt-1 text-sm font-semibold text-slate-700">
@@ -785,31 +784,38 @@ export default function BrandListPage() {
                               </div>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                               <button
                                 type="button"
                                 onClick={() =>
-                                  void handleToggleStatus(itemId, item.isActive)
+                                  void handleToggleStatus(
+                                    itemId,
+                                    item.isActive
+                                  )
                                 }
                                 disabled={isToggling}
-                                className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                   item.isActive
                                     ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                                     : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                                 }`}
                               >
-                                <Power className="h-4 w-4" />
+                                {isToggling ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
                                 {isToggling
                                   ? "Updating..."
                                   : item.isActive
-                                  ? "Deactivate"
-                                  : "Activate"}
+                                    ? "Deactivate"
+                                    : "Activate"}
                               </button>
 
                               <button
                                 type="button"
-                                onClick={() => handleEdit(itemId)}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+                                onClick={() => openEditModal(itemId)}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 hover:text-[#00008b]"
                               >
                                 <Pencil className="h-4 w-4" />
                                 Edit
@@ -817,11 +823,15 @@ export default function BrandListPage() {
 
                               <button
                                 type="button"
-                                onClick={() => void handleDelete(itemId)}
+                                onClick={() => handleDelete(itemId)}
                                 disabled={isDeleting}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {isDeleting ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                                 {isDeleting ? "Deleting..." : "Delete"}
                               </button>
                             </div>
@@ -833,19 +843,85 @@ export default function BrandListPage() {
                 })}
               </div>
 
-              <PaginationFooter
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalEntries={totalEntries}
-                startIndex={startIndex}
-                itemsPerPage={itemsPerPage}
-                onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              />
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-500">
+                  Showing{" "}
+                  <span className="font-semibold text-slate-900">
+                    {startEntry}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-semibold text-slate-900">
+                    {endEntry}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-900">
+                    {totalEntries}
+                  </span>{" "}
+                  entries
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1 || totalEntries === 0}
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                    {totalEntries === 0 ? 0 : currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages || totalEntries === 0}
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>
       </div>
+
+      {modalState.open ? (
+        <div
+          className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-3 py-4 backdrop-blur-sm sm:px-4"
+          onMouseDown={closeBrandModal}
+        >
+          <div
+            className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeBrandModal}
+              className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <CreateBrandsPage
+              key={`${modalState.mode}-${modalState.id || "new"}`}
+              mode={modalState.mode}
+              brandId={modalState.id}
+              isModal
+              onClose={closeBrandModal}
+              onSuccess={handleBrandSaved}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

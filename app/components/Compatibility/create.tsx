@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, {
-  FormEvent,
+import {
+  type FormEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -11,12 +12,16 @@ import React, {
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Save,
+  Search,
   Shapes,
   ShieldCheck,
   Sparkles,
-  Search,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -160,7 +165,12 @@ type ModelCheckboxSelectorProps = {
 type ProductCompatibilityCreatePageProps = {
   mode?: "create" | "edit";
   compatibilityId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void | Promise<void>;
 };
+
+const ROWS_PER_PAGE = 5;
 
 function getErrorMessage(
   error: unknown,
@@ -183,6 +193,7 @@ function getErrorMessage(
   }
 
   if (error instanceof Error && error.message) return error.message;
+
   return fallback;
 }
 
@@ -259,6 +270,7 @@ function getModelIds(
   >
 ): string[] {
   if (!Array.isArray(values)) return [];
+
   return values
     .map((item) => {
       if (typeof item === "string") return item;
@@ -278,6 +290,7 @@ function SearchableSingleSelect({
 }: SearchableSingleSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -288,11 +301,13 @@ function SearchableSingleSelect({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     if (!q) return options;
 
     return options.filter((item) => {
       const name = item.name.toLowerCase();
       const subtitle = (item.subtitle || "").toLowerCase();
+
       return name.includes(q) || subtitle.includes(q);
     });
   }, [options, search]);
@@ -300,20 +315,21 @@ function SearchableSingleSelect({
   useEffect(() => {
     if (!open) return;
 
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
+
       if (!wrapperRef.current?.contains(target)) {
         setOpen(false);
         setSearch("");
       }
-    };
+    }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
         setSearch("");
       }
-    };
+    }
 
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("touchstart", handlePointerDown);
@@ -331,96 +347,114 @@ function SearchableSingleSelect({
 
     const timer = window.setTimeout(() => {
       inputRef.current?.focus();
-    }, 0);
+    }, 80);
 
     return () => window.clearTimeout(timer);
   }, [open]);
 
   return (
-    <div className="space-y-1.5" ref={wrapperRef}>
-      <div className={`relative ${open ? "z-9999" : "z-10"}`}>
-        <button
-          type="button"
-          disabled={disabled}
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          onClick={() => {
-            if (disabled) return;
-            setOpen((prev) => !prev);
-            if (open) setSearch("");
-          }}
-          className="flex h-14 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 pb-2 pt-6 text-left text-sm text-slate-900 shadow-sm outline-none transition focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+    <div ref={wrapperRef} className="relative">
+      {label ? (
+        <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
+          {label}
+          {required ? <span className="text-rose-500"> *</span> : null}
+        </span>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => {
+          if (disabled) return;
+
+          setOpen((prev) => {
+            if (prev) setSearch("");
+            return !prev;
+          });
+        }}
+        className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-800 outline-none transition hover:border-[#00008b] focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+      >
+        <span
+          className={
+            selected ? "truncate text-slate-900" : "truncate text-slate-400"
+          }
         >
-          <span className={selected ? "text-slate-900" : "text-slate-400"}>
-            {selected ? selected.name : placeholder}
-          </span>
-          <span className="text-slate-400">{open ? "▲" : "▼"}</span>
-        </button>
+          {selected ? selected.name : placeholder}
+        </span>
 
-        {label ? (
-          <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[11px] font-medium leading-none text-slate-500">
-            {label} {required ? <span className="text-rose-500">*</span> : null}
-          </label>
-        ) : null}
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-slate-400 transition ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
 
-        {open ? (
-          <div className="absolute left-0 right-0 top-full z-9999 mt-2 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
-            <div className="border-b border-slate-200 p-3">
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-9999 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+          <div className="border-b border-slate-200 p-3">
+            <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3">
+              <Search className="mr-2 h-4 w-4 text-slate-400" />
+
               <input
                 ref={inputRef}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
                     setOpen(false);
                     setSearch("");
                   }
                 }}
                 placeholder={`Search ${label?.toLowerCase() || "option"}`}
-                className="premium-input h-11"
+                className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
               />
             </div>
-
-            <div className="max-h-64 overflow-y-auto p-2" role="listbox">
-              {filtered.length ? (
-                filtered.map((item) => {
-                  const active = item._id === value;
-
-                  return (
-                    <button
-                      key={item._id}
-                      type="button"
-                      onClick={() => {
-                        onChange(item._id);
-                        setOpen(false);
-                        setSearch("");
-                      }}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                        active
-                          ? "bg-violet-50 text-violet-700"
-                          : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{item.name}</div>
-                        {item.subtitle ? (
-                          <div className="truncate text-xs text-slate-400">
-                            {item.subtitle}
-                          </div>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-4 py-6 text-center text-sm text-slate-400">
-                  No results found
-                </div>
-              )}
-            </div>
           </div>
-        ) : null}
-      </div>
+
+          <div className="max-h-56 overflow-y-auto p-2" role="listbox">
+            {filtered.length > 0 ? (
+              filtered.map((item) => {
+                const active = item._id === value;
+
+                return (
+                  <button
+                    key={item._id}
+                    type="button"
+                    onClick={() => {
+                      onChange(item._id);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                      active
+                        ? "bg-[#00008b]/5 text-[#00008b]"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold">{item.name}</div>
+
+                      {item.subtitle ? (
+                        <div className="truncate text-xs text-slate-400">
+                          {item.subtitle}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {active ? <Check className="h-4 w-4 shrink-0" /> : null}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-slate-400">
+                No results found
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -437,17 +471,19 @@ function ModelCheckboxSelector({
   const allSelected =
     optionIds.length > 0 && optionIds.every((id) => values.includes(id));
 
-  const toggleOne = (id: string) => {
+  function toggleOne(id: string) {
+    if (disabled) return;
+
     if (values.includes(id)) {
       onChange(values.filter((item) => item !== id));
       return;
     }
 
     onChange([...values, id]);
-  };
+  }
 
-  const toggleAll = () => {
-    if (!optionIds.length) return;
+  function toggleAll() {
+    if (disabled || !optionIds.length) return;
 
     if (allSelected) {
       onChange(values.filter((id) => !optionIds.includes(id)));
@@ -455,44 +491,44 @@ function ModelCheckboxSelector({
     }
 
     onChange(Array.from(new Set([...values, ...optionIds])));
-  };
+  }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
       {disabled ? (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-7 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-400">
           {emptyText}
         </div>
-      ) : options.length ? (
-        <div className="space-y-4">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
+      ) : options.length > 0 ? (
+        <div className="space-y-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
             <input
               type="checkbox"
               checked={allSelected}
               onChange={toggleAll}
-              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+              className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
             />
             {allLabel}
           </label>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {options.map((item) => {
               const checked = values.includes(item._id);
 
               return (
                 <label
                   key={item._id}
-                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                     checked
-                      ? "border-sky-600 bg-sky-600 text-white"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-sky-50"
+                      ? "border-[#00008b] bg-[#00008b] text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleOne(item._id)}
-                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
                   />
                   <span>{item.name}</span>
                 </label>
@@ -501,7 +537,7 @@ function ModelCheckboxSelector({
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-7 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-400">
           No models found
         </div>
       )}
@@ -509,17 +545,19 @@ function ModelCheckboxSelector({
   );
 }
 
-const ROWS_PER_PAGE = 5;
-
 export default function ProductCompatibilityCreatePage({
   mode = "create",
   compatibilityId = "",
+  isModal = false,
+  onClose,
+  onSuccess,
 }: ProductCompatibilityCreatePageProps) {
   const router = useRouter();
   const { role } = useAuth();
 
   const isEditMode = mode === "edit";
   const basePath = getRoleBasePath(role);
+  const listPath = `${basePath}/compatibility/list`;
 
   const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
@@ -535,158 +573,180 @@ export default function ProductCompatibilityCreatePage({
   const [currentPage, setCurrentPage] = useState(1);
   const [brandSearch, setBrandSearch] = useState("");
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      if (isEditMode && !compatibilityId) {
-        toast.error("Compatibility ID is missing");
-        router.push(`${basePath}/compatibility/list`);
-        return;
-      }
+  function handleClose() {
+    if (isModal && onClose) {
+      onClose();
+      return;
+    }
 
-      try {
-        setBootLoading(true);
+    router.push(listPath);
+  }
 
-        const token =
-          localStorage.getItem("token") ||
-          localStorage.getItem("accessToken") ||
-          localStorage.getItem("authToken") ||
-          "";
+  async function handleSuccess() {
+    if (isModal && onSuccess) {
+      await onSuccess();
+      return;
+    }
 
-        const headers = token
-          ? {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            };
+    router.push(listPath);
+  }
 
-        const requests: Promise<any>[] = [
-          apiClient.get<SubCategoryListResponse>(SummaryApi.sub_category_list.url, {
-            headers,
-          }),
-          apiClient.get<BrandListResponse>(SummaryApi.brand_list.url, {
-            headers,
-          }),
-          apiClient.get<ModelListResponse>(SummaryApi.model_list.url, {
-            headers,
-          }),
-        ];
+  const fetchInitialData = useCallback(async () => {
+    if (isEditMode && !compatibilityId) {
+      toast.error("Compatibility ID is missing");
+      handleClose();
+      return;
+    }
 
-        if (isEditMode && compatibilityId) {
-          requests.push(
-            apiClient.get<ProductCompatibilityResponse>(
-              SummaryApi.product_compatibility_get.url(compatibilityId),
-              { headers }
-            )
-          );
-        }
+    try {
+      setBootLoading(true);
 
-        const responses = await Promise.all(requests);
+      const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken") ||
+        "";
 
-        const subCategoryRes = responses[0];
-        const brandRes = responses[1];
-        const modelRes = responses[2];
-        const compatibilityRes = responses[3];
-
-        const subCategoryList = normalizeSubCategories(
-          subCategoryRes.data
-        ).filter((item) => item.isActive !== false);
-
-        const brandList = normalizeBrands(brandRes.data).filter(
-          (item) => item.isActive !== false
-        );
-
-        const modelList = normalizeModels(modelRes.data).filter(
-          (item) => item.isActive !== false
-        );
-
-        setSubCategories(subCategoryList);
-        setBrands(brandList);
-        setModels(modelList);
-
-        if (isEditMode && compatibilityRes?.data) {
-          const compatibility = normalizeCompatibility(compatibilityRes.data);
-
-          if (!compatibility?._id) {
-            throw new Error("Compatibility details not found");
+      const headers = token
+        ? {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
           }
+        : {
+            Accept: "application/json",
+          };
 
-          setSubCategoryId(
-            getObjectId(
-              compatibility.subCategoryId || compatibility.productTypeId
-            )
-          );
-          setProductBrandId(getObjectId(compatibility.productBrandId));
+      const requests: Promise<any>[] = [
+        apiClient.get<SubCategoryListResponse>(SummaryApi.sub_category_list.url, {
+          headers,
+        }),
+        apiClient.get<BrandListResponse>(SummaryApi.brand_list.url, {
+          headers,
+        }),
+        apiClient.get<ModelListResponse>(SummaryApi.model_list.url, {
+          headers,
+        }),
+      ];
 
-          const compatibleMap = new Map<
-            string,
-            {
-              brandId: string;
-              modelId: string[];
-              notes: string;
-              isActive: boolean;
-            }
-          >();
-
-          (compatibility.compatible || []).forEach((item) => {
-            const brandId = getObjectId(item.brandId);
-            if (!brandId) return;
-
-            compatibleMap.set(brandId, {
-              brandId,
-              modelId: getModelIds(item.modelId),
-              notes: item.notes || "",
-              isActive: item.isActive !== false,
-            });
-          });
-
-          setRows(
-            brandList.map((brand) => {
-              const existing = compatibleMap.get(brand._id);
-
-              return {
-                rowId: brand._id,
-                brandId: brand._id,
-                enabled: Boolean(existing),
-                modelId: existing?.modelId || [],
-                notes: existing?.notes || "",
-                isActive: existing?.isActive ?? true,
-              };
-            })
-          );
-        } else {
-          setRows(
-            brandList.map((brand) => ({
-              rowId: brand._id,
-              brandId: brand._id,
-              enabled: false,
-              modelId: [],
-              notes: "",
-              isActive: true,
-            }))
-          );
-        }
-      } catch (error) {
-        toast.error(
-          getErrorMessage(
-            error,
-            isEditMode
-              ? "Failed to load compatibility"
-              : "Failed to load form data"
+      if (isEditMode && compatibilityId) {
+        requests.push(
+          apiClient.get<ProductCompatibilityResponse>(
+            SummaryApi.product_compatibility_get.url(compatibilityId),
+            { headers }
           )
         );
-        setSubCategories([]);
-        setBrands([]);
-        setModels([]);
-        setRows([]);
-      } finally {
-        setBootLoading(false);
       }
-    };
 
+      const responses = await Promise.all(requests);
+
+      const subCategoryRes = responses[0];
+      const brandRes = responses[1];
+      const modelRes = responses[2];
+      const compatibilityRes = responses[3];
+
+      const subCategoryList = normalizeSubCategories(subCategoryRes.data).filter(
+        (item) => item.isActive !== false
+      );
+
+      const brandList = normalizeBrands(brandRes.data).filter(
+        (item) => item.isActive !== false
+      );
+
+      const modelList = normalizeModels(modelRes.data).filter(
+        (item) => item.isActive !== false
+      );
+
+      setSubCategories(subCategoryList);
+      setBrands(brandList);
+      setModels(modelList);
+
+      if (isEditMode && compatibilityRes?.data) {
+        const compatibility = normalizeCompatibility(compatibilityRes.data);
+
+        if (!compatibility?._id) {
+          throw new Error("Compatibility details not found");
+        }
+
+        setSubCategoryId(
+          getObjectId(compatibility.subCategoryId || compatibility.productTypeId)
+        );
+
+        setProductBrandId(getObjectId(compatibility.productBrandId));
+
+        const compatibleMap = new Map<
+          string,
+          {
+            brandId: string;
+            modelId: string[];
+            notes: string;
+            isActive: boolean;
+          }
+        >();
+
+        (compatibility.compatible || []).forEach((item) => {
+          const brandId = getObjectId(item.brandId);
+          if (!brandId) return;
+
+          compatibleMap.set(brandId, {
+            brandId,
+            modelId: getModelIds(item.modelId),
+            notes: item.notes || "",
+            isActive: item.isActive !== false,
+          });
+        });
+
+        setRows(
+          brandList.map((brand) => {
+            const existing = compatibleMap.get(brand._id);
+
+            return {
+              rowId: brand._id,
+              brandId: brand._id,
+              enabled: Boolean(existing),
+              modelId: existing?.modelId || [],
+              notes: existing?.notes || "",
+              isActive: existing?.isActive ?? true,
+            };
+          })
+        );
+      } else {
+        setSubCategoryId("");
+        setProductBrandId("");
+
+        setRows(
+          brandList.map((brand) => ({
+            rowId: brand._id,
+            brandId: brand._id,
+            enabled: false,
+            modelId: [],
+            notes: "",
+            isActive: true,
+          }))
+        );
+      }
+    } catch (error) {
+      toast.error(
+        getErrorMessage(
+          error,
+          isEditMode
+            ? "Failed to load compatibility"
+            : "Failed to load form data"
+        )
+      );
+
+      setSubCategories([]);
+      setBrands([]);
+      setModels([]);
+      setRows([]);
+    } finally {
+      setBootLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, compatibilityId]);
+
+  useEffect(() => {
     void fetchInitialData();
-  }, [isEditMode, compatibilityId, router, basePath]);
+  }, [fetchInitialData]);
 
   const subCategoryOptions = useMemo<SearchableSelectOption[]>(
     () =>
@@ -710,13 +770,17 @@ export default function ProductCompatibilityCreatePage({
 
   const brandMap = useMemo(() => {
     const map = new Map<string, BrandItem>();
+
     brands.forEach((item) => map.set(item._id, item));
+
     return map;
   }, [brands]);
 
   const modelMap = useMemo(() => {
     const map = new Map<string, ModelItem>();
+
     models.forEach((item) => map.set(item._id, item));
+
     return map;
   }, [models]);
 
@@ -735,7 +799,52 @@ export default function ProductCompatibilityCreatePage({
     return map;
   }, [models]);
 
-  const updateRow = (rowId: string, patch: Partial<CompatibilityRow>) => {
+  const filteredRows = useMemo(() => {
+    const q = brandSearch.trim().toLowerCase();
+
+    if (!q) return rows;
+
+    return rows.filter((row) => {
+      const brandName = brandMap.get(row.brandId)?.name || "";
+      return brandName.toLowerCase().includes(q);
+    });
+  }, [rows, brandSearch, brandMap]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [brandSearch]);
+
+  const selectedSummary = useMemo(() => {
+    return rows
+      .filter((row) => row.enabled)
+      .map((row) => {
+        const brandName = brandMap.get(row.brandId)?.name || "-";
+
+        const selectedModels = row.modelId
+          .map((id) => modelMap.get(id)?.name)
+          .filter(Boolean) as string[];
+
+        return {
+          brandId: row.brandId,
+          brandName,
+          models: selectedModels,
+          notes: row.notes.trim(),
+        };
+      });
+  }, [rows, brandMap, modelMap]);
+
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
+  const paginatedRows = filteredRows.slice(
+    startIndex,
+    startIndex + ROWS_PER_PAGE
+  );
+  const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
+  const showingTo = Math.min(startIndex + ROWS_PER_PAGE, totalRows);
+
+  function updateRow(rowId: string, patch: Partial<CompatibilityRow>) {
     setRows((prev) =>
       prev.map((item) => {
         if (item.rowId !== rowId) return item;
@@ -753,9 +862,9 @@ export default function ProductCompatibilityCreatePage({
         return next;
       })
     );
-  };
+  }
 
-  const validateForm = () => {
+  function validateForm() {
     if (!subCategoryId) {
       toast.error("Please select sub category");
       return false;
@@ -774,10 +883,10 @@ export default function ProductCompatibilityCreatePage({
     }
 
     return true;
-  };
+  }
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
     if (!validateForm()) return;
 
@@ -828,7 +937,7 @@ export default function ProductCompatibilityCreatePage({
             : "Product compatibility created successfully")
       );
 
-      router.push(`${basePath}/compatibility/list`);
+      await handleSuccess();
     } catch (error) {
       toast.error(
         getErrorMessage(error, isEditMode ? "Update failed" : "Create failed")
@@ -836,57 +945,46 @@ export default function ProductCompatibilityCreatePage({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const filteredRows = useMemo(() => {
-    const q = brandSearch.trim().toLowerCase();
-    if (!q) return rows;
+  function resetForm() {
+    if (isEditMode) {
+      void fetchInitialData();
+      return;
+    }
 
-    return rows.filter((row) => {
-      const brandName = brandMap.get(row.brandId)?.name || "";
-      return brandName.toLowerCase().includes(q);
-    });
-  }, [rows, brandSearch, brandMap]);
-
-  useEffect(() => {
+    setSubCategoryId("");
+    setProductBrandId("");
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        enabled: false,
+        modelId: [],
+        notes: "",
+        isActive: true,
+      }))
+    );
+    setBrandSearch("");
     setCurrentPage(1);
-  }, [brandSearch]);
-
-  const selectedSummary = useMemo(() => {
-    return rows
-      .filter((row) => row.enabled)
-      .map((row) => {
-        const brandName = brandMap.get(row.brandId)?.name || "-";
-        const selectedModels = row.modelId
-          .map((id) => modelMap.get(id)?.name)
-          .filter(Boolean) as string[];
-
-        return {
-          brandId: row.brandId,
-          brandName,
-          models: selectedModels,
-          notes: row.notes.trim(),
-        };
-      });
-  }, [rows, brandMap, modelMap]);
-
-  const totalRows = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
-  const paginatedRows = filteredRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
-  const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
-  const showingTo = Math.min(startIndex + ROWS_PER_PAGE, totalRows);
+  }
 
   if (bootLoading) {
     return (
-      <div className="page-shell">
-        <div className="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center">
-          <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {isEditMode
-              ? "Loading compatibility details..."
-              : "Loading compatibility form..."}
+      <div
+        className={
+          isModal
+            ? "bg-slate-50 px-3 py-3"
+            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+        }
+      >
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 shadow-sm">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
+            <span className="text-sm font-semibold">
+              {isEditMode
+                ? "Loading compatibility details..."
+                : "Loading compatibility form..."}
+            </span>
           </div>
         </div>
       </div>
@@ -894,63 +992,64 @@ export default function ProductCompatibilityCreatePage({
   }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
+    <div
+      className={
+        isModal
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4"
+          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+      }
+    >
+      <div className="mx-auto w-full max-w-6xl space-y-3">
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {isModal ? "Close" : "Back to List"}
+          </button>
 
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Compatibility Management
-              </span>
-
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                  {isEditMode
-                    ? "Edit Product Compatibility"
-                    : "Create Product Compatibility"}
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                  Map one sub category and product brand with compatible brands
-                  and selected models.
-                </p>
-              </div>
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#00008b]">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Compatibility Management
             </div>
 
-            <button
-              type="button"
-              onClick={() => router.push(`${basePath}/compatibility/list`)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to List
-            </button>
+            <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
+              {isEditMode
+                ? "Edit Product Compatibility"
+                : "Create Product Compatibility"}
+            </h1>
+
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              Map one sub category and product brand with compatible brands and
+              selected models.
+            </p>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-8 space-y-5">
-            <section className="premium-card-solid rounded-card p-4 md:p-5">
-              <div className="mb-5 flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                  <Shapes className="h-5 w-5" />
+        <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-12">
+          <div className="space-y-3 lg:col-span-8">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                  <Shapes className="h-4.5 w-4.5" />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-sm font-bold text-slate-950">
                     Basic Details
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-xs leading-5 text-slate-500">
                     Select sub category and product brand before mapping
                     compatibility.
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <SearchableSingleSelect
                   label="Sub Category"
                   required
@@ -973,71 +1072,73 @@ export default function ProductCompatibilityCreatePage({
               </div>
             </section>
 
-            <section className="premium-card-solid rounded-card p-4 md:p-5">
-              <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
-                    <Sparkles className="h-5 w-5" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                    <Sparkles className="h-4.5 w-4.5" />
                   </div>
 
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-sm font-bold text-slate-950">
                       Compatible Brands & Models
                     </h2>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-xs leading-5 text-slate-500">
                       Enable compatible brands, select models, and add optional
                       notes.
                     </p>
                   </div>
                 </div>
 
-                <div className="relative w-full lg:max-w-sm">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <div className="relative w-full lg:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                   <input
                     type="text"
                     value={brandSearch}
-                    onChange={(e) => setBrandSearch(e.target.value)}
+                    onChange={(event) => setBrandSearch(event.target.value)}
                     placeholder="Search compatible brand"
-                    className="premium-input pl-11"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {paginatedRows.length ? (
+              <div className="space-y-3">
+                {paginatedRows.length > 0 ? (
                   paginatedRows.map((row) => {
                     const brand = brandMap.get(row.brandId);
                     const brandName = brand?.name || "-";
 
-                    const brandModels = (modelMapByBrand.get(row.brandId) || []).map(
-                      (item) => ({
-                        _id: item._id,
-                        name: item.name,
-                        subtitle: item.nameKey || "",
-                      })
-                    );
+                    const brandModels = (
+                      modelMapByBrand.get(row.brandId) || []
+                    ).map((item) => ({
+                      _id: item._id,
+                      name: item.name,
+                      subtitle: item.nameKey || "",
+                    }));
 
                     return (
                       <div
                         key={row.rowId}
-                        className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
                       >
-                        <div className="flex flex-col gap-4">
+                        <div className="space-y-3">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3">
-                              <label className="inline-flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <label className="inline-flex items-center gap-2">
                                 <input
                                   type="checkbox"
                                   checked={row.enabled}
-                                  onChange={(e) =>
+                                  onChange={(event) =>
                                     updateRow(row.rowId, {
-                                      enabled: e.target.checked,
+                                      enabled: event.target.checked,
                                     })
                                   }
-                                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                  className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
                                   disabled={loading}
                                 />
-                                <span className="text-sm font-semibold text-slate-900">
+
+                                <span className="text-sm font-bold text-slate-900">
                                   {brandName}
                                 </span>
                               </label>
@@ -1063,7 +1164,7 @@ export default function ProductCompatibilityCreatePage({
                                     enabled: false,
                                   })
                                 }
-                                className="inline-flex items-center gap-2 self-start rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+                                className="inline-flex h-8 items-center justify-center gap-2 self-start rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
                               >
                                 <X className="h-3.5 w-3.5" />
                                 Clear
@@ -1087,18 +1188,21 @@ export default function ProductCompatibilityCreatePage({
                           />
 
                           <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700">
+                            <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                               Notes
                             </label>
+
                             <textarea
                               rows={3}
                               value={row.notes}
-                              onChange={(e) =>
-                                updateRow(row.rowId, { notes: e.target.value })
+                              onChange={(event) =>
+                                updateRow(row.rowId, {
+                                  notes: event.target.value,
+                                })
                               }
                               disabled={!row.enabled || loading}
                               placeholder="Optional notes for this compatible brand"
-                              className="premium-input min-h-24 resize-y py-3 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                              className="min-h-20 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                             />
                           </div>
                         </div>
@@ -1106,7 +1210,7 @@ export default function ProductCompatibilityCreatePage({
                     );
                   })
                 ) : (
-                  <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
                     <p className="text-sm font-medium text-slate-500">
                       No compatible brands found
                     </p>
@@ -1114,9 +1218,21 @@ export default function ProductCompatibilityCreatePage({
                 )}
               </div>
 
-              <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-500">
-                  Showing {showingFrom} to {showingTo} of {totalRows} brands
+                  Showing{" "}
+                  <span className="font-semibold text-slate-900">
+                    {showingFrom}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-semibold text-slate-900">
+                    {showingTo}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-900">
+                    {totalRows}
+                  </span>{" "}
+                  brands
                 </p>
 
                 <div className="flex items-center gap-2">
@@ -1125,25 +1241,29 @@ export default function ProductCompatibilityCreatePage({
                     onClick={() =>
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
-                    disabled={safeCurrentPage === 1}
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={safeCurrentPage === 1 || totalRows === 0}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
                   >
+                    <ChevronLeft className="h-4 w-4" />
                     Prev
                   </button>
 
-                  <span className="px-2 text-sm font-medium text-slate-600">
-                    {safeCurrentPage} / {totalPages}
+                  <span className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                    {totalRows === 0 ? 0 : safeCurrentPage} / {totalPages}
                   </span>
 
                   <button
                     type="button"
                     onClick={() =>
-                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      setCurrentPage((prev) =>
+                        Math.min(totalPages, prev + 1)
+                      )
                     }
-                    disabled={safeCurrentPage === totalPages}
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={safeCurrentPage === totalPages || totalRows === 0}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1151,56 +1271,59 @@ export default function ProductCompatibilityCreatePage({
           </div>
 
           <div className="lg:col-span-4">
-            <section className="premium-card-solid sticky top-24 rounded-card p-4 md:p-5">
-              <div className="mb-5 flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
-                  <ShieldCheck className="h-5 w-5" />
+            <section className="sticky top-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <ShieldCheck className="h-4.5 w-4.5" />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-sm font-bold text-slate-950">
                     Selected Summary
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-xs leading-5 text-slate-500">
                     Review selected mapping before saving.
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                     Sub Category
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {subCategoryOptions.find((item) => item._id === subCategoryId)
+
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {subCategoryOptions.find(
+                      (item) => item._id === subCategoryId
+                    )?.name || "-"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                    Product Brand
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {brandOptions.find((item) => item._id === productBrandId)
                       ?.name || "-"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Product Brand
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {brandOptions.find((item) => item._id === productBrandId)?.name ||
-                      "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                     Compatible Brands
                   </p>
 
-                  {selectedSummary.length ? (
-                    <div className="mt-3 space-y-3">
+                  {selectedSummary.length > 0 ? (
+                    <div className="mt-3 space-y-2">
                       {selectedSummary.map((item) => (
                         <div
                           key={item.brandId}
-                          className="rounded-2xl border border-slate-100 bg-slate-50 p-3"
+                          className="rounded-xl border border-slate-200 bg-white p-3"
                         >
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="text-sm font-bold text-slate-900">
                             {item.brandName}
                           </p>
 
@@ -1212,7 +1335,7 @@ export default function ProductCompatibilityCreatePage({
                           </p>
 
                           {item.notes ? (
-                            <p className="mt-2 text-xs text-slate-600">
+                            <p className="mt-1 text-xs text-slate-600">
                               Notes: {item.notes}
                             </p>
                           ) : null}
@@ -1220,24 +1343,53 @@ export default function ProductCompatibilityCreatePage({
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-slate-500">
                       No compatible brands selected yet.
                     </p>
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-violet-600 to-fuchsia-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {isEditMode ? "Update Compatibility" : "Create Compatibility"}
-                </button>
+                <div className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur-xl">
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          {isEditMode
+                            ? "Update Compatibility"
+                            : "Create Compatibility"}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      disabled={loading}
+                      className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Reset
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      disabled={loading}
+                      className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
           </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   type ChangeEvent,
@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ImagePlus,
   Loader2,
   Save,
@@ -22,9 +23,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
+import { useAuth } from "@/context/auth/AuthProvider";
 
 type ImagePreview = {
   file: File | null;
@@ -51,47 +52,121 @@ type MasterCategoryResponse = {
   data?: MasterCategoryItem;
 };
 
+type CreateMasterCategoryPageProps = {
+  mode?: "create" | "edit";
+  masterCategoryId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void | Promise<void>;
+};
+
 const initialPreview: ImagePreview = {
   file: null,
   url: "",
   isExisting: false,
 };
 
+function normalizeRole(role?: string | null) {
+  return String(role ?? "").trim().toUpperCase();
+}
+
+function getRoleBasePath(role?: string | null) {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === "MASTER_ADMIN") return "/master";
+  if (normalizedRole === "MANAGER") return "/manager";
+  if (normalizedRole === "SUPERVISOR") return "/supervisor";
+  if (normalizedRole === "STAFF") return "/staff";
+
+  return "/master";
+}
+
 function getErrorMessage(error: unknown): string {
   if (
     typeof error === "object" &&
     error !== null &&
     "response" in error &&
-    typeof (error as { response?: unknown }).response === "object" &&
-    (error as { response?: { data?: { message?: string } } }).response?.data
-      ?.message
+    typeof (error as { response?: unknown }).response === "object"
   ) {
-    return (
-      (error as { response?: { data?: { message?: string } } }).response?.data
-        ?.message || "Something went wrong"
-    );
+    const message = (error as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+
+    if (message) return message;
   }
 
-  if (error instanceof Error) {
+  if (error instanceof Error && error.message) {
     return error.message;
   }
 
   return "Something went wrong";
 }
 
+function CompactTextField({
+  label,
+  value,
+  placeholder,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </span>
+
+      <input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+      />
+    </label>
+  );
+}
+
+function CompactPreviewField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5">
+      <p className="mb-1 text-[11px] font-semibold text-slate-500">{label}</p>
+      <p className="truncate text-sm font-semibold text-slate-700">{value}</p>
+    </div>
+  );
+}
+
 export default function CreateMasterCategoryPage({
   mode = "create",
   masterCategoryId = "",
-}: {
-  mode?: "create" | "edit";
-  masterCategoryId?: string;
-}) {
+  isModal = false,
+  onClose,
+  onSuccess,
+}: CreateMasterCategoryPageProps) {
   const router = useRouter();
+  const { role } = useAuth();
+  const basePath = getRoleBasePath(role);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const isEditMode = mode === "edit";
+  const listPath = `${basePath}/mastercategory/list`;
 
   const [name, setName] = useState("");
-  const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
+  const [imagePreview, setImagePreview] =
+    useState<ImagePreview>(initialPreview);
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
@@ -104,16 +179,22 @@ export default function CreateMasterCategoryPage({
   const pageTitle = isEditMode
     ? "Edit Master Category"
     : "Create Master Category";
+
   const pageDescription = isEditMode
-    ? "Update your master category details and keep the catalog naming and image clean."
-    : "Add a premium, well-structured master category for your catalog. Keep naming clean and upload an optional category image.";
+    ? "Update your master category details."
+    : "Add a new master category for your catalog.";
+
   const basicInfoDescription = isEditMode
     ? "Update the master category name. The key preview updates automatically."
     : "Enter the master category name. The key preview will be generated automatically.";
+
   const imageDescription = isEditMode
     ? "Replace or remove the current category image."
     : "Upload or drag and drop an optional category image.";
-  const submitLabel = isEditMode ? "Update Master Category" : "Create Master Category";
+
+  const submitLabel = isEditMode
+    ? "Update Master Category"
+    : "Create Master Category";
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -144,7 +225,7 @@ export default function CreateMasterCategoryPage({
 
     let active = true;
 
-    const loadMasterCategory = async () => {
+    async function loadMasterCategory() {
       try {
         setLoadingExisting(true);
 
@@ -173,6 +254,7 @@ export default function CreateMasterCategoryPage({
           name: resolvedName,
           imageUrl: resolvedImageUrl,
         });
+
         setImagePreview(
           resolvedImageUrl
             ? {
@@ -190,7 +272,7 @@ export default function CreateMasterCategoryPage({
           setLoadingExisting(false);
         }
       }
-    };
+    }
 
     void loadMasterCategory();
 
@@ -199,13 +281,31 @@ export default function CreateMasterCategoryPage({
     };
   }, [isEditMode, masterCategoryId]);
 
-  const clearFileInput = () => {
+  function handleClose() {
+    if (isModal && onClose) {
+      onClose();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  async function handleSuccess() {
+    if (isModal && onSuccess) {
+      await onSuccess();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  function clearFileInput() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
+  }
 
-  const buildInitialPreview = (): ImagePreview => {
+  function buildInitialPreview(): ImagePreview {
     if (initialData.imageUrl) {
       return {
         file: null,
@@ -215,12 +315,13 @@ export default function CreateMasterCategoryPage({
     }
 
     return initialPreview;
-  };
+  }
 
-  const validateAndSetImage = (file: File | null) => {
+  function validateAndSetImage(file: File | null) {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
       clearFileInput();
@@ -228,6 +329,7 @@ export default function CreateMasterCategoryPage({
     }
 
     const maxSize = 3 * 1024 * 1024;
+
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
       clearFileInput();
@@ -245,44 +347,47 @@ export default function CreateMasterCategoryPage({
         isExisting: false,
       };
     });
-  };
+  }
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
     validateAndSetImage(file);
-  };
+  }
 
-  const handleDragEnter = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleDragEnter(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(true);
-  };
+  }
 
-  const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(true);
-  };
+  }
 
-  const handleDragLeave = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(false);
-  };
+  }
 
-  const handleDrop = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(false);
 
     if (submitting || removingImage) return;
 
-    const file = e.dataTransfer.files?.[0] || null;
+    const file = event.dataTransfer.files?.[0] || null;
     validateAndSetImage(file);
-  };
+  }
 
-  const removeImage = async () => {
-    const hasSelectedLocalImage = Boolean(imagePreview.file && !imagePreview.isExisting);
+  async function removeImage() {
+    const hasSelectedLocalImage = Boolean(
+      imagePreview.file && !imagePreview.isExisting
+    );
+
     const hasExistingImage = Boolean(
       isEditMode && imagePreview.isExisting && initialData.imageUrl
     );
@@ -297,7 +402,9 @@ export default function CreateMasterCategoryPage({
       });
 
       clearFileInput();
-      toast.success(initialData.imageUrl ? "Selected image cleared" : "Image removed");
+      toast.success(
+        initialData.imageUrl ? "Selected image cleared" : "Image removed"
+      );
       return;
     }
 
@@ -310,24 +417,26 @@ export default function CreateMasterCategoryPage({
     try {
       setRemovingImage(true);
 
-      await apiClient.delete(SummaryApi.master_category_image_remove.url(masterCategoryId));
+      await apiClient.delete(
+        SummaryApi.master_category_image_remove.url(masterCategoryId)
+      );
 
       setImagePreview(initialPreview);
       setInitialData((prev) => ({
         ...prev,
         imageUrl: "",
       }));
-      clearFileInput();
 
+      clearFileInput();
       toast.success("Image removed successfully");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
       setRemovingImage(false);
     }
-  };
+  }
 
-  const resetForm = () => {
+  function resetForm() {
     setDragActive(false);
 
     setImagePreview((prev) => {
@@ -340,9 +449,9 @@ export default function CreateMasterCategoryPage({
 
     setName(isEditMode ? initialData.name : "");
     clearFileInput();
-  };
+  }
 
-  const validateForm = () => {
+  function validateForm() {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -356,10 +465,10 @@ export default function CreateMasterCategoryPage({
     }
 
     return true;
-  };
+  }
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
     if (!validateForm()) return;
 
@@ -402,7 +511,7 @@ export default function CreateMasterCategoryPage({
         }
 
         toast.success("Master category updated successfully");
-        router.push("/master/mastercategory/list");
+        await handleSuccess();
         return;
       }
 
@@ -424,29 +533,36 @@ export default function CreateMasterCategoryPage({
       );
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to create master category");
+        throw new Error(
+          response.data?.message || "Failed to create master category"
+        );
       }
 
       toast.success("Master category created successfully");
       resetForm();
-
-      setTimeout(() => {
-        router.push("/master/mastercategory/list");
-      }, 700);
+      await handleSuccess();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   if (loadingExisting) {
     return (
-      <div className="page-shell">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-center rounded-card border border-slate-200 bg-white py-24 shadow-sm">
+      <div
+        className={
+          isModal
+            ? "bg-slate-50 px-3 py-3 sm:px-4"
+            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+        }
+      >
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-12 shadow-sm">
           <div className="flex items-center gap-3 text-slate-700">
-            <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
-            <span className="text-sm font-medium">Loading master category...</span>
+            <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
+            <span className="text-sm font-semibold">
+              Loading master category...
+            </span>
           </div>
         </div>
       </div>
@@ -454,129 +570,146 @@ export default function CreateMasterCategoryPage({
   }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
+    <div
+      className={
+        isModal
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+      }
+    >
+      <div className="mx-auto w-full max-w-7xl space-y-3">
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={submitting || removingImage}
+            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {isModal ? "Close" : "Back to List"}
+          </button>
 
-          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
-                <Sparkles className="h-3.5 w-3.5" />
-                Catalog Management
-              </span>
+          <div className="flex flex-col gap-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#00008b]/15 bg-[#00008b]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#00008b]">
+              <Sparkles className="h-3 w-3" />
+              Catalog Management
+            </span>
 
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                  {pageTitle}
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                  {pageDescription}
-                </p>
-              </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
+                {pageTitle}
+              </h1>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {pageDescription}
+              </p>
             </div>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-card p-4 md:p-5">
-            <div className="mb-5 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                <Tag className="h-5 w-5" />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                <Tag className="h-4.5 w-4.5" />
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-950">
                   Basic Information
                 </h2>
-                <p className="text-sm text-slate-500">{basicInfoDescription}</p>
+                <p className="text-xs leading-5 text-slate-500">
+                  {basicInfoDescription}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5">
-              <TopLabelInput
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px]">
+              <CompactTextField
                 label="Master Category Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Enter master category name"
                 disabled={submitting || removingImage}
                 required
               />
 
-              <TopLabelPanel
+              <CompactPreviewField
                 label="Name Key Preview"
-                className="border-dashed border-slate-200 bg-slate-50"
-                contentClassName="text-sm font-medium text-slate-500"
-              >
-                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
-              </TopLabelPanel>
+                value={nameKeyPreview || "auto-generated-from-name"}
+              />
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-card p-4 md:p-5">
-            <div className="mb-5 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
-                <ImagePlus className="h-5 w-5" />
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                <ImagePlus className="h-4.5 w-4.5" />
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-950">
                   Category Image
                 </h2>
-                <p className="text-sm text-slate-500">{imageDescription}</p>
+                <p className="text-xs leading-5 text-slate-500">
+                  {imageDescription}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_260px]">
-              <div>
-                <label
-                  htmlFor="master-category-image"
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
-                    dragActive
-                      ? "border-violet-500 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
-                  } ${submitting || removingImage ? "pointer-events-none opacity-70" : ""}`}
-                >
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
-                    {dragActive ? (
-                      <UploadCloud className="h-7 w-7" />
-                    ) : (
-                      <ImagePlus className="h-7 w-7" />
-                    )}
-                  </div>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_210px]">
+              <label
+                htmlFor="master-category-image"
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`group flex min-h-29.5 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-center transition ${
+                  dragActive
+                    ? "border-[#00008b] bg-[#00008b]/5"
+                    : "border-slate-300 bg-slate-50 hover:border-[#00008b] hover:bg-[#00008b]/5"
+                } ${
+                  submitting || removingImage
+                    ? "pointer-events-none opacity-70"
+                    : ""
+                }`}
+              >
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#00008b] shadow-sm ring-1 ring-slate-100">
+                  {dragActive ? (
+                    <UploadCloud className="h-5 w-5" />
+                  ) : (
+                    <ImagePlus className="h-5 w-5" />
+                  )}
+                </div>
 
-                  <p className="text-base font-semibold text-slate-800">
-                    {dragActive
-                      ? "Drop image here"
-                      : isEditMode
-                        ? "Click to replace image"
-                        : "Click to upload image"}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
-                  </p>
+                <p className="text-sm font-bold text-slate-800">
+                  {dragActive
+                    ? "Drop image here"
+                    : isEditMode
+                      ? "Click to replace image"
+                      : "Click to upload image"}
+                </p>
 
-                  <input
-                    ref={fileInputRef}
-                    id="master-category-image"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    disabled={submitting || removingImage}
-                  />
-                </label>
-              </div>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  PNG, JPG, JPEG, WEBP up to 3MB
+                </p>
 
-              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-sm font-semibold text-slate-700">Preview</p>
+                <input
+                  ref={fileInputRef}
+                  id="master-category-image"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  disabled={submitting || removingImage}
+                />
+              </label>
 
-                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-bold text-slate-700">
+                  Preview
+                </p>
+
+                <div className="relative flex h-29.5 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {imagePreview.url ? (
                     <Image
                       src={imagePreview.url}
@@ -586,7 +719,7 @@ export default function CreateMasterCategoryPage({
                       className="object-cover"
                     />
                   ) : (
-                    <div className="px-4 text-center text-sm text-slate-400">
+                    <div className="px-3 text-center text-xs font-medium text-slate-400">
                       No image selected
                     </div>
                   )}
@@ -599,19 +732,19 @@ export default function CreateMasterCategoryPage({
                       void removeImage();
                     }}
                     disabled={submitting || removingImage}
-                    className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-2 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {removingImage ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Removing...
                       </>
                     ) : (
                       <>
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                         {imagePreview.file && !imagePreview.isExisting
                           ? initialData.imageUrl
-                            ? "Clear Selected Image"
+                            ? "Clear Selected"
                             : "Remove Image"
                           : "Remove Image"}
                       </>
@@ -622,30 +755,39 @@ export default function CreateMasterCategoryPage({
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur-xl">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={resetForm}
                 disabled={submitting || removingImage}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
               </button>
 
               <button
+                type="button"
+                onClick={handleClose}
+                disabled={submitting || removingImage}
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+
+              <button
                 type="submit"
                 disabled={submitting || removingImage}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(145,22,161,0.28)] transition duration-200 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-xs font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     {isEditMode ? "Updating..." : "Creating..."}
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
+                    <Save className="h-3.5 w-3.5" />
                     {submitLabel}
                   </>
                 )}

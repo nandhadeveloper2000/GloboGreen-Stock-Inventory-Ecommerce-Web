@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
-import React, {
-  ChangeEvent,
-  DragEvent,
-  FormEvent,
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
   useEffect,
   useMemo,
   useRef,
@@ -12,14 +12,12 @@ import React, {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  Loader2,
-  ImagePlus,
-  Tag,
   ArrowLeft,
-  Trash2,
-  Save,
-  Sparkles,
   BadgePlus,
+  ImagePlus,
+  Loader2,
+  Save,
+  Trash2,
   UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +25,6 @@ import { toast } from "sonner";
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
-import { TopLabelInput, TopLabelPanel } from "@/components/ui/top-label-fields";
 
 type PageMode = "create" | "edit";
 
@@ -58,6 +55,9 @@ type ImagePreview = {
 type CreateBrandsPageProps = {
   mode?: PageMode;
   brandId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void | Promise<void>;
 };
 
 const initialPreview: ImagePreview = {
@@ -70,17 +70,15 @@ function getErrorMessage(error: unknown): string {
     typeof error === "object" &&
     error !== null &&
     "response" in error &&
-    typeof (error as { response?: unknown }).response === "object" &&
-    (error as { response?: { data?: { message?: string } } }).response?.data
-      ?.message
+    typeof (error as { response?: unknown }).response === "object"
   ) {
-    return (
-      (error as { response?: { data?: { message?: string } } }).response?.data
-        ?.message || "Something went wrong"
-    );
+    const message = (error as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+
+    if (message) return message;
   }
 
-  if (error instanceof Error) {
+  if (error instanceof Error && error.message) {
     return error.message;
   }
 
@@ -118,9 +116,61 @@ function getApiUrl(
   return `${apiUrl}/${id}${fallbackSuffix}`;
 }
 
+function CompactTextField({
+  label,
+  value,
+  placeholder,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </span>
+
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+      />
+    </label>
+  );
+}
+
+function CompactPreviewField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5">
+      <p className="mb-1 text-[11px] font-semibold text-slate-500">{label}</p>
+      <p className="truncate text-sm font-semibold text-slate-700">{value}</p>
+    </div>
+  );
+}
+
 export default function CreateBrandsPage({
   mode = "create",
   brandId = "",
+  isModal = false,
+  onClose,
+  onSuccess,
 }: CreateBrandsPageProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -128,10 +178,12 @@ export default function CreateBrandsPage({
 
   const isEditMode = mode === "edit";
   const basePath = getRoleBasePath(role);
+  const listPath = `${basePath}/brand/list`;
 
   const [name, setName] = useState("");
   const [existingImageUrl, setExistingImageUrl] = useState("");
-  const [imagePreview, setImagePreview] = useState<ImagePreview>(initialPreview);
+  const [imagePreview, setImagePreview] =
+    useState<ImagePreview>(initialPreview);
 
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
@@ -142,7 +194,7 @@ export default function CreateBrandsPage({
     ? "Update brand details and manage brand image."
     : "Create a new brand with optional image.";
 
-  const buttonText = isEditMode ? "Save Changes" : "Save Brand";
+  const buttonText = isEditMode ? "Update Brand" : "Save Brand";
   const submittingText = isEditMode ? "Updating..." : "Creating...";
 
   const nameKeyPreview = useMemo(() => {
@@ -168,11 +220,17 @@ export default function CreateBrandsPage({
       return;
     }
 
-    const fetchBrand = async () => {
+    let active = true;
+
+    async function fetchBrand() {
       try {
         if (!isValidMongoId(brandId)) {
           toast.error("Invalid brand id");
-          router.push(`${basePath}/brand/list`);
+          if (isModal) {
+            onClose?.();
+          } else {
+            router.push(listPath);
+          }
           return;
         }
 
@@ -192,29 +250,66 @@ export default function CreateBrandsPage({
           throw new Error(result?.message || "Failed to fetch brand");
         }
 
+        if (!active) return;
+
         setName(result.data.name || "");
         setExistingImageUrl(result.data.image?.url?.trim() || "");
       } catch (error: unknown) {
+        if (!active) return;
+
         toast.error(getErrorMessage(error));
-        router.push(`${basePath}/brand/list`);
+
+        if (isModal) {
+          onClose?.();
+        } else {
+          router.push(listPath);
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
     void fetchBrand();
-  }, [isEditMode, brandId, basePath, router]);
 
-  const validateAndSetImage = (file: File | null) => {
+    return () => {
+      active = false;
+    };
+  }, [isEditMode, brandId, isModal, listPath, onClose, router]);
+
+  function handleClose() {
+    if (isModal && onClose) {
+      onClose();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  async function handleSuccess() {
+    if (isModal && onSuccess) {
+      await onSuccess();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  function clearFileInput() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function validateAndSetImage(file: File | null) {
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      clearFileInput();
       return;
     }
 
@@ -222,9 +317,7 @@ export default function CreateBrandsPage({
 
     if (file.size > maxSize) {
       toast.error("Image size must be less than 3MB");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      clearFileInput();
       return;
     }
 
@@ -238,43 +331,43 @@ export default function CreateBrandsPage({
         url: URL.createObjectURL(file),
       };
     });
-  };
+  }
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
     validateAndSetImage(file);
-  };
+  }
 
-  const handleImageDragEnter = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleImageDragEnter(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setIsDraggingImage(true);
-  };
+  }
 
-  const handleImageDragOver = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleImageDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setIsDraggingImage(true);
-  };
+  }
 
-  const handleImageDragLeave = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleImageDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setIsDraggingImage(false);
-  };
+  }
 
-  const handleImageDrop = (e: DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleImageDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setIsDraggingImage(false);
 
     if (submitting) return;
 
-    const file = e.dataTransfer.files?.[0] || null;
+    const file = event.dataTransfer.files?.[0] || null;
     validateAndSetImage(file);
-  };
+  }
 
-  const removeSelectedImage = () => {
+  function removeSelectedImage() {
     setImagePreview((prev) => {
       if (prev.url) {
         URL.revokeObjectURL(prev.url);
@@ -283,14 +376,11 @@ export default function CreateBrandsPage({
       return initialPreview;
     });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-
+    clearFileInput();
     toast.success("Selected image removed");
-  };
+  }
 
-  const removeExistingImage = async () => {
+  async function removeExistingImage() {
     if (!isEditMode) return;
 
     if (!isValidMongoId(brandId)) {
@@ -326,9 +416,24 @@ export default function CreateBrandsPage({
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const validateForm = () => {
+  function resetForm() {
+    setName("");
+    setIsDraggingImage(false);
+
+    setImagePreview((prev) => {
+      if (prev.url) {
+        URL.revokeObjectURL(prev.url);
+      }
+
+      return initialPreview;
+    });
+
+    clearFileInput();
+  }
+
+  function validateForm() {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -342,10 +447,10 @@ export default function CreateBrandsPage({
     }
 
     return true;
-  };
+  }
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
     if (!validateForm()) return;
 
@@ -411,7 +516,7 @@ export default function CreateBrandsPage({
         }
 
         toast.success(result?.message || "Brand updated successfully");
-        router.push(`${basePath}/brand/list`);
+        await handleSuccess();
         return;
       }
 
@@ -439,23 +544,30 @@ export default function CreateBrandsPage({
       }
 
       toast.success(result?.message || "Brand created successfully");
-      router.push(`${basePath}/brand/list`);
+      resetForm();
+      await handleSuccess();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   if (loading) {
     return (
-      <div className="page-shell">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="premium-card-solid rounded-[30px] p-10">
-            <div className="flex items-center justify-center gap-3 text-slate-600">
-              <Loader2 className="h-5 w-5 animate-spin" />
+      <div
+        className={
+          isModal
+            ? "bg-slate-50 px-3 py-3"
+            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+        }
+      >
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 shadow-sm">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
+            <span className="text-sm font-semibold">
               Loading brand details...
-            </div>
+            </span>
           </div>
         </div>
       </div>
@@ -463,240 +575,211 @@ export default function CreateBrandsPage({
   }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-              {pageTitle}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">{pageDescription}</p>
-          </div>
-
+    <div
+      className={
+        isModal
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4"
+          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+      }
+    >
+      <div className="mx-auto w-full max-w-5xl space-y-3">
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <button
             type="button"
-            onClick={() => router.push(`${basePath}/brand/list`)}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            onClick={handleClose}
+            disabled={submitting}
+            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to List
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {isModal ? "Close" : "Back to List"}
           </button>
-        </div>
 
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
-
-          <div className="relative z-10">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
-              <Sparkles className="h-3.5 w-3.5" />
-              Catalog Management
-            </span>
-
-            <div className="mt-3">
-              <h2 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                {pageTitle}
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                {isEditMode
-                  ? "Update the brand name and replace or remove its image with a clean catalog management flow."
-                  : "Add the brand name and upload an optional brand image for a clean catalog management experience."}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
+              {pageTitle}
+            </h1>
+            <p className="mt-0.5 text-sm text-slate-500">{pageDescription}</p>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="premium-card-solid rounded-card p-4 md:p-5">
-            <div className="mb-5 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                <BadgePlus className="h-5 w-5" />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                <BadgePlus className="h-4.5 w-4.5" />
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-950">
                   Basic Information
                 </h2>
-                <p className="text-sm text-slate-500">
-                  {isEditMode
-                    ? "Update the brand name. Name key will update automatically."
-                    : "Enter the brand name. Name key will be auto-generated."}
+                <p className="text-xs leading-5 text-slate-500">
+                  Enter brand name. Name key will be generated automatically.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <TopLabelInput
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <CompactTextField
                 label="Brand Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Enter brand name"
-                icon={Tag}
                 disabled={submitting}
                 required
               />
 
-              <TopLabelPanel
+              <CompactPreviewField
                 label="Name Key Preview"
-                className="border-dashed border-slate-200 bg-slate-50"
-                contentClassName="text-sm font-medium text-slate-500"
-              >
-                <span>{nameKeyPreview || "auto-generated-from-name"}</span>
-              </TopLabelPanel>
+                value={nameKeyPreview || "auto-generated-from-name"}
+              />
             </div>
           </section>
 
-          <section className="premium-card-solid rounded-card p-4 md:p-5">
-            <div className="mb-5 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-100 text-pink-600">
-                <ImagePlus className="h-5 w-5" />
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
+                <ImagePlus className="h-4.5 w-4.5" />
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-950">
                   Brand Image
                 </h2>
-                <p className="text-sm text-slate-500">
-                  {isEditMode
-                    ? "Replace the current brand image or remove it completely."
-                    : "Upload or drag and drop an optional image for better brand presentation."}
+                <p className="text-xs leading-5 text-slate-500">
+                  Upload or drag and drop an optional image.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_260px]">
-              <div>
-                <label
-                  htmlFor="brand-image"
-                  onDragEnter={handleImageDragEnter}
-                  onDragOver={handleImageDragOver}
-                  onDragLeave={handleImageDragLeave}
-                  onDrop={handleImageDrop}
-                  className={`group flex min-h-55 cursor-pointer flex-col items-center justify-center rounded-[26px] border-2 border-dashed px-6 py-8 text-center transition duration-200 ${
-                    isDraggingImage
-                      ? "border-violet-500 bg-violet-50 shadow-sm"
-                      : "border-slate-200 bg-linear-to-br from-slate-50 to-violet-50/60 hover:border-violet-400 hover:shadow-sm"
-                  }`}
-                >
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-100">
-                    {isDraggingImage ? (
-                      <UploadCloud className="h-7 w-7" />
-                    ) : (
-                      <ImagePlus className="h-7 w-7" />
-                    )}
-                  </div>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_210px]">
+              <label
+                htmlFor="brand-image"
+                onDragEnter={handleImageDragEnter}
+                onDragOver={handleImageDragOver}
+                onDragLeave={handleImageDragLeave}
+                onDrop={handleImageDrop}
+                className={`group flex min-h-29.5 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-center transition ${
+                  isDraggingImage
+                    ? "border-[#00008b] bg-[#00008b]/5"
+                    : "border-slate-300 bg-slate-50 hover:border-[#00008b] hover:bg-[#00008b]/5"
+                } ${submitting ? "pointer-events-none opacity-70" : ""}`}
+              >
+                <input
+                  ref={fileInputRef}
+                  id="brand-image"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={handleImageChange}
+                  disabled={submitting}
+                />
 
-                  <p className="text-base font-semibold text-slate-800">
-                    {isDraggingImage
-                      ? "Drop image here"
-                      : isEditMode
-                      ? "Click to select new image"
-                      : "Click to upload image"}
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Or drag and drop PNG, JPG, JPEG, WEBP up to 3MB
-                  </p>
-
-                  <input
-                    ref={fileInputRef}
-                    id="brand-image"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="hidden"
-                    onChange={handleImageChange}
-                    disabled={submitting}
-                  />
-                </label>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  {imagePreview.url ? (
-                    <button
-                      type="button"
-                      onClick={removeSelectedImage}
-                      disabled={submitting}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove Selected
-                    </button>
-                  ) : null}
-
-                  {isEditMode && existingImageUrl ? (
-                    <button
-                      type="button"
-                      onClick={removeExistingImage}
-                      disabled={submitting}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove Existing Image
-                    </button>
-                  ) : null}
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#00008b] shadow-sm ring-1 ring-slate-100">
+                  {isDraggingImage ? (
+                    <UploadCloud className="h-5 w-5" />
+                  ) : (
+                    <ImagePlus className="h-5 w-5" />
+                  )}
                 </div>
-              </div>
 
-              <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-sm font-semibold text-slate-700">
+                <p className="text-sm font-bold text-slate-800">
+                  {isDraggingImage
+                    ? "Drop image here"
+                    : isEditMode
+                      ? "Click to replace image"
+                      : "Click to upload image"}
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  PNG, JPG, JPEG, WEBP up to 3MB
+                </p>
+              </label>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-bold text-slate-700">
                   Preview
                 </p>
 
-                <div className="relative flex h-55 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="relative flex h-29.5 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {previewImageUrl ? (
                     <Image
                       src={previewImageUrl}
                       alt="Brand preview"
                       fill
+                      sizes="210px"
                       className="object-cover"
-                      sizes="260px"
                       unoptimized
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center px-4 text-center text-slate-400">
-                      <ImagePlus className="h-10 w-10" />
-                      <p className="mt-2 text-sm font-medium">
-                        No image selected
-                      </p>
+                    <div className="px-3 text-center text-xs font-medium text-slate-400">
+                      No image selected
                     </div>
                   )}
                 </div>
 
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  {imagePreview.url
-                    ? "Previewing newly selected image. Save to upload it."
-                    : existingImageUrl
-                    ? "Showing current saved brand image."
-                    : "No image available for this brand."}
-                </p>
+                <div className="mt-2 space-y-2">
+                  {imagePreview.url ? (
+                    <button
+                      type="button"
+                      onClick={removeSelectedImage}
+                      disabled={submitting}
+                      className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove Selected
+                    </button>
+                  ) : null}
+
+                  {isEditMode && existingImageUrl && !imagePreview.url ? (
+                    <button
+                      type="button"
+                      onClick={() => void removeExistingImage()}
+                      disabled={submitting}
+                      className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove Existing
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </section>
 
-          <div className="sticky bottom-4 z-10 rounded-card border border-white/60 bg-white/90 p-4 shadow-[0_15px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur-xl">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
-                onClick={() => router.push(`${basePath}/brand/list`)}
+                onClick={resetForm}
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <ArrowLeft className="h-4 w-4" />
+                Reset
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={submitting}
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 Cancel
               </button>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-xs font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     {submittingText}
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
+                    <Save className="h-3.5 w-3.5" />
                     {buttonText}
                   </>
                 )}

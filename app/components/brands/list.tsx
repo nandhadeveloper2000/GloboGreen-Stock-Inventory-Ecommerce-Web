@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -303,7 +303,7 @@ export default function MyBrandListPage() {
           <div className="border-b border-token px-4 py-4 md:px-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(46,49,146,0.14)] bg-primary-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(0,0,139,0.14)] bg-primary-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                   <Tag className="h-3.5 w-3.5" />
                   Shop Owner Panel
                 </div>
@@ -374,7 +374,7 @@ export default function MyBrandListPage() {
                 />
               </div>
 
-              <div className="flex h-10 flex-col items-center justify-center rounded-lg border border-[rgba(46,49,146,0.18)] bg-primary-soft px-3 text-center">
+              <div className="flex h-10 flex-col items-center justify-center rounded-lg border border-[rgba(0,0,139,0.18)] bg-primary-soft px-3 text-center">
                 <span className="text-[10px] font-semibold text-secondary-text">
                   Search by
                 </span>
@@ -613,3 +613,4 @@ export default function MyBrandListPage() {
     </div>
   );
 }
+

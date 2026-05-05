@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+﻿/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
@@ -25,13 +25,14 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
-import { useAuth } from "@/context/auth/AuthProvider";
+import CreateProductPage from "./create";
 
 type ApiImage = {
   url?: string;
@@ -98,6 +99,7 @@ type ProductListResponse = {
   success?: boolean;
   message?: string;
   data?: ProductItem[];
+  products?: ProductItem[];
 };
 
 type ActionResponse = {
@@ -106,39 +108,22 @@ type ActionResponse = {
   data?: ProductItem;
 };
 
-function normalizeRole(role?: string | null) {
-  return String(role ?? "").trim().toUpperCase();
-}
-
-function getRoleBasePath(role?: string | null) {
-  const normalizedRole = normalizeRole(role);
-
-  if (normalizedRole === "MASTER_ADMIN") return "/master";
-  if (normalizedRole === "MANAGER") return "/manager";
-  if (normalizedRole === "SUPERVISOR") return "/supervisor";
-  if (normalizedRole === "STAFF") return "/staff";
-
-  return "/master";
-}
+const ITEMS_PER_PAGE = 12;
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
     typeof error === "object" &&
     error !== null &&
     "response" in error &&
-    typeof (error as { response?: unknown }).response === "object" &&
-    (error as { response?: { data?: { message?: string } } }).response?.data
-      ?.message
+    typeof (error as { response?: unknown }).response === "object"
   ) {
-    return (
-      (error as { response?: { data?: { message?: string } } }).response?.data
-        ?.message || fallback
-    );
+    const message = (error as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+
+    if (message) return message;
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return fallback;
 }
@@ -180,7 +165,8 @@ function getModelName(item: ProductItem) {
 
 function hasSharedMedia(item: ProductItem) {
   const hasTopLevelMedia =
-    (item.images?.length ?? 0) > 0 || (item.productInformation?.length ?? 0) > 0;
+    (item.images?.length ?? 0) > 0 ||
+    (item.productInformation?.length ?? 0) > 0;
 
   const hasVariantMedia = (item.variant || []).some(
     (variant) =>
@@ -200,51 +186,49 @@ function hasCompatibility(item: ProductItem) {
 }
 
 function getConfigurationLabel(item: ProductItem) {
-  if (item.configurationMode === "variant") {
-    return "Variant";
-  }
+  if (item.configurationMode === "variant") return "Variant";
 
   if (item.configurationMode === "variantCompatibility") {
-    return "Variant & Compatible Brands & Models";
+    return "Variant + Compatibility";
   }
 
   if (item.configurationMode === "productMediaInfoCompatibility") {
-    return "Product Images & Product Information & Compatible Brands & Models";
+    return "Media + Info + Compatibility";
   }
 
   if (item.configurationMode === "productMediaInfo") {
-    return "Product Images & Product Information";
+    return "Media + Product Info";
   }
 
   if (hasVariants(item) && hasCompatibility(item)) {
-    return "Variant & Compatible Brands & Models";
+    return "Variant + Compatibility";
   }
 
-  if (hasVariants(item)) {
-    return "Variant";
-  }
+  if (hasVariants(item)) return "Variant";
 
   if (hasSharedMedia(item) && hasCompatibility(item)) {
-    return "Product Images & Product Information & Compatible Brands & Models";
+    return "Media + Info + Compatibility";
   }
 
-  if (hasSharedMedia(item)) {
-    return "Product Images & Product Information";
-  }
+  if (hasSharedMedia(item)) return "Media + Product Info";
 
-  if (hasCompatibility(item)) {
-    return "Compatible Brands & Models";
-  }
+  if (hasCompatibility(item)) return "Compatibility";
 
   return "Basic";
 }
 
 function getPreviewImageUrl(item: ProductItem) {
-  const primaryImage = item.images?.find((image) => image.url?.trim())?.url?.trim();
+  const primaryImage = item.images
+    ?.find((image) => image.url?.trim())
+    ?.url?.trim();
+
   if (primaryImage) return primaryImage;
 
   for (const variant of item.variant || []) {
-    const variantImage = variant.images?.find((image) => image.url?.trim())?.url?.trim();
+    const variantImage = variant.images
+      ?.find((image) => image.url?.trim())
+      ?.url?.trim();
+
     if (variantImage) return variantImage;
   }
 
@@ -272,7 +256,7 @@ function buildSearchText(item: ProductItem) {
   const variantText = (item.variant || [])
     .map((variant) => {
       const attributeText = (variant.attributes || [])
-        .map((attribute) => `${attribute.label || ""} ${attribute.value || ""}`.trim())
+        .map((attribute) => `${attribute.label || ""} ${attribute.value || ""}`)
         .join(" ");
 
       const productInfoText = (variant.productInformation || [])
@@ -280,7 +264,7 @@ function buildSearchText(item: ProductItem) {
           [
             section.title || "",
             ...(section.fields || []).map(
-              (field) => `${field.label || ""} ${field.value || ""}`.trim()
+              (field) => `${field.label || ""} ${field.value || ""}`
             ),
           ]
             .filter(Boolean)
@@ -304,7 +288,7 @@ function buildSearchText(item: ProductItem) {
       [
         section.title || "",
         ...(section.fields || []).map(
-          (field) => `${field.label || ""} ${field.value || ""}`.trim()
+          (field) => `${field.label || ""} ${field.value || ""}`
         ),
       ]
         .filter(Boolean)
@@ -333,13 +317,8 @@ function buildSearchText(item: ProductItem) {
 function getApprovalBadgeClass(status?: string) {
   const normalized = String(status || "").trim().toUpperCase();
 
-  if (normalized === "APPROVED") {
-    return "bg-emerald-50 text-emerald-700";
-  }
-
-  if (normalized === "REJECTED") {
-    return "bg-rose-50 text-rose-700";
-  }
+  if (normalized === "APPROVED") return "bg-emerald-50 text-emerald-700";
+  if (normalized === "REJECTED") return "bg-rose-50 text-rose-700";
 
   return "bg-amber-50 text-amber-700";
 }
@@ -356,32 +335,32 @@ function StatCard({
   iconWrapClassName: string;
 }) {
   return (
-    <div className="premium-card-solid rounded-3xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
-          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <p className="text-xs font-semibold text-slate-500">{title}</p>
+          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
             {value}
           </h3>
         </div>
 
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${iconWrapClassName}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconWrapClassName}`}
         >
           {icon}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 function CardGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 8 }).map((_, index) => (
         <div
           key={index}
-          className="premium-card-solid animate-pulse rounded-3xl p-4"
+          className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="h-7 w-12 rounded-full bg-slate-200" />
@@ -393,7 +372,7 @@ function CardGridSkeleton() {
           </div>
 
           <div className="mt-4 flex items-start gap-3">
-            <div className="h-14 w-14 rounded-[18px] bg-slate-200" />
+            <div className="h-14 w-14 rounded-xl bg-slate-200" />
             <div className="flex-1">
               <div className="h-4 w-32 rounded bg-slate-200" />
               <div className="mt-2 h-3 w-24 rounded bg-slate-100" />
@@ -405,18 +384,12 @@ function CardGridSkeleton() {
             {Array.from({ length: 3 }).map((_, itemIndex) => (
               <div
                 key={itemIndex}
-                className="rounded-[18px] border border-slate-100 bg-slate-50/70 p-3"
+                className="rounded-xl border border-slate-100 bg-slate-50 p-3"
               >
                 <div className="h-3 w-14 rounded bg-slate-200" />
                 <div className="mt-2 h-4 w-24 rounded bg-slate-100" />
               </div>
             ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <div className="h-7 w-20 rounded-full bg-slate-200" />
-            <div className="h-7 w-20 rounded-full bg-slate-200" />
-            <div className="h-7 w-20 rounded-full bg-slate-200" />
           </div>
         </div>
       ))}
@@ -443,12 +416,7 @@ function ActionIconButton({
 
   if (href) {
     return (
-      <Link
-        href={href}
-        aria-label={label}
-        title={label}
-        className={sharedClassName}
-      >
+      <Link href={href} aria-label={label} title={label} className={sharedClassName}>
         {children}
       </Link>
     );
@@ -472,18 +440,18 @@ function ProductCard({
   item,
   index,
   startIndex,
-  basePath,
   deletingId,
   togglingId,
+  onEdit,
   onToggleStatus,
   onDelete,
 }: {
   item: ProductItem;
   index: number;
   startIndex: number;
-  basePath: string;
   deletingId: string | null;
   togglingId: string | null;
+  onEdit: (item: ProductItem) => void;
   onToggleStatus: (item: ProductItem) => void;
   onDelete: (id: string) => void;
 }) {
@@ -496,163 +464,150 @@ function ProductCard({
   const sharedMedia = hasSharedMedia(item);
 
   return (
-    <article className="premium-card-solid group relative overflow-hidden rounded-3xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-r from-sky-50/70 via-white to-violet-50/70" />
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+          #{startIndex + index + 1}
+        </div>
 
-      <div className="relative z-10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600 shadow-sm">
-            <span>#{startIndex + index + 1}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <ActionIconButton
+            onClick={() => onEdit(item)}
+            label={`Edit ${item.itemName}`}
+            className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </ActionIconButton>
 
-          <div className="flex items-center gap-2">
-            <ActionIconButton
-              href={`${basePath}/product/edit/${item._id}`}
-              label={`Edit ${item.itemName}`}
-              className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </ActionIconButton>
+          <ActionIconButton
+            onClick={() => onToggleStatus(item)}
+            disabled={isToggling}
+            label={active ? `Deactivate ${item.itemName}` : `Activate ${item.itemName}`}
+            className={
+              active
+                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }
+          >
+            {isToggling ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Power className="h-3.5 w-3.5" />
+            )}
+          </ActionIconButton>
 
-            <ActionIconButton
-              onClick={() => void onToggleStatus(item)}
-              disabled={isToggling}
-              label={
-                active
-                  ? `Deactivate ${item.itemName}`
-                  : `Activate ${item.itemName}`
-              }
+          <ActionIconButton
+            onClick={() => onDelete(item._id)}
+            disabled={isDeleting}
+            label={`Delete ${item.itemName}`}
+            className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </ActionIconButton>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-start gap-3">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+          {previewImage ? (
+            <img src={previewImage} alt={item.itemName} className="h-full w-full object-cover" />
+          ) : (
+            <ImageIcon className="h-5 w-5 text-slate-400" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
               className={
                 active
-                  ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  ? "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
+                  : "inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
               }
             >
-              {isToggling ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Power className="h-3.5 w-3.5" />
-              )}
-            </ActionIconButton>
+              {active ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+              {active ? "Active" : "Inactive"}
+            </span>
 
-            <ActionIconButton
-              onClick={() => void onDelete(item._id)}
-              disabled={isDeleting}
-              label={`Delete ${item.itemName}`}
-              className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+            <span
+              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getApprovalBadgeClass(
+                item.approvalStatus
+              )}`}
             >
-              {isDeleting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-            </ActionIconButton>
+              {String(item.approvalStatus || "PENDING").toUpperCase()}
+            </span>
           </div>
+
+          <h3 className="mt-2 line-clamp-1 text-base font-bold tracking-tight text-slate-900">
+            {item.itemName}
+          </h3>
+
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            SKU No: {item.sku || "-"}
+          </p>
         </div>
+      </div>
 
-        <div className="mt-4 flex items-start gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100 shadow-sm">
-            {previewImage ? (
-              <img
-                src={previewImage}
-                alt={item.itemName}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <ImageIcon className="h-5 w-5 text-slate-400" />
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={
-                  active
-                    ? "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
-                    : "inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
-                }
-              >
-                {active ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <XCircle className="h-3 w-3" />
-                )}
-                {active ? "Active" : "Inactive"}
-              </span>
-
-              <span
-                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getApprovalBadgeClass(
-                  item.approvalStatus
-                )}`}
-              >
-                {String(item.approvalStatus || "PENDING").toUpperCase()}
-              </span>
-            </div>
-
-            <h3 className="mt-2 line-clamp-1 text-base font-bold tracking-tight text-slate-900">
-              {item.itemName}
-            </h3>
-            <p className="mt-1 text-xs font-medium text-slate-500">
-              SKU No: {item.sku || "-"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                Brand
-              </p>
-              <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-slate-800">
-                {getBrandName(item)}
-              </p>
-            </div>
-
-            <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                Model
-              </p>
-              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                <Cpu className="h-3.5 w-3.5 text-slate-400" />
-                <span className="truncate">{getModelName(item)}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-sky-50/70 via-white to-violet-50/60 p-3">
+      <div className="mt-4 grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Configuration
+              Brand
             </p>
-            <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-800">
-              {getConfigurationLabel(item)}
+            <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-slate-800">
+              {getBrandName(item)}
             </p>
           </div>
 
-          <div className="rounded-[18px] border border-slate-200 bg-linear-to-br from-slate-50 via-white to-slate-50 p-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Updated
+              Model
             </p>
-            <p className="mt-1.5 text-xs font-semibold text-slate-800">
-              {formatDate(item.updatedAt || item.createdAt)}
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+              <Cpu className="h-3.5 w-3.5 text-slate-400" />
+              <span className="truncate">{getModelName(item)}</span>
             </p>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-            <Layers3 className="h-3.5 w-3.5" />
-            Variant {variantRows}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Compatible {compatibleRows}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-            <ImageIcon className="h-3.5 w-3.5" />
-            Media {sharedMedia ? "Yes" : "No"}
-          </span>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            Configuration
+          </p>
+          <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-800">
+            {getConfigurationLabel(item)}
+          </p>
         </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            Updated
+          </p>
+          <p className="mt-1.5 text-xs font-semibold text-slate-800">
+            {formatDate(item.updatedAt || item.createdAt)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+          <Layers3 className="h-3.5 w-3.5" />
+          Variant {variantRows}
+        </span>
+
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Compatible {compatibleRows}
+        </span>
+
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+          <ImageIcon className="h-3.5 w-3.5" />
+          Media {sharedMedia ? "Yes" : "No"}
+        </span>
       </div>
     </article>
   );
@@ -680,10 +635,10 @@ function PaginationFooter({
     totalEntries === 0 ? 0 : Math.min(startIndex + itemsPerPage, totalEntries);
 
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm font-medium text-slate-600">
-        Showing <span className="font-bold text-slate-900">{showingFrom}</span> to{" "}
-        <span className="font-bold text-slate-900">{showingTo}</span> of{" "}
+        Showing <span className="font-bold text-slate-900">{showingFrom}</span>{" "}
+        to <span className="font-bold text-slate-900">{showingTo}</span> of{" "}
         <span className="font-bold text-slate-900">{totalEntries}</span> entries
       </p>
 
@@ -692,12 +647,12 @@ function PaginationFooter({
           type="button"
           onClick={onPrevious}
           disabled={currentPage === 1 || totalEntries === 0}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
 
-        <div className="inline-flex h-10 min-w-19 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700">
+        <div className="inline-flex h-9 min-w-16 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">
           {totalEntries === 0 ? 0 : currentPage} / {totalPages || 1}
         </div>
 
@@ -705,7 +660,7 @@ function PaginationFooter({
           type="button"
           onClick={onNext}
           disabled={currentPage === totalPages || totalEntries === 0}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>
@@ -714,19 +669,70 @@ function PaginationFooter({
   );
 }
 
-export default function ProductListPage() {
-  const { role } = useAuth();
-  const basePath = getRoleBasePath(role);
+function ProductFormModal({
+  open,
+  mode,
+  productId,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  productId: string;
+  onClose: () => void;
+  onSuccess: () => void | Promise<void>;
+}) {
+  if (!open) return null;
 
+  return (
+    <div className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm">
+      <div className="my-4 w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              {mode === "edit" ? "Edit Product" : "Create Product"}
+            </h2>
+            <p className="text-xs font-medium text-slate-500">
+              Complete product details inside this popup.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+            aria-label="Close product form"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <CreateProductPage
+          key={`${mode}-${productId || "new"}`}
+          mode={mode}
+          productId={productId}
+          isModal
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function ProductListPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-
-  const itemsPerPage = 12;
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productModal, setProductModal] = useState<{
+    mode: "create" | "edit";
+    productId: string;
+  } | null>(null);
 
   const fetchProducts = useCallback(async (showLoader = true) => {
     try {
@@ -745,11 +751,14 @@ export default function ProductListPage() {
         }
       );
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to load products");
+      const result = response.data;
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to load products");
       }
 
-      setItems(Array.isArray(response.data?.data) ? response.data.data : []);
+      const list = result.data || result.products || [];
+      setItems(Array.isArray(list) ? list : []);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to load products"));
       setItems([]);
@@ -759,28 +768,54 @@ export default function ProductListPage() {
     }
   }, []);
 
+  const closeProductModal = useCallback(() => {
+    setProductModal(null);
+  }, []);
+
+  const handleProductSaved = useCallback(async () => {
+    setProductModal(null);
+    await fetchProducts(false);
+  }, [fetchProducts]);
+
   useEffect(() => {
     void fetchProducts(true);
   }, [fetchProducts]);
 
-  const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return items;
+  useEffect(() => {
+    if (!productModal) return;
 
-    return items.filter((item) => buildSearchText(item).includes(query));
-  }, [items, search]);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [productModal]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
 
-  const totalCount = items.length;
-  const activeCount = items.filter((item) => isProductActive(item)).length;
-  const variantCount = items.filter((item) => hasVariants(item)).length;
-  const compatibilityCount = items.filter((item) => hasCompatibility(item)).length;
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    if (!q) return items;
+
+    return items.filter((item) => buildSearchText(item).includes(q));
+  }, [items, search]);
+
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      active: items.filter((item) => isProductActive(item)).length,
+      variants: items.filter((item) => hasVariants(item)).length,
+      media: items.filter((item) => hasSharedMedia(item)).length,
+    }),
+    [items]
+  );
 
   const totalEntries = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -788,27 +823,50 @@ export default function ProductListPage() {
     }
   }, [currentPage, totalPages]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
-    );
-    if (!confirmed) return;
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredItems, startIndex]);
 
+  function handleDelete(id: string) {
+    if (!id) {
+      toast.error("Invalid product id");
+      return;
+    }
+
+    toast("Delete product?", {
+      description: "This action will permanently remove the selected product.",
+      action: {
+        label: deletingId === id ? "Deleting..." : "Delete",
+        onClick: () => {
+          void performDelete(id);
+        },
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => undefined,
+      },
+      duration: 5000,
+    });
+  }
+
+  async function performDelete(id: string) {
     try {
       setDeletingId(id);
 
-      const response = await apiClient.delete<ActionResponse>(
-        SummaryApi.product_delete.url(id)
-      );
+      const deleteUrl =
+        typeof SummaryApi.product_delete.url === "function"
+          ? SummaryApi.product_delete.url(id)
+          : `${SummaryApi.product_delete.url}/${id}`;
+
+      const response = await apiClient.delete<ActionResponse>(deleteUrl);
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to delete product");
       }
 
-      toast.success(response.data?.message || "Product deleted successfully");
+      toast.success(response.data.message || "Product deleted successfully");
       setItems((prev) => prev.filter((item) => item._id !== id));
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to delete product"));
@@ -822,10 +880,12 @@ export default function ProductListPage() {
       setTogglingId(item._id);
 
       const nextStatus = !isProductActive(item);
+
       const response = await apiClient.put<ActionResponse>(
         SummaryApi.product_update.url(item._id),
         {
           isActive: nextStatus,
+          isActiveGlobal: nextStatus,
         }
       );
 
@@ -834,11 +894,21 @@ export default function ProductListPage() {
       }
 
       toast.success(
-        response.data?.message ||
+        response.data.message ||
           `Product ${nextStatus ? "activated" : "deactivated"} successfully`
       );
 
-      await fetchProducts(false);
+      setItems((prev) =>
+        prev.map((row) =>
+          row._id === item._id
+            ? {
+                ...row,
+                isActive: nextStatus,
+                isActiveGlobal: nextStatus,
+              }
+            : row
+        )
+      );
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to update product status"));
     } finally {
@@ -847,160 +917,164 @@ export default function ProductListPage() {
   }
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-[30px] px-5 py-6 md:px-7 md:py-7">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
-
-          <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
+    <>
+      <div className="min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm md:px-5 md:py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#00008b]">
                 <Sparkles className="h-3.5 w-3.5" />
                 Product Management
               </span>
 
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                  Products
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-white/85 md:text-base">
-                  View, search, activate, deactivate, and delete product records
-                  with configuration details, category mapping, and compatibility
-                  context in one place.
-                </p>
-              </div>
+              <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
+                Products
+              </h1>
+
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                View, search, activate, deactivate, and delete product records.
+              </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => void fetchProducts(false)}
                 disabled={refreshing}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <RefreshCw
-                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-                />
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                 Refresh
               </button>
 
-              <Link
-                href={`${basePath}/product/create`}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition hover:shadow-md"
+              <button
+                type="button"
+                onClick={() => setProductModal({ mode: "create", productId: "" })}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#000070] hover:shadow-md"
               >
                 <Plus className="h-4 w-4" />
                 Create Product
-              </Link>
+              </button>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total Products"
-            value={totalCount}
-            icon={<Package2 className="h-5 w-5 text-violet-700" />}
-            iconWrapClassName="bg-violet-100"
+            value={stats.total}
+            icon={<Package2 className="h-5 w-5" />}
+            iconWrapClassName="bg-[#00008b]/10 text-[#00008b]"
           />
+
           <StatCard
             title="Active"
-            value={activeCount}
-            icon={<CheckCircle2 className="h-5 w-5 text-emerald-700" />}
-            iconWrapClassName="bg-emerald-100"
+            value={stats.active}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            iconWrapClassName="bg-emerald-100 text-emerald-700"
           />
+
           <StatCard
             title="With Variants"
-            value={variantCount}
-            icon={<Layers3 className="h-5 w-5 text-amber-700" />}
-            iconWrapClassName="bg-amber-100"
+            value={stats.variants}
+            icon={<Boxes className="h-5 w-5" />}
+            iconWrapClassName="bg-indigo-100 text-indigo-700"
           />
+
           <StatCard
-            title="Compatibility Mapped"
-            value={compatibilityCount}
-            icon={<ShieldCheck className="h-5 w-5 text-sky-700" />}
-            iconWrapClassName="bg-sky-100"
+            title="With Media"
+            value={stats.media}
+            icon={<ImageIcon className="h-5 w-5" />}
+            iconWrapClassName="bg-sky-100 text-sky-700"
           />
         </section>
 
-        <section className="premium-card-solid rounded-3xl p-4 md:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-[#2e3192] to-[#9116a1] text-white shadow-lg">
-                <Search className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b] text-white shadow-sm">
+                <Package2 className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900 md:text-xl">
+                <h2 className="text-base font-bold tracking-tight text-slate-900">
                   Product Directory
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Search by product name, model number, key, brand, or model.
+                  Search by product, SKU, brand, model, configuration, variant, or product info.
                 </p>
               </div>
             </div>
 
             <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
               <input
                 type="text"
-                placeholder="Search products..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="premium-input pl-11"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search products..."
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
               />
             </div>
           </div>
         </section>
 
-        <div>
+        <section>
           {loading ? (
             <CardGridSkeleton />
           ) : filteredItems.length === 0 ? (
-            <div className="premium-card-solid rounded-3xl border-dashed border-slate-300 p-12 text-center shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <Boxes className="h-10 w-10" />
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <Search className="h-8 w-8" />
               </div>
 
-              <h3 className="mt-5 text-xl font-bold text-slate-900">
+              <h3 className="mt-4 text-lg font-bold text-slate-900">
                 No products found
               </h3>
-              <p className="mt-2 text-sm text-slate-500">
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                 {search.trim()
                   ? "Try adjusting your search keyword."
                   : "Start by creating your first product."}
               </p>
 
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                {search.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                  >
+                    Clear Search
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
-                  onClick={() => setSearch("")}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
-                >
-                  Clear Search
-                </button>
-
-                <Link
-                  href={`${basePath}/product/create`}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  onClick={() => setProductModal({ mode: "create", productId: "" })}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white transition hover:bg-[#000070]"
                 >
                   <Plus className="h-4 w-4" />
                   Create Product
-                </Link>
+                </button>
               </div>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {paginatedItems.map((item, index) => (
                   <ProductCard
                     key={item._id}
                     item={item}
                     index={index}
                     startIndex={startIndex}
-                    basePath={basePath}
                     deletingId={deletingId}
                     togglingId={togglingId}
+                    onEdit={(product) =>
+                      setProductModal({ mode: "edit", productId: product._id })
+                    }
                     onToggleStatus={handleToggleStatus}
                     onDelete={handleDelete}
                   />
@@ -1012,16 +1086,23 @@ export default function ProductListPage() {
                 totalPages={totalPages}
                 totalEntries={totalEntries}
                 startIndex={startIndex}
-                itemsPerPage={itemsPerPage}
+                itemsPerPage={ITEMS_PER_PAGE}
                 onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                onNext={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
+                onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               />
             </>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+      </div>
+
+      <ProductFormModal
+        open={Boolean(productModal)}
+        mode={productModal?.mode || "create"}
+        productId={productModal?.productId || ""}
+        onClose={closeProductModal}
+        onSuccess={handleProductSaved}
+      />
+    </>
   );
 }

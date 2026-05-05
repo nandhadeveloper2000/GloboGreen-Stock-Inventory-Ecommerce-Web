@@ -1,4 +1,4 @@
-// app/page.tsx
+﻿// app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function Home() {
       <div className="premium-grid-bg premium-bg-animate absolute inset-0" />
 
       <div className="absolute left-[-80px] top-[-80px] h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute bottom-[-100px] right-[-80px] h-72 w-72 rounded-full bg-pink-500/10 blur-3xl" />
+      <div className="absolute bottom-[-100px] right-[-80px] h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl">
@@ -25,6 +25,7 @@ export default function Home() {
                         src="/favicon.png"
                         alt="Logo"
                         fill
+                        sizes="32px"
                         className="object-contain p-1.5"
                         priority
                       />
@@ -126,7 +127,7 @@ export default function Home() {
                           <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
                             Go to Master Login
                             <span className="transition-transform duration-300 group-hover:translate-x-1">
-                              →
+                              â†’
                             </span>
                           </div>
                         </div>
@@ -167,7 +168,7 @@ export default function Home() {
                           <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
                             Go to Shop Login
                             <span className="transition-transform duration-300 group-hover:translate-x-1">
-                              →
+                              â†’
                             </span>
                           </div>
                         </div>
@@ -187,3 +188,4 @@ export default function Home() {
     </main>
   );
 }
+

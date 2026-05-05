@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+﻿/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import Link from "next/link";
@@ -113,43 +113,43 @@ const INITIAL_FORM: VendorFormState = {
 };
 
 const GST_STATE_OPTIONS: Option[] = [
-  "01 – Jammu & Kashmir",
-  "02 – Himachal Pradesh",
-  "03 – Punjab",
-  "04 – Chandigarh (UT)",
-  "05 – Uttarakhand",
-  "06 – Haryana",
-  "07 – Delhi (UT)",
-  "08 – Rajasthan",
-  "09 – Uttar Pradesh",
-  "10 – Bihar",
-  "11 – Sikkim",
-  "12 – Arunachal Pradesh",
-  "13 – Nagaland",
-  "14 – Manipur",
-  "15 – Mizoram",
-  "16 – Tripura",
-  "17 – Meghalaya",
-  "18 – Assam",
-  "19 – West Bengal",
-  "20 – Jharkhand",
-  "21 – Odisha",
-  "22 – Chhattisgarh",
-  "23 – Madhya Pradesh",
-  "24 – Gujarat",
-  "26 – Dadra & Nagar Haveli and Daman & Diu (UT)",
-  "27 – Maharashtra",
-  "28 – Andhra Pradesh",
-  "29 – Karnataka",
-  "30 – Goa",
-  "31 – Lakshadweep (UT)",
-  "32 – Kerala",
-  "33 – Tamil Nadu",
-  "34 – Puducherry (UT)",
-  "35 – Andaman & Nicobar Islands (UT)",
-  "36 – Telangana",
-  "37 – Andhra Pradesh (New)",
-  "38 – Ladakh (UT)",
+  "01 â€“ Jammu & Kashmir",
+  "02 â€“ Himachal Pradesh",
+  "03 â€“ Punjab",
+  "04 â€“ Chandigarh (UT)",
+  "05 â€“ Uttarakhand",
+  "06 â€“ Haryana",
+  "07 â€“ Delhi (UT)",
+  "08 â€“ Rajasthan",
+  "09 â€“ Uttar Pradesh",
+  "10 â€“ Bihar",
+  "11 â€“ Sikkim",
+  "12 â€“ Arunachal Pradesh",
+  "13 â€“ Nagaland",
+  "14 â€“ Manipur",
+  "15 â€“ Mizoram",
+  "16 â€“ Tripura",
+  "17 â€“ Meghalaya",
+  "18 â€“ Assam",
+  "19 â€“ West Bengal",
+  "20 â€“ Jharkhand",
+  "21 â€“ Odisha",
+  "22 â€“ Chhattisgarh",
+  "23 â€“ Madhya Pradesh",
+  "24 â€“ Gujarat",
+  "26 â€“ Dadra & Nagar Haveli and Daman & Diu (UT)",
+  "27 â€“ Maharashtra",
+  "28 â€“ Andhra Pradesh",
+  "29 â€“ Karnataka",
+  "30 â€“ Goa",
+  "31 â€“ Lakshadweep (UT)",
+  "32 â€“ Kerala",
+  "33 â€“ Tamil Nadu",
+  "34 â€“ Puducherry (UT)",
+  "35 â€“ Andaman & Nicobar Islands (UT)",
+  "36 â€“ Telangana",
+  "37 â€“ Andhra Pradesh (New)",
+  "38 â€“ Ladakh (UT)",
 ].map((item) => ({ label: item, value: item }));
 
 function cn(...values: Array<string | false | null | undefined>) {
@@ -1164,7 +1164,7 @@ export function VendorForm({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("storage"))}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-4 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-4 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:scale-[1.01]"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Recheck Selection
@@ -1209,7 +1209,7 @@ export function VendorForm({
   return (
     <div className="page-shell">
       <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="relative overflow-hidden rounded-[22px] bg-gradient-hero px-4 py-4 shadow-[0_18px_50px_rgba(46,49,146,0.18)] md:px-5">
+        <section className="relative overflow-hidden rounded-[22px] bg-gradient-hero px-4 py-4 shadow-[0_18px_50px_rgba(0,0,139,0.18)] md:px-5">
           <div className="pointer-events-none absolute inset-0 premium-grid-bg opacity-40" />
           <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute left-0 top-0 h-full w-full bg-[radial-gradient(520px_180px_at_20%_0%,rgba(255,255,255,0.22),transparent_70%)]" />
@@ -1556,7 +1556,7 @@ export function VendorForm({
                     isLocationLoading ||
                     (!isEditMode && !selectedShopId)
                   }
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-gradient-primary px-4 text-[12px] font-semibold text-white shadow-[0_8px_20px_rgba(46,49,146,0.20)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-gradient-primary px-4 text-[12px] font-semibold text-white shadow-[0_8px_20px_rgba(0,0,139,0.20)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (
                     <>

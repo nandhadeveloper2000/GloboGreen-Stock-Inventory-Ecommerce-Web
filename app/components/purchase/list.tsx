@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -517,7 +517,7 @@ export default function PurchaseListPage() {
 
               <Link
                 href="/shopowner/purchase/create"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,139,0.22)] transition hover:scale-[1.01]"
               >
                 <Plus className="h-4 w-4" />
                 Create Purchase
@@ -746,3 +746,4 @@ export default function PurchaseListPage() {
     </div>
   );
 }
+

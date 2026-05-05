@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -198,7 +198,7 @@ export default function MySubCategoryCreatePage() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className="relative overflow-hidden rounded-card bg-[linear-gradient(135deg,#2e3192,#ec0677)] p-5 text-white shadow-xl md:p-6">
+        <section className="relative overflow-hidden rounded-card bg-gradient-primary p-5 text-white shadow-xl md:p-6">
           <div className="absolute inset-0 bg-[radial-gradient(650px_260px_at_10%_0%,rgba(255,255,255,0.22),transparent_65%)]" />
 
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -422,3 +422,4 @@ export default function MySubCategoryCreatePage() {
     </div>
   );
 }
+

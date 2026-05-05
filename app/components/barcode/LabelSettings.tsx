@@ -113,8 +113,9 @@ export default function LabelSettings() {
     try {
       const res = await apiClient({
         method: SummaryApi.barcode_label_formats.method,
-        url: SummaryApi.barcode_label_formats.url,
-        params: { shopId: currentShopId },
+        url: SummaryApi.barcode_label_formats.url({
+          shopId: currentShopId,
+        }),
       });
 
       const data = getResponseData<LabelFormat[]>(res) || [];

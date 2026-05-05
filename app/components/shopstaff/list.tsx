@@ -1,4 +1,4 @@
-//app/components/shopstaff/list.tsx
+﻿//app/components/shopstaff/list.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -137,10 +137,10 @@ function readList(json: ApiResponse): ShopStaffItem[] {
 }
 
 function formatDate(value?: string) {
-  if (!value) return "—";
+  if (!value) return "â€”";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "â€”";
 
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -436,7 +436,7 @@ export default function ShopStaffListPage() {
               {canCreate ? (
                 <Link
                   href={`${appBasePath}/shopstaff/create`}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01]"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,139,0.22)] transition hover:scale-[1.01]"
                 >
                   <UserPlus2 className="h-4 w-4" />
                   Create Staff
@@ -497,7 +497,7 @@ export default function ShopStaffListPage() {
 
                             <div className="min-w-0">
                               <p className="truncate text-sm font-bold text-slate-900">{item.name || "Unnamed"}</p>
-                              <p className="truncate text-xs text-slate-500">@{item.username || "—"}</p>
+                              <p className="truncate text-xs text-slate-500">@{item.username || "â€”"}</p>
                             </div>
                           </div>
                         </td>
@@ -510,8 +510,8 @@ export default function ShopStaffListPage() {
 
                         <td className="px-5 py-4">
                           <div className="space-y-1">
-                            <p className="inline-flex items-center gap-2 text-sm text-slate-700"><Mail className="h-4 w-4 text-slate-400" />{item.email || "—"}</p>
-                            <p className="inline-flex items-center gap-2 text-sm text-slate-700"><Phone className="h-4 w-4 text-slate-400" />{item.mobile || "—"}</p>
+                            <p className="inline-flex items-center gap-2 text-sm text-slate-700"><Mail className="h-4 w-4 text-slate-400" />{item.email || "â€”"}</p>
+                            <p className="inline-flex items-center gap-2 text-sm text-slate-700"><Phone className="h-4 w-4 text-slate-400" />{item.mobile || "â€”"}</p>
                           </div>
                         </td>
 
@@ -572,5 +572,6 @@ export default function ShopStaffListPage() {
     </div>
   );
 }
+
 
 

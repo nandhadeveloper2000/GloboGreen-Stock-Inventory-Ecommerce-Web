@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -68,12 +68,24 @@ type TopMenuItem =
       href?: never;
     };
 
+type FlatNavLink = {
+  label: string;
+  href: string;
+};
+
 function normalizeText(value?: string | null) {
   return String(value || "").trim();
 }
 
 function normalizeRoleValue(value?: string | null) {
   return String(value || "").trim().toUpperCase();
+}
+
+function normalizeNavKey(value?: string | null) {
+  return normalizeText(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 function isShopRole(role: UserRole) {
@@ -83,6 +95,10 @@ function isShopRole(role: UserRole) {
     "SHOP_SUPERVISOR",
     "EMPLOYEE",
   ].includes(normalizeRoleValue(role));
+}
+
+function isMasterAdminRole(role: UserRole) {
+  return normalizeRoleValue(role) === "MASTER_ADMIN";
 }
 
 function getRoleBasePath(role: UserRole) {
@@ -114,6 +130,68 @@ function compactItems(items: NavChildItem[]) {
   return items.filter((item) => Boolean(item.label && item.href));
 }
 
+function joinRoute(base: string, path: string) {
+  const safeBase = String(base || "").replace(/\/+$/, "");
+  const safePath = String(path || "").startsWith("/") ? path : `/${path}`;
+
+  return `${safeBase}${safePath}`.replace(/\/{2,}/g, "/");
+}
+
+function getBasePathFromDashboard(dashboardHref: string) {
+  const value = normalizeText(dashboardHref);
+
+  if (!value) return "";
+
+  if (value.endsWith("/dashboard")) {
+    return value.replace(/\/dashboard$/, "");
+  }
+
+  const parts = value.split("/").filter(Boolean);
+
+  if (parts.length <= 1) return "";
+
+  return `/${parts.slice(0, -1).join("/")}`;
+}
+
+function flattenNavLinks(items: NavItem[]) {
+  const links: FlatNavLink[] = [];
+
+  items.forEach((item) => {
+    if (item.href) {
+      links.push({
+        label: item.label,
+        href: item.href,
+      });
+    }
+
+    item.children?.forEach((child) => {
+      if (child.href) {
+        links.push({
+          label: child.label,
+          href: child.href,
+        });
+      }
+    });
+  });
+
+  return links;
+}
+
+function findHrefByLabels(
+  items: NavItem[],
+  labels: string[],
+  fallbackHref: string
+) {
+  const links = flattenNavLinks(items);
+  const targetKeys = labels.map(normalizeNavKey);
+
+  const matched = links.find((link) =>
+    targetKeys.includes(normalizeNavKey(link.label))
+  );
+
+  return matched?.href || fallbackHref;
+}
+
 function getMenuIcon(label: string): LucideIcon {
   const value = label.toLowerCase();
 
@@ -128,6 +206,8 @@ function getMenuIcon(label: string): LucideIcon {
   if (value.includes("model")) return Package;
   if (value.includes("customer")) return UserRound;
   if (value.includes("supplier") || value.includes("vendor")) return Store;
+  if (value.includes("shop owner")) return Store;
+  if (value.includes("shop")) return Building2;
   if (value.includes("user") || value.includes("staff")) return Users;
   if (value.includes("location")) return MapPin;
   if (value.includes("expense")) return WalletCards;
@@ -139,6 +219,149 @@ function getMenuIcon(label: string): LucideIcon {
   if (value.includes("setting")) return Settings;
 
   return ListChecks;
+}
+
+function buildMasterAdminTopMenu(
+  role: UserRole,
+  sidebarItems: NavItem[]
+): TopMenuItem[] {
+  const dashboard = sidebarItems.find((item) => item.label === "Dashboard");
+  const dashboardHref =
+    dashboard?.href || `/${String(role).toLowerCase().replace(/_/g, "")}/dashboard`;
+
+  const base = getBasePathFromDashboard(dashboardHref);
+  const path = (href: string) => joinRoute(base, href);
+
+  return [
+    {
+      label: "Dashboard",
+      href: dashboardHref,
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Master",
+      icon: Grid3X3,
+      columns: [
+        {
+          title: "Inventory",
+          icon: Warehouse,
+          items: [
+            {
+              label: "Product",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Product List", "Products List", "All Products"],
+                path("/products/list")
+              ),
+            },
+            {
+              label: "Master Categories",
+              href: findHrefByLabels(
+                sidebarItems,
+                [
+                  "Master Category List",
+                  "Master Categories List",
+                  "Master Categories",
+                ],
+                path("/master-categories/list")
+              ),
+            },
+            {
+              label: "Categories",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Category List", "Categories List", "Categories"],
+                path("/categories/list")
+              ),
+            },
+            {
+              label: "Subcategories",
+              href: findHrefByLabels(
+                sidebarItems,
+                [
+                  "Subcategory List",
+                  "Sub Category List",
+                  "Subcategories List",
+                  "Subcategories",
+                ],
+                path("/subcategories/list")
+              ),
+            },
+            {
+              label: "Brand",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Brand List", "Brands List", "Brands"],
+                path("/brands/list")
+              ),
+            },
+            {
+              label: "Model",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Model List", "Models List", "Models"],
+                path("/models/list")
+              ),
+            },
+            {
+              label: "Compatibility",
+              href: findHrefByLabels(
+                sidebarItems,
+                [
+                  "Compatibility List",
+                  "Product Compatibility List",
+                  "Compatibilities List",
+                ],
+                path("/compatibility/list")
+              ),
+            },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Management",
+      icon: Users,
+      columns: [
+        {
+          title: "Staff Management",
+          icon: Users,
+          items: [
+            {
+              label: "Users",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Staff List", "User List", "Users List", "Users"],
+                path("/staff/list")
+              ),
+            },
+          ],
+        },
+        {
+          title: "Shop Management",
+          icon: Store,
+          items: [
+            {
+              label: "Shop Owner",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Shop Owner List", "Shop Owners List", "Shop Owners"],
+                path("/shop-owner/list")
+              ),
+            },
+            {
+              label: "Shop Owner Shop",
+              href: findHrefByLabels(
+                sidebarItems,
+                ["Shop List", "Shops List", "Shop Owner Shop List"],
+                path("/shops/list")
+              ),
+            },
+          ],
+        },
+      ],
+    },
+  ];
 }
 
 function buildShopTopMenu(role: UserRole): TopMenuItem[] {
@@ -164,7 +387,10 @@ function buildShopTopMenu(role: UserRole): TopMenuItem[] {
             { label: "Subcategories", href: path("/subcategories/list") },
             { label: "Brand", href: path("/brands/list") },
             { label: "Model", href: path("/models/list") },
-            { label: "Barcode / QR Generate", href: path("/barcode-printing/create") },
+            {
+              label: "Barcode / QR Generate",
+              href: path("/barcode-printing/create"),
+            },
             { label: "Stock Transfer", href: path("/stock-transfer/list") },
           ],
         },
@@ -182,8 +408,8 @@ function buildShopTopMenu(role: UserRole): TopMenuItem[] {
           title: "Physical Stock Management",
           icon: Boxes,
           items: [
-            { label: "Stock Entry", href: path("/physical-stock-entry/create") },
-            { label: "View Stock Entry", href: path("/physical-stock-entry/list") },
+            { label: "Stock Entry", href: path("/physical-stock/create") },
+            { label: "View Stock Entry", href: path("/physical-stock/list") },
           ],
         },
         {
@@ -235,7 +461,10 @@ function buildShopTopMenu(role: UserRole): TopMenuItem[] {
           icon: History,
           items: [
             { label: "View Purchases", href: path("/purchase/list") },
-            { label: "View Purchase Returns", href: path("/purchasereturn/list") },
+            {
+              label: "View Purchase Returns",
+              href: path("/purchasereturn/list"),
+            },
           ],
         },
         {
@@ -354,6 +583,10 @@ export default function AppTopbar({
       return buildShopTopMenu(role);
     }
 
+    if (isMasterAdminRole(role)) {
+      return buildMasterAdminTopMenu(role, sidebarItems);
+    }
+
     return buildDefaultTopMenu(role, sidebarItems);
   }, [role, sidebarItems]);
 
@@ -367,8 +600,14 @@ export default function AppTopbar({
     return item && "columns" in item ? item : null;
   }, [activeMenu, topMenu]);
 
+  const activeMegaColumns = activeMega?.columns ?? [];
+
   const posRoute = useMemo(() => getPosRoute(role), [role]);
   const shouldShowPos = Boolean(posRoute && isShopRole(role));
+
+  const closeActiveMenuOnRouteChange = useEffectEvent(() => {
+    setActiveMenu(null);
+  });
 
   useEffect(() => {
     function syncShopName() {
@@ -399,7 +638,7 @@ export default function AppTopbar({
   }, []);
 
   useEffect(() => {
-    setActiveMenu(null);
+    closeActiveMenuOnRouteChange();
   }, [pathname]);
 
   useEffect(() => {
@@ -472,9 +711,11 @@ export default function AppTopbar({
               const Icon = item.icon;
 
               const isActive =
-                "href" in item
+                "href" in item && item.href
                   ? isPathActive(pathname, item.href)
-                  : hasActiveColumn(pathname, item.columns);
+                  : "columns" in item
+                    ? hasActiveColumn(pathname, item.columns ?? [])
+                    : false;
 
               const isOpen = activeMenu === item.label;
 
@@ -546,17 +787,17 @@ export default function AppTopbar({
           onMouseEnter={clearCloseTimer}
           onMouseLeave={closeMenuSlowly}
           className={cn(
-            "absolute top-14 z-50 hidden overflow-hidden rounded-b-xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_45px_rgba(15,23,42,0.22)] lg:left-[230px] lg:block",
-            getDropdownWidthClass(activeMega.columns.length)
+            "absolute top-14 z-50 hidden overflow-hidden rounded-b-xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_45px_rgba(15,23,42,0.22)] lg:left-57.5 lg:block",
+            getDropdownWidthClass(activeMegaColumns.length)
           )}
         >
           <div
             className={cn(
               "grid gap-0",
-              getDropdownGridClass(activeMega.columns.length)
+              getDropdownGridClass(activeMegaColumns.length)
             )}
           >
-            {activeMega.columns.map((column) => {
+            {activeMegaColumns.map((column) => {
               const ColumnIcon = column.icon;
 
               return (

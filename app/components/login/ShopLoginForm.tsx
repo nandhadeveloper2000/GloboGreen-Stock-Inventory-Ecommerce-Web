@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -220,11 +220,11 @@ export default function ShopLoginForm() {
 
       <div
         className="absolute -left-28 -top-28 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(46, 49, 146, 0.30)" }}
+        style={{ background: "rgba(0, 0, 139, 0.30)" }}
       />
       <div
         className="absolute -right-28 top-[8%] h-96 w-[24rem] rounded-full blur-3xl"
-        style={{ background: "rgba(236, 6, 119, 0.25)" }}
+        style={{ background: "rgba(22, 163, 74, 0.25)" }}
       />
       <div
         className="absolute -bottom-28 left-[8%] h-72 w-72 rounded-full blur-3xl"
@@ -232,7 +232,7 @@ export default function ShopLoginForm() {
       />
       <div
         className="absolute -bottom-28 right-[10%] h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(236, 6, 119, 0.20)" }}
+        style={{ background: "rgba(22, 163, 74, 0.20)" }}
       />
 
       <div className="relative z-10 w-full max-w-md">
@@ -273,7 +273,7 @@ export default function ShopLoginForm() {
                 </CardDescription>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_14px_34px_rgba(236,6,119,0.24)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_14px_34px_rgba(22,163,74,0.24)]">
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function ShopLoginForm() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="group h-12 w-full rounded-2xl border-0 bg-gradient-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(236,6,119,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group h-12 w-full rounded-2xl border-0 bg-gradient-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(22,163,74,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span className="flex items-center justify-center gap-2">
                   {loading ? "Signing in..." : "Continue"}

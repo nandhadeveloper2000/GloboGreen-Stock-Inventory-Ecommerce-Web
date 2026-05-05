@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+﻿/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1556,7 +1556,7 @@ setIdProofPreview(staff.idProofUrl || staff.idProof?.url || "");
                 <button
                   type="submit"
                   disabled={submitting || isLocationLoading || allowedRoles.length === 0}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-[#2e3192] to-[#9116a1] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(91,33,182,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,139,0.22)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (
                     <>

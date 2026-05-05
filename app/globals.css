@@ -58,27 +58,26 @@
 ========================================================= */
 :root {
   /* Brand */
-  --primary: #2e3192;
-  --primary-dark: #1f2373;
-  --primary-light: #eef0ff;
-  --primary-soft: #f4f5ff;
-  --primary-soft-2: #e4e7ff;
+  --primary: #00008b;
+  --primary-dark: #000070;
+  --primary-light: #e8edff;
+  --primary-soft: #eef2ff;
+  --primary-soft-2: #dce6ff;
 
-  --accent: #ec0677;
-  --accent-dark: #c00563;
-  --accent-light: #ffe4f1;
-  --accent-soft: #fff0f7;
+  --accent: #16a34a;
+  --accent-dark: #15803d;
+  --accent-light: #dcfce7;
+  --accent-soft: #f0fdf4;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #2e3192 0%, #ec0677 100%);
+  --gradient-primary: linear-gradient(135deg, #00008b 0%, #16a34a 100%);
   --gradient-hero: linear-gradient(
     135deg,
-    #0b0f3a 0%,
-    #1f2373 35%,
-    #2e3192 65%,
-    #ec0677 100%
+    #000070 0%,
+    #00008b 60%,
+    #16a34a 100%
   );
-  --gradient-soft: linear-gradient(135deg, #eef0ff 0%, #fff0f7 100%);
+  --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
   --gradient-card: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.88) 0%,
@@ -86,51 +85,52 @@
   );
   --gradient-border: linear-gradient(
     135deg,
-    rgba(46, 49, 146, 0.24),
-    rgba(236, 6, 119, 0.22)
+    rgba(0, 0, 139, 0.24),
+    rgba(22, 163, 74, 0.22)
   );
 
   /* Base */
   --white: #ffffff;
-  --background: #ffffff;
+  --background: #f8fafc;
   --foreground: #0f172a;
+  --text: #0f172a;
 
-  --page-bg: #f6f7fb;
+  --page-bg: #f8fafc;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --soft: #f8fafc;
-  --border: #e5e7eb;
+  --border: #e2e8f0;
   --divider: #e2e8f0;
-  --input: #e5e7eb;
+  --input: #e2e8f0;
 
   /* Text */
   --heading: #0f172a;
-  --primary-text: #111827;
-  --secondary-text: #6b7280;
-  --muted-text: #9ca3af;
-  --label-text: #94a3b8;
+  --primary-text: var(--text);
+  --secondary-text: #64748b;
+  --muted-text: #64748b;
+  --label-text: #64748b;
 
   /* Status */
-  --success: #22c55e;
-  --success-light: #bbf7d0;
-  --success-dark: #16a34a;
-  --success-soft: #ecfdf5;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --success-dark: #15803d;
+  --success-soft: #f0fdf4;
 
-  --danger: #ef4444;
+  --danger: #dc2626;
   --danger-soft: #fef2f2;
 
   --warning: #f59e0b;
   --warning-soft: #fff7ed;
 
   /* Hero */
-  --hero-dark: #0b0f3a;
-  --hero-purple: #2e3192;
-  --hero-pink: #ec0677;
-  --header-bg: #0b0f3a;
+  --hero-dark: #000070;
+  --hero-purple: #00008b;
+  --hero-pink: #16a34a;
+  --header-bg: #000070;
 
   /* Badges */
-  --active-bg: #ecfdf5;
-  --active-text: #166534;
+  --active-bg: #f0fdf4;
+  --active-text: #15803d;
   --inactive-bg: #fef2f2;
   --inactive-text: #991b1b;
 
@@ -150,7 +150,7 @@
 
   --primary-foreground: #ffffff;
 
-  --secondary: #f8fafc;
+  --secondary: #eef2ff;
   --secondary-foreground: #1e293b;
 
   --muted: #f1f5f9;
@@ -159,24 +159,24 @@
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
 
-  --ring: #ec0677;
+  --ring: #00008b;
 
   /* Chart */
-  --chart-1: #2e3192;
-  --chart-2: #6366f1;
-  --chart-3: #a5b4fc;
-  --chart-4: #ec0677;
-  --chart-5: #f472b6;
+  --chart-1: #00008b;
+  --chart-2: #16a34a;
+  --chart-3: #93c5fd;
+  --chart-4: #86efac;
+  --chart-5: #64748b;
 
   /* Sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
-  --sidebar-primary: #2e3192;
+  --sidebar-primary: #00008b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f5ff;
-  --sidebar-accent-foreground: #2e3192;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #ec0677;
+  --sidebar-accent: #eef2ff;
+  --sidebar-accent-foreground: #00008b;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #00008b;
 
   --radius: 1rem;
 }
@@ -197,15 +197,15 @@ body {
   background:
     radial-gradient(
       circle at top left,
-      rgba(46, 49, 146, 0.08),
+      rgba(0, 0, 139, 0.08),
       transparent 24%
     ),
     radial-gradient(
       circle at top right,
-      rgba(236, 6, 119, 0.08),
+      rgba(22, 163, 74, 0.08),
       transparent 22%
     ),
-    linear-gradient(180deg, #ffffff 0%, #f6f7fb 100%);
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   color: var(--primary-text);
   font-feature-settings:
     "rlig" 1,
@@ -220,7 +220,7 @@ textarea {
 }
 
 ::selection {
-  background: rgba(236, 6, 119, 0.18);
+  background: rgba(0, 0, 139, 0.18);
   color: var(--heading);
 }
 
@@ -249,12 +249,12 @@ textarea {
     background:
       radial-gradient(
         circle at top left,
-        rgba(46, 49, 146, 0.12),
+        rgba(0, 0, 139, 0.12),
         transparent 26%
       ),
       radial-gradient(
         circle at bottom right,
-        rgba(236, 6, 119, 0.1),
+        rgba(22, 163, 74, 0.1),
         transparent 24%
       ),
       var(--gradient-soft);
@@ -299,24 +299,24 @@ textarea {
   .premium-btn {
     @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60;
     background: var(--gradient-primary);
-    box-shadow: 0 16px 38px rgba(236, 6, 119, 0.22);
+    box-shadow: 0 16px 38px rgba(0, 0, 112, 0.22);
   }
 
   .premium-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 46px rgba(236, 6, 119, 0.28);
+    box-shadow: 0 20px 46px rgba(0, 0, 112, 0.28);
   }
 
   .premium-btn-secondary {
     @apply inline-flex items-center justify-center rounded-2xl border bg-white px-5 py-3 text-sm font-semibold transition-all duration-300;
     color: var(--primary);
-    border-color: rgba(46, 49, 146, 0.14);
+    border-color: rgba(0, 0, 139, 0.14);
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
   }
 
   .premium-btn-secondary:hover {
     background: var(--primary-soft);
-    border-color: rgba(46, 49, 146, 0.24);
+    border-color: rgba(0, 0, 139, 0.24);
   }
 
   .premium-input {
@@ -333,8 +333,8 @@ textarea {
   .premium-input:focus {
     border-color: var(--primary);
     box-shadow:
-      0 0 0 4px rgba(236, 6, 119, 0.12),
-      0 8px 20px rgba(46, 49, 146, 0.08);
+      0 0 0 4px rgba(0, 0, 139, 0.12),
+      0 8px 20px rgba(0, 0, 139, 0.08);
   }
 
   .premium-textarea {
@@ -351,8 +351,8 @@ textarea {
   .premium-textarea:focus {
     border-color: var(--primary);
     box-shadow:
-      0 0 0 4px rgba(236, 6, 119, 0.12),
-      0 8px 20px rgba(46, 49, 146, 0.08);
+      0 0 0 4px rgba(0, 0, 139, 0.12),
+      0 8px 20px rgba(0, 0, 139, 0.08);
   }
 
   .premium-select {
@@ -365,8 +365,8 @@ textarea {
   .premium-select:focus {
     border-color: var(--primary);
     box-shadow:
-      0 0 0 4px rgba(236, 6, 119, 0.12),
-      0 8px 20px rgba(46, 49, 146, 0.08);
+      0 0 0 4px rgba(0, 0, 139, 0.12),
+      0 8px 20px rgba(0, 0, 139, 0.08);
   }
 
   .premium-label {
@@ -415,8 +415,8 @@ textarea {
   .premium-glow {
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-      0 24px 80px rgba(46, 49, 146, 0.16),
-      0 18px 60px rgba(236, 6, 119, 0.18);
+      0 24px 80px rgba(0, 0, 139, 0.16),
+      0 18px 60px rgba(22, 163, 74, 0.16);
   }
 
   /* Compact form mode */
@@ -521,7 +521,7 @@ textarea {
   }
 
   .ring-brand {
-    box-shadow: 0 0 0 4px rgba(236, 6, 119, 0.12);
+    box-shadow: 0 0 0 4px rgba(0, 0, 139, 0.12);
   }
 
   .premium-grid-bg {
@@ -542,12 +542,12 @@ textarea {
     background:
       radial-gradient(
         600px 250px at 10% 0%,
-        rgba(46, 49, 146, 0.18),
+        rgba(0, 0, 139, 0.18),
         transparent 70%
       ),
       radial-gradient(
         600px 250px at 90% 0%,
-        rgba(236, 6, 119, 0.16),
+        rgba(22, 163, 74, 0.16),
         transparent 70%
       );
   }
