@@ -17,8 +17,10 @@ import {
   ImagePlus,
   Loader2,
   Save,
+  Sparkles,
   Trash2,
   UploadCloud,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,9 +80,7 @@ function getErrorMessage(error: unknown): string {
     if (message) return message;
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong";
 }
@@ -109,14 +109,12 @@ function getApiUrl(
   id: string,
   fallbackSuffix = ""
 ) {
-  if (typeof apiUrl === "function") {
-    return apiUrl(id);
-  }
+  if (typeof apiUrl === "function") return apiUrl(id);
 
   return `${apiUrl}/${id}${fallbackSuffix}`;
 }
 
-function CompactTextField({
+function TopLabelInput({
   label,
   value,
   placeholder,
@@ -132,35 +130,31 @@ function CompactTextField({
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
-        {label}
-        {required ? <span className="text-rose-500"> *</span> : null}
-      </span>
-
+    <div className="relative">
       <input
         type="text"
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 pb-1.5 pt-5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
       />
-    </label>
+
+      <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+    </div>
   );
 }
 
-function CompactPreviewField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function PreviewField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5">
-      <p className="mb-1 text-[11px] font-semibold text-slate-500">{label}</p>
-      <p className="truncate text-sm font-semibold text-slate-700">{value}</p>
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-black text-slate-800">{value}</p>
     </div>
   );
 }
@@ -181,7 +175,9 @@ export default function CreateBrandsPage({
   const listPath = `${basePath}/brand/list`;
 
   const [name, setName] = useState("");
+  const [initialName, setInitialName] = useState("");
   const [existingImageUrl, setExistingImageUrl] = useState("");
+  const [initialImageUrl, setInitialImageUrl] = useState("");
   const [imagePreview, setImagePreview] =
     useState<ImagePreview>(initialPreview);
 
@@ -191,8 +187,8 @@ export default function CreateBrandsPage({
 
   const pageTitle = isEditMode ? "Edit Brand" : "Create Brand";
   const pageDescription = isEditMode
-    ? "Update brand details and manage brand image."
-    : "Create a new brand with optional image.";
+    ? "Update brand details, image, and catalog identity."
+    : "Create a new brand record with an optional brand image.";
 
   const buttonText = isEditMode ? "Update Brand" : "Save Brand";
   const submittingText = isEditMode ? "Updating..." : "Creating...";
@@ -226,11 +222,8 @@ export default function CreateBrandsPage({
       try {
         if (!isValidMongoId(brandId)) {
           toast.error("Invalid brand id");
-          if (isModal) {
-            onClose?.();
-          } else {
-            router.push(listPath);
-          }
+          if (isModal) onClose?.();
+          else router.push(listPath);
           return;
         }
 
@@ -252,22 +245,22 @@ export default function CreateBrandsPage({
 
         if (!active) return;
 
-        setName(result.data.name || "");
-        setExistingImageUrl(result.data.image?.url?.trim() || "");
+        const resolvedName = result.data.name || "";
+        const resolvedImageUrl = result.data.image?.url?.trim() || "";
+
+        setName(resolvedName);
+        setInitialName(resolvedName);
+        setExistingImageUrl(resolvedImageUrl);
+        setInitialImageUrl(resolvedImageUrl);
       } catch (error: unknown) {
         if (!active) return;
 
         toast.error(getErrorMessage(error));
 
-        if (isModal) {
-          onClose?.();
-        } else {
-          router.push(listPath);
-        }
+        if (isModal) onClose?.();
+        else router.push(listPath);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
@@ -322,9 +315,7 @@ export default function CreateBrandsPage({
     }
 
     setImagePreview((prev) => {
-      if (prev.url) {
-        URL.revokeObjectURL(prev.url);
-      }
+      if (prev.url) URL.revokeObjectURL(prev.url);
 
       return {
         file,
@@ -369,10 +360,7 @@ export default function CreateBrandsPage({
 
   function removeSelectedImage() {
     setImagePreview((prev) => {
-      if (prev.url) {
-        URL.revokeObjectURL(prev.url);
-      }
-
+      if (prev.url) URL.revokeObjectURL(prev.url);
       return initialPreview;
     });
 
@@ -410,6 +398,7 @@ export default function CreateBrandsPage({
       }
 
       setExistingImageUrl("");
+      setInitialImageUrl("");
       toast.success(result?.message || "Brand image removed successfully");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -419,14 +408,12 @@ export default function CreateBrandsPage({
   }
 
   function resetForm() {
-    setName("");
+    setName(isEditMode ? initialName : "");
+    setExistingImageUrl(isEditMode ? initialImageUrl : "");
     setIsDraggingImage(false);
 
     setImagePreview((prev) => {
-      if (prev.url) {
-        URL.revokeObjectURL(prev.url);
-      }
-
+      if (prev.url) URL.revokeObjectURL(prev.url);
       return initialPreview;
     });
 
@@ -512,7 +499,9 @@ export default function CreateBrandsPage({
             );
           }
 
-          setExistingImageUrl(imageResult.data?.image?.url?.trim() || "");
+          const updatedImageUrl = imageResult.data?.image?.url?.trim() || "";
+          setExistingImageUrl(updatedImageUrl);
+          setInitialImageUrl(updatedImageUrl);
         }
 
         toast.success(result?.message || "Brand updated successfully");
@@ -558,14 +547,14 @@ export default function CreateBrandsPage({
       <div
         className={
           isModal
-            ? "bg-slate-50 px-3 py-3"
-            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+            ? "bg-slate-50 px-3 py-4 sm:px-4"
+            : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
         }
       >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 shadow-sm">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-[26px] border border-slate-200 bg-white py-14 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-black">
               Loading brand details...
             </span>
           </div>
@@ -578,49 +567,66 @@ export default function CreateBrandsPage({
     <div
       className={
         isModal
-          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4"
-          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-4 sm:px-4 lg:px-5"
+          : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
       }
     >
-      <div className="mx-auto w-full max-w-5xl space-y-3">
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={submitting}
-            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {isModal ? "Close" : "Back to List"}
-          </button>
+      <div className="mx-auto w-full max-w-5xl space-y-5">
+        <section className="relative overflow-hidden rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:p-5">
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#00008b]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-44 w-44 rounded-full bg-[#ec0677]/10 blur-3xl" />
 
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
-              {pageTitle}
-            </h1>
-            <p className="mt-0.5 text-sm text-slate-500">{pageDescription}</p>
+          <div className="relative z-10 flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={submitting}
+              className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isModal ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <ArrowLeft className="h-4 w-4" />
+              )}
+              {isModal ? "Close" : "Back to List"}
+            </button>
+
+            <div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#00008b]/15 bg-[#00008b]/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#00008b]">
+                <Sparkles className="h-3.5 w-3.5" />
+                Catalog Management
+              </span>
+
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+                {pageTitle}
+              </h1>
+
+              <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                {pageDescription}
+              </p>
+            </div>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
-                <BadgePlus className="h-4.5 w-4.5" />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                <BadgePlus className="h-5 w-5" />
               </div>
 
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-slate-950">
+                <h2 className="text-base font-black text-slate-950">
                   Basic Information
                 </h2>
-                <p className="text-xs leading-5 text-slate-500">
+                <p className="mt-0.5 text-sm font-semibold leading-6 text-slate-500">
                   Enter brand name. Name key will be generated automatically.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <CompactTextField
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TopLabelInput
                 label="Brand Name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -629,41 +635,43 @@ export default function CreateBrandsPage({
                 required
               />
 
-              <CompactPreviewField
+              <PreviewField
                 label="Name Key Preview"
                 value={nameKeyPreview || "auto-generated-from-name"}
               />
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
-                <ImagePlus className="h-4.5 w-4.5" />
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                <ImagePlus className="h-5 w-5" />
               </div>
 
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-slate-950">
+                <h2 className="text-base font-black text-slate-950">
                   Brand Image
                 </h2>
-                <p className="text-xs leading-5 text-slate-500">
-                  Upload or drag and drop an optional image.
+                <p className="mt-0.5 text-sm font-semibold leading-6 text-slate-500">
+                  Upload or drag and drop an optional brand image.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_210px]">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
               <label
                 htmlFor="brand-image"
                 onDragEnter={handleImageDragEnter}
                 onDragOver={handleImageDragOver}
                 onDragLeave={handleImageDragLeave}
                 onDrop={handleImageDrop}
-                className={`group flex min-h-29.5 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-center transition ${
+                className={[
+                  "group flex min-h-45 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed px-4 py-5 text-center transition",
                   isDraggingImage
                     ? "border-[#00008b] bg-[#00008b]/5"
-                    : "border-slate-300 bg-slate-50 hover:border-[#00008b] hover:bg-[#00008b]/5"
-                } ${submitting ? "pointer-events-none opacity-70" : ""}`}
+                    : "border-slate-300 bg-slate-50 hover:border-[#00008b] hover:bg-[#00008b]/5",
+                  submitting ? "pointer-events-none opacity-70" : "",
+                ].join(" ")}
               >
                 <input
                   ref={fileInputRef}
@@ -675,15 +683,15 @@ export default function CreateBrandsPage({
                   disabled={submitting}
                 />
 
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#00008b] shadow-sm ring-1 ring-slate-100">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#00008b] shadow-sm ring-1 ring-slate-100 transition group-hover:scale-105">
                   {isDraggingImage ? (
-                    <UploadCloud className="h-5 w-5" />
+                    <UploadCloud className="h-7 w-7" />
                   ) : (
-                    <ImagePlus className="h-5 w-5" />
+                    <ImagePlus className="h-7 w-7" />
                   )}
                 </div>
 
-                <p className="text-sm font-bold text-slate-800">
+                <p className="text-base font-black text-slate-900">
                   {isDraggingImage
                     ? "Drop image here"
                     : isEditMode
@@ -691,42 +699,42 @@ export default function CreateBrandsPage({
                       : "Click to upload image"}
                 </p>
 
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-1 text-sm font-semibold text-slate-500">
                   PNG, JPG, JPEG, WEBP up to 3MB
                 </p>
               </label>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-xs font-bold text-slate-700">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
                   Preview
                 </p>
 
-                <div className="relative flex h-29.5 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div className="relative flex h-45 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   {previewImageUrl ? (
                     <Image
                       src={previewImageUrl}
                       alt="Brand preview"
                       fill
-                      sizes="210px"
+                      sizes="260px"
                       className="object-cover"
                       unoptimized
                     />
                   ) : (
-                    <div className="px-3 text-center text-xs font-medium text-slate-400">
+                    <div className="px-3 text-center text-sm font-semibold text-slate-400">
                       No image selected
                     </div>
                   )}
                 </div>
 
-                <div className="mt-2 space-y-2">
+                <div className="mt-3 space-y-2">
                   {imagePreview.url ? (
                     <button
                       type="button"
                       onClick={removeSelectedImage}
                       disabled={submitting}
-                      className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                       Remove Selected
                     </button>
                   ) : null}
@@ -736,9 +744,9 @@ export default function CreateBrandsPage({
                       type="button"
                       onClick={() => void removeExistingImage()}
                       disabled={submitting}
-                      className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-sm font-black text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                       Remove Existing
                     </button>
                   ) : null}
@@ -747,13 +755,13 @@ export default function CreateBrandsPage({
             </div>
           </section>
 
-          <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur-xl">
+          <div className="sticky bottom-3 z-10 rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={resetForm}
                 disabled={submitting}
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
               </button>
@@ -762,7 +770,7 @@ export default function CreateBrandsPage({
                 type="button"
                 onClick={handleClose}
                 disabled={submitting}
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -770,16 +778,16 @@ export default function CreateBrandsPage({
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-xs font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     {submittingText}
                   </>
                 ) : (
                   <>
-                    <Save className="h-3.5 w-3.5" />
+                    <Save className="h-4 w-4" />
                     {buttonText}
                   </>
                 )}

@@ -693,14 +693,14 @@ function UploadCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt={title} className={previewClassName} />
         ) : fileName ? (
-          <div className="flex h-40 w-full max-w-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 text-center">
+          <div className="flex h-40 w-full max-w-65 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 text-center">
             <FileBadge2 className="h-9 w-9 text-slate-400" />
             <p className="mt-3 line-clamp-2 text-sm font-medium text-slate-700">
               {fileName}
             </p>
           </div>
         ) : (
-          <div className="flex h-40 w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
+          <div className="flex h-40 w-full max-w-65 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
             {emptyIcon}
           </div>
         )}

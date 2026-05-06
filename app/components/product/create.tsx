@@ -34,7 +34,6 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-
 import SummaryApi from "@/constants/SummaryApi";
 import apiClient from "@/lib/api-client";
 import { useAuth } from "@/context/auth/AuthProvider";
@@ -90,36 +89,29 @@ import type {
   ProductVideoItem,
   VariantItem,
 } from "./create-types";
-
 type ProductReference =
   | string
   | {
     _id?: string;
     name?: string;
   };
-
 type ProductApiMedia = {
   url?: string;
   publicId?: string;
 };
-
 type ProductApiImage = ProductApiMedia;
 type ProductApiVideo = ProductApiMedia;
-
 type ExistingProductInfoField = {
   label?: string;
   value?: unknown;
 };
-
 type ExistingProductInfoSection = {
   title?: string;
   fields?: ExistingProductInfoField[];
 };
-
 type NormalizableProductInfoSection =
   | ExistingProductInfoSection
   | ProductInformationSection;
-
 type ExistingProductVariant = {
   title?: string;
   description?: string;
@@ -133,14 +125,12 @@ type ExistingProductVariant = {
   productInformation?: ExistingProductInfoSection[];
   isActive?: boolean;
 };
-
 type ExistingCompatibilityItem = {
   brandId?: ProductReference;
   modelId?: ProductReference[];
   notes?: string;
   isActive?: boolean;
 };
-
 type ExistingProductData = {
   _id: string;
   configurationMode?: CategoryMappingMode;
@@ -162,28 +152,23 @@ type ExistingProductData = {
   isActive?: boolean;
   isActiveGlobal?: boolean;
 };
-
 type ProductGetResponse = ApiResponse<ExistingProductData>;
-
 function getReferenceId(value?: ProductReference | null) {
   if (!value) return "";
   if (typeof value === "string") return value;
   return String(value._id || "");
 }
-
 function getReferenceName(value?: ProductReference | null) {
   if (!value) return "";
   if (typeof value === "string") return value;
   return String(value.name || "").trim();
 }
-
 function toReferenceArray(
   value?: ProductReference | ProductReference[] | null,
 ): ProductReference[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
-
 function getReferenceNames(
   value?: ProductReference | ProductReference[] | null,
 ) {
@@ -191,12 +176,10 @@ function getReferenceNames(
     .map((item) => getReferenceName(item))
     .filter(Boolean);
 }
-
 function toTextValue(value: unknown) {
   if (value === undefined || value === null) return "";
   return String(value);
 }
-
 function createExistingMediaItem(
   media: ProductApiMedia,
   prefix: string,
@@ -204,11 +187,9 @@ function createExistingMediaItem(
 ): ProductMediaItem | null {
   const url = String(media?.url || "").trim();
   if (!url) return null;
-
   const publicId = String(media?.publicId || "").trim();
   const nameFromPublicId = publicId.split("/").pop();
   const nameFromUrl = url.split("/").pop()?.split("?")[0];
-
   return {
     id: `${prefix}-${publicId || index}-${Math.random().toString(36).slice(2, 8)}`,
     file: null,
@@ -219,7 +200,6 @@ function createExistingMediaItem(
     isExisting: true,
   };
 }
-
 function normalizeExistingMedia(
   value: ProductApiMedia[] | undefined,
   prefix: string,
@@ -230,21 +210,18 @@ function normalizeExistingMedia(
       .filter((media): media is ProductMediaItem => Boolean(media))
     : [];
 }
-
 function normalizeExistingImages(
   value: ProductApiImage[] | undefined,
   prefix: string,
 ) {
   return normalizeExistingMedia(value, prefix) as ProductImageItem[];
 }
-
 function normalizeExistingVideos(
   value: ProductApiVideo[] | undefined,
   prefix: string,
 ) {
   return normalizeExistingMedia(value, prefix) as ProductVideoItem[];
 }
-
 function normalizeExistingProductInformation(
   sections: NormalizableProductInfoSection[] | undefined,
   fallbackSections?: NormalizableProductInfoSection[],
@@ -269,18 +246,14 @@ function normalizeExistingProductInformation(
           ),
       )
     : [];
-
   if (normalized.length) {
     return normalized;
   }
-
   if (fallbackSections?.length) {
     return normalizeExistingProductInformation(fallbackSections);
   }
-
   return [{ ...initialProductInfoSection }];
 }
-
 function normalizeExistingVariants(
   value: ExistingProductVariant[] | undefined,
   fallbackSections?: NormalizableProductInfoSection[],
@@ -317,7 +290,6 @@ function normalizeExistingVariants(
       isActive: item?.isActive !== false,
     }))
     : [];
-
   return normalized.length
     ? normalized
     : [
@@ -327,7 +299,6 @@ function normalizeExistingVariants(
       ),
     ];
 }
-
 function hasSharedMediaData(item?: ExistingProductData | null) {
   return Boolean(
     (item?.images?.length ?? 0) > 0 ||
@@ -335,7 +306,6 @@ function hasSharedMediaData(item?: ExistingProductData | null) {
     (item?.productInformation?.length ?? 0) > 0,
   );
 }
-
 function hasCompatibilityData(item?: ExistingProductData | null) {
   return Boolean(
     (item?.compatible?.length ?? 0) > 0 ||
@@ -344,11 +314,9 @@ function hasCompatibilityData(item?: ExistingProductData | null) {
     ),
   );
 }
-
 function hasVariantData(item?: ExistingProductData | null) {
   return Boolean(item?.variant?.length);
 }
-
 function resolveCategoryMappingMode(
   item?: ExistingProductData | null,
 ): CategoryMappingMode {
@@ -360,26 +328,20 @@ function resolveCategoryMappingMode(
   ) {
     return item.configurationMode;
   }
-
   if (hasVariantData(item) && hasCompatibilityData(item)) {
     return "variantCompatibility";
   }
-
   if (hasVariantData(item)) {
     return "variant";
   }
-
   if (hasSharedMediaData(item) && hasCompatibilityData(item)) {
     return "productMediaInfoCompatibility";
   }
-
   if (hasSharedMediaData(item)) {
     return "productMediaInfo";
   }
-
   return "variant";
 }
-
 function buildCompatibilityRows(
   brandsList: OptionItem[],
   compatibilityItems: ExistingCompatibilityItem[] | undefined,
@@ -392,11 +354,9 @@ function buildCompatibilityRows(
       isActive: boolean;
     }
   >();
-
   (compatibilityItems || []).forEach((item) => {
     const brandId = getReferenceId(item?.brandId);
     if (!brandId) return;
-
     compatibilityMap.set(brandId, {
       modelId: Array.isArray(item?.modelId)
         ? item.modelId.map((model) => getReferenceId(model)).filter(Boolean)
@@ -405,10 +365,8 @@ function buildCompatibilityRows(
       isActive: item?.isActive !== false,
     });
   });
-
   return brandsList.map((brand) => {
     const existing = compatibilityMap.get(brand._id);
-
     return {
       rowId: brand._id,
       brandId: brand._id,
@@ -419,7 +377,6 @@ function buildCompatibilityRows(
     };
   });
 }
-
 function mergeCompatibilityRowsWithBrands(
   brandsList: OptionItem[],
   currentRows: CompatibilityTableRow[],
@@ -435,10 +392,8 @@ function mergeCompatibilityRowsWithBrands(
       },
     ]),
   );
-
   return brandsList.map((brand) => {
     const existing = currentMap.get(brand._id);
-
     return {
       rowId: brand._id,
       brandId: brand._id,
@@ -449,18 +404,15 @@ function mergeCompatibilityRowsWithBrands(
     };
   });
 }
-
 function cloneCompatibilityRows(rows: CompatibilityTableRow[]) {
   return rows.map((row) => ({
     ...row,
     modelId: [...row.modelId],
   }));
 }
-
 function hasEnabledCompatibilityRows(rows: CompatibilityTableRow[]) {
   return rows.some((row) => row.enabled);
 }
-
 function buildInitialManualSearchKeys(item: ExistingProductData) {
   const nextSearchKeys = normalizeSearchKeys(
     (Array.isArray(item.searchKeys) ? item.searchKeys : []).join(","),
@@ -478,12 +430,10 @@ function buildInitialManualSearchKeys(item: ExistingProductData) {
       [item.sku].filter(Boolean).join(","),
     ),
   );
-
   return nextSearchKeys.filter(
     (key) => !autoKeys.has(key) && !excludedKeys.has(key),
   );
 }
-
 function buildMediaPayload(items: ProductMediaItem[]) {
   return items
     .filter((item) => item.isExisting && item.previewUrl.trim())
@@ -492,21 +442,17 @@ function buildMediaPayload(items: ProductMediaItem[]) {
       ...(item.publicId ? { publicId: item.publicId } : {}),
     }));
 }
-
 function getMediaIdentity(item: ProductMediaItem) {
   if (item.file instanceof File) {
     return `${item.name}-${item.size}-${item.file.lastModified}`;
   }
-
   return `existing-${item.publicId || item.previewUrl}`;
 }
-
 function hasFilledProductInfoSections(sections: ProductInformationSection[]) {
   return sections.some((section) =>
     section.fields.some((field) => isFilledInfoField(field)),
   );
 }
-
 function hasMeaningfulVariantData(item: VariantItem) {
   return Boolean(
     item.title.trim() ||
@@ -518,7 +464,6 @@ function hasMeaningfulVariantData(item: VariantItem) {
     hasFilledProductInfoSections(item.productInformation),
   );
 }
-
 function revokeMediaItems(items: ProductMediaItem[]) {
   items.forEach((item) => {
     if (!item.isExisting) {
@@ -526,44 +471,35 @@ function revokeMediaItems(items: ProductMediaItem[]) {
     }
   });
 }
-
 function revokeVariantMedia(items: VariantItem[]) {
   items.forEach((item) => {
     revokeMediaItems(item.images);
     revokeMediaItems(item.videos);
   });
 }
-
 function classifyProductMediaFile(file: File): "image" | "video" | null {
   const fileType = file.type.toLowerCase();
   const fileName = file.name.toLowerCase();
-
   if (fileType.startsWith("image/") || /\.(png|jpe?g|webp)$/.test(fileName)) {
     return "image";
   }
-
   if (fileType.startsWith("video/") || /\.(mp4|mov|webm)$/.test(fileName)) {
     return "video";
   }
-
   return null;
 }
-
 function splitProductMediaFiles(files: FileList | File[] | null) {
   return Array.from(files ?? []).reduce(
     (acc, file) => {
       const mediaKind = classifyProductMediaFile(file);
-
       if (mediaKind === "image") {
         acc.images.push(file);
         return acc;
       }
-
       if (mediaKind === "video") {
         acc.videos.push(file);
         return acc;
       }
-
       acc.unsupported.push(file.name);
       return acc;
     },
@@ -574,7 +510,6 @@ function splitProductMediaFiles(files: FileList | File[] | null) {
     },
   );
 }
-
 function TopLabelInput({
   label,
   value,
@@ -603,7 +538,6 @@ function TopLabelInput({
   };
 }) {
   const RightIcon = rightAction?.icon;
-
   return (
     <div className="space-y-1">
       <div className="relative">
@@ -615,15 +549,13 @@ function TopLabelInput({
           disabled={disabled}
           maxLength={maxLength}
           className={[
-            "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+            "h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 pb-1.5 pt-4 text-sm font-semibold text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
             rightAction ? "pr-11" : "",
           ].join(" ")}
         />
-
-        <label className="pointer-events-none absolute left-3 top-1.5 bg-white px-1 text-[10px] font-semibold leading-none text-slate-500">
+        <label className="pointer-events-none absolute left-3 top-1.5 bg-white px-1 text-[10px] font-black leading-none text-slate-500">
           {label} {required ? <span className="text-rose-500">*</span> : null}
         </label>
-
         {rightAction && RightIcon ? (
           <button
             type="button"
@@ -637,12 +569,10 @@ function TopLabelInput({
           </button>
         ) : null}
       </div>
-
       {hint ? <p className="px-1 text-[11px] text-slate-500">{hint}</p> : null}
     </div>
   );
 }
-
 function SearchableSingleSelectCard({
   title,
   description,
@@ -687,7 +617,7 @@ function SearchableSingleSelectCard({
   return (
     <div
       ref={dropdownRef}
-      className="rounded-3xl border border-slate-200/90 bg-white p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
+      className="rounded-3xl border border-slate-200/90 bg-white p-4 shadow-[0_14px_38px_rgba(15,23,42,0.07)]"
     >
       <div className="mb-3 flex items-start gap-3">
         <div
@@ -698,13 +628,11 @@ function SearchableSingleSelectCard({
         >
           <Icon className="h-4 w-4" />
         </div>
-
         <div>
           <h3 className="text-base font-extrabold text-slate-900">{title}</h3>
           <p className="text-xs leading-5 text-slate-500">{description}</p>
         </div>
       </div>
-
       <div className="relative">
         <button
           type="button"
@@ -733,7 +661,6 @@ function SearchableSingleSelectCard({
               {loading ? "Loading..." : selectedName || placeholder}
             </span>
           </span>
-
           <ChevronDown
             className={[
               "h-4 w-4 shrink-0 text-slate-400 transition",
@@ -741,7 +668,6 @@ function SearchableSingleSelectCard({
             ].join(" ")}
           />
         </button>
-
         {open ? (
           <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-40 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
             <div className="border-b border-slate-100 p-3">
@@ -757,12 +683,10 @@ function SearchableSingleSelectCard({
                 />
               </div>
             </div>
-
             <div className="max-h-64 overflow-y-auto p-2">
               {options.length ? (
                 options.map((option) => {
                   const selected = value === option._id;
-
                   return (
                     <button
                       key={option._id}
@@ -777,7 +701,6 @@ function SearchableSingleSelectCard({
                       ].join(" ")}
                     >
                       <span className="truncate">{option.name}</span>
-
                       {selected ? (
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00008b] text-white">
                           <Check className="h-3.5 w-3.5" />
@@ -798,7 +721,6 @@ function SearchableSingleSelectCard({
     </div>
   );
 }
-
 function HsnLookupModal({
   open,
   onClose,
@@ -807,7 +729,6 @@ function HsnLookupModal({
   onClose: () => void;
 }) {
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm">
       <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
@@ -821,7 +742,6 @@ function HsnLookupModal({
               it into the HSN Code field.
             </p>
           </div>
-
           <button
             type="button"
             onClick={onClose}
@@ -831,13 +751,11 @@ function HsnLookupModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-
         <iframe
           title="HSN code lookup"
           src="https://hsn.codes/"
           className="min-h-0 flex-1 border-0"
         />
-
         <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
           <a
             href="https://hsn.codes/"
@@ -848,7 +766,6 @@ function HsnLookupModal({
             <ExternalLink className="h-3.5 w-3.5" />
             Open in new tab
           </a>
-
           <button
             type="button"
             onClick={onClose}
@@ -861,7 +778,6 @@ function HsnLookupModal({
     </div>
   );
 }
-
 function CompatibilityRowsEditor({
   rows,
   brandMap,
@@ -884,7 +800,6 @@ function CompatibilityRowsEditor({
       </div>
     );
   }
-
   return (
     <div className="space-y-3">
       {rows.map((row) => {
@@ -894,11 +809,10 @@ function CompatibilityRowsEditor({
             _id: model._id,
             name: model.name,
           })) || [];
-
         return (
           <div
             key={row.rowId}
-            className="rounded-[22px] border border-slate-200 bg-white p-4"
+            className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4"
           >
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr]">
               <div className="space-y-3">
@@ -918,7 +832,6 @@ function CompatibilityRowsEditor({
                     {brandName}
                   </span>
                 </label>
-
                 <textarea
                   value={row.notes}
                   onChange={(e) =>
@@ -931,7 +844,6 @@ function CompatibilityRowsEditor({
                   disabled={disabled || !row.enabled}
                 />
               </div>
-
               <ModelCheckboxSelector
                 options={brandModels}
                 values={row.modelId}
@@ -949,7 +861,6 @@ function CompatibilityRowsEditor({
     </div>
   );
 }
-
 export default function CreateProductPage({
   mode = "create",
   productId = "",
@@ -966,13 +877,10 @@ export default function CreateProductPage({
   const router = useRouter();
   const { role } = useAuth();
   const isEditMode = mode === "edit";
-
   const basePath = getRoleBasePath(role);
-
   const [submitting, setSubmitting] = useState(false);
   const [loadingExistingProduct, setLoadingExistingProduct] =
     useState(isEditMode);
-
   const [itemName, setItemName] = useState("");
   const [sku, setSku] = useState("");
   const [hsnCode, setHsnCode] = useState("");
@@ -981,13 +889,11 @@ export default function CreateProductPage({
   const [searchKeysInput, setSearchKeysInput] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
-
   const [masterCategories, setMasterCategories] = useState<OptionItem[]>([]);
   const [categories, setCategories] = useState<OptionItem[]>([]);
   const [subcategories, setSubcategories] = useState<OptionItem[]>([]);
   const [brands, setBrands] = useState<OptionItem[]>([]);
   const [models, setModels] = useState<ModelItem[]>([]);
-
   const [masterCategoryId, setMasterCategoryId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -995,13 +901,11 @@ export default function CreateProductPage({
   const [modelId, setModelId] = useState("");
   const [categoryMappingMode, setCategoryMappingMode] =
     useState<CategoryMappingMode>("variant");
-
   const [loadingMasterCategories, setLoadingMasterCategories] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [loadingModels, setLoadingModels] = useState(true);
-
   const [openDropdown, setOpenDropdown] = useState<
     DropdownConfig["key"] | null
   >(null);
@@ -1014,54 +918,43 @@ export default function CreateProductPage({
     brandId: "",
     modelId: "",
   });
-
   const [variant, setVariant] = useState<VariantItem[]>([createVariantItem()]);
   const [productImages, setProductImages] = useState<ProductImageItem[]>([]);
   const [productVideos, setProductVideos] = useState<ProductVideoItem[]>([]);
   const [productInformation, setProductInformation] = useState<
     ProductInformationSection[]
   >([{ ...initialProductInfoSection }]);
-
   const [compatibilityRows, setCompatibilityRows] = useState<
     CompatibilityTableRow[]
   >([]);
   const [compatibilityBrandSearch, setCompatibilityBrandSearch] = useState("");
   const [compatibilityCurrentPage, setCompatibilityCurrentPage] = useState(1);
-
   const variantRef = useRef<VariantItem[]>([]);
   const productImagesRef = useRef<ProductImageItem[]>([]);
   const productVideosRef = useRef<ProductVideoItem[]>([]);
   const skipNextPresetSyncRef = useRef(false);
-
   const masterCategoryDropdownRef = useRef<HTMLDivElement | null>(null);
   const categoryDropdownRef = useRef<HTMLDivElement | null>(null);
   const subcategoryDropdownRef = useRef<HTMLDivElement | null>(null);
   const brandDropdownRef = useRef<HTMLDivElement | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement | null>(null);
-
   const masterCategorySearchInputRef = useRef<HTMLInputElement | null>(null);
   const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
   const subcategorySearchInputRef = useRef<HTMLInputElement | null>(null);
   const brandSearchInputRef = useRef<HTMLInputElement | null>(null);
   const modelSearchInputRef = useRef<HTMLInputElement | null>(null);
-
   const autoItemKey = useMemo(() => {
     return keyOf(itemName);
   }, [itemName]);
-
   const autosku = useMemo(() => {
     return buildAutoSku(itemName);
   }, [itemName]);
-
-
   const selectedSubcategoryName = useMemo(() => {
     return subcategories.find((item) => item._id === subcategoryId)?.name || "";
   }, [subcategories, subcategoryId]);
-
   const selectedSubcategoryPreset = useMemo(() => {
     return resolveMobileSubcategoryPreset(selectedSubcategoryName);
   }, [selectedSubcategoryName]);
-
   const usesVariantCompatibilityMapping =
     categoryMappingMode === "variantCompatibility";
   const usesProductCompatibilityMapping =
@@ -1073,78 +966,61 @@ export default function CreateProductPage({
   const usesProductMediaInformation =
     usesProductCompatibilityMapping ||
     categoryMappingMode === "productMediaInfo";
-
   const filteredBrandOptions = useMemo(() => {
     const query = searchMap.brandId.trim().toLowerCase();
-
     return query
       ? brands.filter((item) => item.name.toLowerCase().includes(query))
       : brands;
   }, [brands, searchMap.brandId]);
-
   const availablePrimaryModelOptions = useMemo(() => {
     return brandId
       ? models.filter((item) => getBrandIdFromModel(item) === brandId)
       : [];
   }, [brandId, models]);
-
   const filteredPrimaryModelOptions = useMemo(() => {
     const query = searchMap.modelId.trim().toLowerCase();
-
     return query
       ? availablePrimaryModelOptions.filter((item) =>
         item.name.toLowerCase().includes(query),
       )
       : availablePrimaryModelOptions;
   }, [availablePrimaryModelOptions, searchMap.modelId]);
-
   const brandMap = useMemo(() => {
     const map = new Map<string, OptionItem>();
     brands.forEach((item) => map.set(item._id, item));
     return map;
   }, [brands]);
-
   const modelMapByBrand = useMemo(() => {
     const map = new Map<string, ModelItem[]>();
-
     models.forEach((item) => {
       const currentBrandId = getBrandIdFromModel(item);
       if (!currentBrandId) return;
-
       const existing = map.get(currentBrandId) || [];
       existing.push(item);
       map.set(currentBrandId, existing);
     });
-
     return map;
   }, [models]);
-
   const selectedBrandName = useMemo(() => {
     return brands.find((item) => item._id === brandId)?.name || "";
   }, [brandId, brands]);
-
   const selectedModelName = useMemo(() => {
     return models.find((item) => item._id === modelId)?.name || "";
   }, [modelId, models]);
-
   const defaultVariantCompatibilityRows = useMemo(() => {
     return buildCompatibilityRows(brands, undefined);
   }, [brands]);
-
   const filteredCompatibilityRows = useMemo(() => {
     const q = compatibilityBrandSearch.trim().toLowerCase();
     if (!q) return compatibilityRows;
-
     return compatibilityRows.filter((row) => {
       const brandName = brandMap.get(row.brandId)?.name || "";
       return brandName.toLowerCase().includes(q);
     });
   }, [compatibilityRows, compatibilityBrandSearch, brandMap]);
-
   const manualSearchKeys = useMemo(() => {
     return normalizeSearchKeys(searchKeysInput);
   }, [searchKeysInput]);
-
   const totalCompatibilityRows = filteredCompatibilityRows.length;
   const totalCompatibilityPages = Math.max(
     1,
@@ -1159,23 +1035,19 @@ export default function CreateProductPage({
     compatibilityStartIndex,
     compatibilityStartIndex + ROWS_PER_PAGE,
   );
-
   const fetchExistingProduct = useEffectEvent(
     async (brandsList: OptionItem[]) => {
       if (!isEditMode) {
         setLoadingExistingProduct(false);
         return;
       }
-
       if (!productId?.trim()) {
         toast.error("Invalid product id");
         setLoadingExistingProduct(false);
         return;
       }
-
       try {
         setLoadingExistingProduct(true);
-
         const response = await apiClient.get<ProductGetResponse>(
           SummaryApi.product_get.url(productId),
           {
@@ -1184,13 +1056,10 @@ export default function CreateProductPage({
             },
           },
         );
-
         if (!response.data?.success || !response.data?.data) {
           throw new Error(response.data?.message || "Failed to load product");
         }
-
         const item = response.data.data;
-
         const nextItemName = String(item.itemName || "");
         const nextsku = String(item.sku || "");
         const nextMasterCategoryId = getReferenceId(item.masterCategoryId);
@@ -1202,7 +1071,6 @@ export default function CreateProductPage({
         const nextModelId = getReferenceId(
           Array.isArray(item.modelId) ? item.modelId[0] : item.modelId,
         );
-
         setItemName(nextItemName);
         setSku(nextsku);
         setSkuManuallyEdited(
@@ -1212,16 +1080,13 @@ export default function CreateProductPage({
         setHsnCode(String(item.hsnCode || ""));
         setDescription(String(item.description || ""));
         setSearchKeysInput(buildInitialManualSearchKeys(item).join(", "));
-
         setMasterCategoryId(nextMasterCategoryId);
         setCategoryId(nextCategoryId);
         setSubcategoryId(nextSubcategoryId);
         setBrandId(nextBrandId);
         setModelId(nextModelId);
-
         skipNextPresetSyncRef.current = true;
         setCategoryMappingMode(resolveCategoryMappingMode(item));
-
         const nextVariant = normalizeExistingVariants(
           item.variant,
           item.productInformation,
@@ -1239,7 +1104,6 @@ export default function CreateProductPage({
         const nextProductInformation = normalizeExistingProductInformation(
           item.productInformation,
         );
-
         setVariant(nextVariant);
         setProductImages(nextProductImages);
         setProductVideos(nextProductVideos);
@@ -1248,14 +1112,12 @@ export default function CreateProductPage({
           buildCompatibilityRows(brandsList, item.compatible),
         );
         setIsActive(Boolean(item.isActiveGlobal ?? item.isActive));
-
         if (nextMasterCategoryId) {
           await fetchCategories(nextMasterCategoryId, {
             categoryId: nextCategoryId,
             subcategoryId: nextSubcategoryId,
           });
         }
-
         if (nextCategoryId) {
           await fetchSubcategories(nextCategoryId, {
             subcategoryId: nextSubcategoryId,
@@ -1269,31 +1131,25 @@ export default function CreateProductPage({
       }
     },
   );
-
   const fetchInitialOptions = useEffectEvent(async () => {
     const [, brandsList] = await Promise.all([
       fetchMasterCategories(),
       fetchBrandsAndSeedCompatibility(),
       fetchModels(),
     ]);
-
     if (isEditMode) {
       await fetchExistingProduct(brandsList || []);
       return;
     }
-
     setLoadingExistingProduct(false);
   });
-
   useEffect(() => {
     if (isEditMode && !productId?.trim()) return;
     void fetchInitialOptions();
   }, [isEditMode, productId]);
-
   useEffect(() => {
     variantRef.current = variant;
   }, [variant]);
-
   useEffect(() => {
     if (isEditMode) return;
     if (skuManuallyEdited) return;
@@ -1305,15 +1161,12 @@ export default function CreateProductPage({
     sku,
     skuManuallyEdited,
   ]);
-
   useEffect(() => {
     productImagesRef.current = productImages;
   }, [productImages]);
-
   useEffect(() => {
     productVideosRef.current = productVideos;
   }, [productVideos]);
-
   useEffect(() => {
     return () => {
       revokeVariantMedia(variantRef.current);
@@ -1321,11 +1174,9 @@ export default function CreateProductPage({
       revokeMediaItems(productVideosRef.current);
     };
   }, []);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-
       const clickedInside = [
         masterCategoryDropdownRef,
         categoryDropdownRef,
@@ -1333,21 +1184,16 @@ export default function CreateProductPage({
         brandDropdownRef,
         modelDropdownRef,
       ].some((ref) => ref.current?.contains(target));
-
       if (!clickedInside) {
         setOpenDropdown(null);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   useEffect(() => {
     if (!openDropdown) return;
-
     let inputRef: RefObject<HTMLInputElement | null> | null = null;
-
     if (openDropdown === "masterCategoryId") {
       inputRef = masterCategorySearchInputRef;
     } else if (openDropdown === "categoryId") {
@@ -1359,42 +1205,34 @@ export default function CreateProductPage({
     } else if (openDropdown === "modelId") {
       inputRef = modelSearchInputRef;
     }
-
     const timer = window.setTimeout(() => {
       inputRef?.current?.focus();
     }, 100);
-
     return () => window.clearTimeout(timer);
   }, [openDropdown]);
-
   useEffect(() => {
     if (!masterCategoryId) {
       setCategories([]);
       setCategoryId("");
       return;
     }
-
     void fetchCategories(masterCategoryId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masterCategoryId]);
-
   useEffect(() => {
     if (!categoryId) {
       setSubcategories([]);
       setSubcategoryId("");
       return;
     }
-
     void fetchSubcategories(categoryId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
-
   useEffect(() => {
     if (skipNextPresetSyncRef.current) {
       skipNextPresetSyncRef.current = false;
       return;
     }
-
     if (!selectedSubcategoryPreset) {
       revokeVariantMedia(variantRef.current);
       setVariant([
@@ -1406,14 +1244,11 @@ export default function CreateProductPage({
       setProductInformation([{ ...initialProductInfoSection }]);
       return;
     }
-
     revokeVariantMedia(variantRef.current);
-
     const sections = buildPresetProductInfoSections(
       selectedSubcategoryPreset.sections,
       selectedSubcategoryPreset.itemTypeName,
     );
-
     const presetVariants = buildPresetVariantRows(
       selectedSubcategoryPreset.variantLabels,
     ).map((item) => ({
@@ -1421,41 +1256,32 @@ export default function CreateProductPage({
       compatibility: cloneCompatibilityRows(defaultVariantCompatibilityRows),
       productInformation: cloneProductInfoSections(sections),
     }));
-
     setVariant(presetVariants);
     setProductInformation(sections);
   }, [defaultVariantCompatibilityRows, selectedSubcategoryPreset]);
-
   useEffect(() => {
     setCompatibilityCurrentPage(1);
   }, [compatibilityBrandSearch]);
-
   useEffect(() => {
     if (!modelId) return;
-
     const exists = availablePrimaryModelOptions.some(
       (item) => item._id === modelId,
     );
-
     if (!exists) {
       setModelId("");
     }
   }, [availablePrimaryModelOptions, modelId]);
-
   async function fetchMasterCategories() {
     try {
       setLoadingMasterCategories(true);
-
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
         SummaryApi.master_category_list.url,
       );
-
       const rows = filterActive(
         toOptionArray(
           res.data?.data || res.data?.categories || res.data?.masterCategories,
         ),
       );
-
       setMasterCategories(rows);
       return rows;
     } catch (error: unknown) {
@@ -1466,7 +1292,6 @@ export default function CreateProductPage({
       setLoadingMasterCategories(false);
     }
   }
-
   async function fetchCategories(
     selectedMasterCategoryId: string,
     selectedValues?: {
@@ -1476,11 +1301,9 @@ export default function CreateProductPage({
   ) {
     try {
       setLoadingCategories(true);
-
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
         SummaryApi.category_list.url,
       );
-
       const rows = filterActive(toOptionArray(res.data?.data)).filter(
         (
           item: OptionItem & { masterCategoryId?: string | { _id?: string } },
@@ -1491,14 +1314,12 @@ export default function CreateProductPage({
           return value?._id === selectedMasterCategoryId;
         },
       );
-
       setCategories(rows);
       const nextCategoryId = selectedValues?.categoryId ?? categoryId;
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
       const hasSelectedCategory = rows.some(
         (item) => item._id === nextCategoryId,
       );
-
       if (!hasSelectedCategory) {
         setCategoryId("");
         setSubcategoryId("");
@@ -1507,7 +1328,6 @@ export default function CreateProductPage({
         setCategoryId(nextCategoryId);
         setSubcategoryId(nextSubcategoryId);
       }
-
       return rows;
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to load categories"));
@@ -1517,7 +1337,6 @@ export default function CreateProductPage({
       setLoadingCategories(false);
     }
   }
-
   async function fetchSubcategories(
     selectedCategoryId: string,
     selectedValues?: {
@@ -1526,11 +1345,9 @@ export default function CreateProductPage({
   ) {
     try {
       setLoadingSubcategories(true);
-
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
         SummaryApi.sub_category_list.url,
       );
-
       const rows = filterActive(toOptionArray(res.data?.data)).filter(
         (item: OptionItem & { categoryId?: string | { _id?: string } }) => {
           const value = item.categoryId;
@@ -1538,19 +1355,16 @@ export default function CreateProductPage({
           return value?._id === selectedCategoryId;
         },
       );
-
       setSubcategories(rows);
       const nextSubcategoryId = selectedValues?.subcategoryId ?? subcategoryId;
       const hasSelectedSubcategory = rows.some(
         (item) => item._id === nextSubcategoryId,
       );
-
       if (!hasSelectedSubcategory) {
         setSubcategoryId("");
       } else {
         setSubcategoryId(nextSubcategoryId);
       }
-
       return rows;
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to load sub categories"));
@@ -1560,19 +1374,15 @@ export default function CreateProductPage({
       setLoadingSubcategories(false);
     }
   }
-
   async function fetchBrandsAndSeedCompatibility() {
     try {
       setLoadingBrands(true);
-
       const res = await apiClient.get<ApiResponse<OptionItem[]>>(
         SummaryApi.brand_list.url,
       );
-
       const activeBrands = filterActive(
         toOptionArray(res.data?.data || res.data?.brands),
       );
-
       setBrands(activeBrands);
       setCompatibilityRows((prev) =>
         mergeCompatibilityRowsWithBrands(activeBrands, prev),
@@ -1602,15 +1412,12 @@ export default function CreateProductPage({
       setLoadingBrands(false);
     }
   }
-
   async function fetchModels() {
     try {
       setLoadingModels(true);
-
       const res = await apiClient.get<ApiResponse<ModelItem[]>>(
         SummaryApi.model_list.url,
       );
-
       const rows = filterActive(
         toModelArray(res.data?.data || res.data?.models),
       );
@@ -1624,18 +1431,15 @@ export default function CreateProductPage({
       setLoadingModels(false);
     }
   }
-
   function handleToggleDropdown(key: DropdownConfig["key"]) {
     setOpenDropdown((prev) => (prev === key ? null : key));
   }
-
   function handleSearchChange(key: DropdownConfig["key"], value: string) {
     setSearchMap((prev) => ({
       ...prev,
       [key]: value,
     }));
   }
-
   function handleSelectDropdownValue(
     key: DropdownConfig["key"],
     value: string,
@@ -1647,68 +1451,53 @@ export default function CreateProductPage({
       setBrandId("");
       setModelId("");
     }
-
     if (key === "categoryId") {
       setCategoryId(value);
       setSubcategoryId("");
       setBrandId("");
       setModelId("");
     }
-
     if (key === "subcategoryId") {
       setSubcategoryId(value);
       setBrandId("");
       setModelId("");
     }
-
     if (key === "brandId") {
       handlePrimaryBrandChange(value);
     }
-
     if (key === "modelId") {
       handlePrimaryModelChange(value);
     }
-
     setSearchMap((prev) => ({
       ...prev,
       [key]: "",
     }));
-
     setOpenDropdown(null);
   }
-
   function handlePrimaryBrandChange(value: string) {
     setBrandId(value);
-
     const currentModelStillValid = models.some(
       (item) => item._id === modelId && getBrandIdFromModel(item) === value,
     );
-
     if (!currentModelStillValid) {
       setModelId("");
     }
   }
-
   function handlePrimaryModelChange(value: string) {
     setModelId(value);
   }
-
   function updateVariant(variantId: string, patch: Partial<VariantItem>) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const next = { ...item, ...patch };
-
         if (!next.title.trim()) {
           next.title = buildVariantTitle(next.attributes);
         }
-
         return next;
       }),
     );
   }
-
   function updateVariantAttributeLabel(
     variantId: string,
     attributeId: string,
@@ -1717,13 +1506,11 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const nextAttributes = item.attributes.map((attribute) =>
           attribute.id === attributeId
             ? { ...attribute, label: value }
             : attribute,
         );
-
         return {
           ...item,
           attributes: nextAttributes,
@@ -1732,7 +1519,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function updateVariantAttributeValue(
     variantId: string,
     attributeId: string,
@@ -1741,11 +1527,9 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const nextAttributes = item.attributes.map((attribute) =>
           attribute.id === attributeId ? { ...attribute, value } : attribute,
         );
-
         return {
           ...item,
           attributes: nextAttributes,
@@ -1754,7 +1538,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function addVariantAttribute(variantId: string) {
     setVariant((prev) =>
       prev.map((item) =>
@@ -1767,19 +1550,16 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function removeVariantAttribute(variantId: string, attributeId: string) {
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const nextAttributes =
           item.attributes.length === 1
             ? [createVariantAttribute()]
             : item.attributes.filter(
               (attribute) => attribute.id !== attributeId,
             );
-
         return {
           ...item,
           attributes: nextAttributes,
@@ -1788,36 +1568,29 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function buildDraftVariant(sourceVariant?: VariantItem) {
     const presetLabels = selectedSubcategoryPreset?.variantLabels?.length
       ? selectedSubcategoryPreset.variantLabels
       : [];
-
     const defaultProductInfo =
       selectedSubcategoryPreset && productInformation.length
         ? cloneProductInfoSections(productInformation)
         : [{ ...initialProductInfoSection }];
-
     const defaultCompatibility = cloneCompatibilityRows(
       defaultVariantCompatibilityRows,
     );
-
     const nextVariant = createVariantItem(presetLabels, defaultCompatibility);
-
     if (!sourceVariant) {
       return {
         ...nextVariant,
         productInformation: defaultProductInfo,
       };
     }
-
     const nextAttributes = sourceVariant.attributes.length
       ? sourceVariant.attributes.map((attribute) =>
         createVariantAttribute(attribute.label, attribute.value),
       )
       : nextVariant.attributes;
-
     return {
       ...nextVariant,
       title: sourceVariant.title.trim() || buildVariantTitle(nextAttributes),
@@ -1832,65 +1605,49 @@ export default function CreateProductPage({
       isActive: sourceVariant.isActive,
     };
   }
-
   function addVariantRow() {
     setVariant((prev) => {
       const sourceVariant =
         [...prev].reverse().find((item) => hasMeaningfulVariantData(item)) ||
         prev[prev.length - 1];
-
       return [...prev, buildDraftVariant(sourceVariant)];
     });
   }
-
   function removeVariantRow(variantId: string) {
     setVariant((prev) => {
       if (prev.length === 1) {
         revokeVariantMedia(prev);
         return [buildDraftVariant()];
       }
-
       const current = prev.find((item) => item.id === variantId);
       revokeMediaItems(current?.images || []);
       revokeMediaItems(current?.videos || []);
-
       return prev.filter((item) => item.id !== variantId);
     });
   }
-
   function addVariantImages(
     variantId: string,
     files: FileList | File[] | null,
   ) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
-
     const errors: string[] = [];
-
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const existingSignatures = new Set(item.images.map(getMediaIdentity));
-
         const additions: ProductImageItem[] = [];
-
         nextFiles.forEach((file) => {
           const validationError = validateProductImageFile(file);
-
           if (validationError) {
             errors.push(`${file.name}: ${validationError}`);
             return;
           }
-
           const signature = `${file.name}-${file.size}-${file.lastModified}`;
-
           if (existingSignatures.has(signature)) {
             return;
           }
-
           existingSignatures.add(signature);
-
           additions.push({
             id: `${signature}-${Math.random().toString(36).slice(2, 10)}`,
             file,
@@ -1899,25 +1656,20 @@ export default function CreateProductPage({
             size: file.size,
           });
         });
-
         return {
           ...item,
           images: [...item.images, ...additions],
         };
       }),
     );
-
     errors.forEach((message) => toast.error(message));
   }
-
   function removeVariantImage(variantId: string, imageId: string) {
     const currentVariant = variant.find((item) => item.id === variantId);
     const image = currentVariant?.images.find((item) => item.id === imageId);
-
     if (image && !image.isExisting) {
       URL.revokeObjectURL(image.previewUrl);
     }
-
     setVariant((prev) =>
       prev.map((item) =>
         item.id === variantId
@@ -1931,39 +1683,29 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function addVariantVideos(
     variantId: string,
     files: FileList | File[] | null,
   ) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
-
     const errors: string[] = [];
-
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         const existingSignatures = new Set(item.videos.map(getMediaIdentity));
         const additions: ProductVideoItem[] = [];
-
         nextFiles.forEach((file) => {
           const validationError = validateProductVideoFile(file);
-
           if (validationError) {
             errors.push(`${file.name}: ${validationError}`);
             return;
           }
-
           const signature = `${file.name}-${file.size}-${file.lastModified}`;
-
           if (existingSignatures.has(signature)) {
             return;
           }
-
           existingSignatures.add(signature);
-
           additions.push({
             id: `${signature}-${Math.random().toString(36).slice(2, 10)}`,
             file,
@@ -1972,25 +1714,20 @@ export default function CreateProductPage({
             size: file.size,
           });
         });
-
         return {
           ...item,
           videos: [...item.videos, ...additions],
         };
       }),
     );
-
     errors.forEach((message) => toast.error(message));
   }
-
   function removeVariantVideo(variantId: string, videoId: string) {
     const currentVariant = variant.find((item) => item.id === variantId);
     const video = currentVariant?.videos.find((item) => item.id === videoId);
-
     if (video && !video.isExisting) {
       URL.revokeObjectURL(video.previewUrl);
     }
-
     setVariant((prev) =>
       prev.map((item) =>
         item.id === variantId
@@ -2004,25 +1741,20 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function addVariantMedia(variantId: string, files: FileList | File[] | null) {
     const { images, videos, unsupported } = splitProductMediaFiles(files);
-
     if (images.length > 0) {
       addVariantImages(variantId, images);
     }
-
     if (videos.length > 0) {
       addVariantVideos(variantId, videos);
     }
-
     unsupported.forEach((fileName) => {
       toast.error(
         `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`,
       );
     });
   }
-
   function removeVariantMedia(
     variantId: string,
     mediaKind: "image" | "video",
@@ -2032,37 +1764,26 @@ export default function CreateProductPage({
       removeVariantImage(variantId, itemId);
       return;
     }
-
     removeVariantVideo(variantId, itemId);
   }
-
   function addProductImages(files: FileList | File[] | null) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
-
     const errors: string[] = [];
-
     setProductImages((prev) => {
       const existingSignatures = new Set(prev.map(getMediaIdentity));
-
       const additions: ProductImageItem[] = [];
-
       nextFiles.forEach((file) => {
         const validationError = validateProductImageFile(file);
-
         if (validationError) {
           errors.push(`${file.name}: ${validationError}`);
           return;
         }
-
         const signature = `${file.name}-${file.size}-${file.lastModified}`;
-
         if (existingSignatures.has(signature)) {
           return;
         }
-
         existingSignatures.add(signature);
-
         additions.push({
           id: `${signature}-${Math.random().toString(36).slice(2, 10)}`,
           file,
@@ -2071,39 +1792,28 @@ export default function CreateProductPage({
           size: file.size,
         });
       });
-
       return [...prev, ...additions];
     });
-
     errors.forEach((message) => toast.error(message));
   }
-
   function addProductVideos(files: FileList | File[] | null) {
     const nextFiles = Array.from(files ?? []);
     if (!nextFiles.length) return;
-
     const errors: string[] = [];
-
     setProductVideos((prev) => {
       const existingSignatures = new Set(prev.map(getMediaIdentity));
       const additions: ProductVideoItem[] = [];
-
       nextFiles.forEach((file) => {
         const validationError = validateProductVideoFile(file);
-
         if (validationError) {
           errors.push(`${file.name}: ${validationError}`);
           return;
         }
-
         const signature = `${file.name}-${file.size}-${file.lastModified}`;
-
         if (existingSignatures.has(signature)) {
           return;
         }
-
         existingSignatures.add(signature);
-
         additions.push({
           id: `${signature}-${Math.random().toString(36).slice(2, 10)}`,
           file,
@@ -2112,64 +1822,49 @@ export default function CreateProductPage({
           size: file.size,
         });
       });
-
       return [...prev, ...additions];
     });
-
     errors.forEach((message) => toast.error(message));
   }
-
   function removeProductImage(imageId: string) {
     const image = productImages.find((item) => item.id === imageId);
-
     if (image && !image.isExisting) {
       URL.revokeObjectURL(image.previewUrl);
     }
-
     setProductImages((prev) =>
       prev.filter((imageItem) => imageItem.id !== imageId),
     );
   }
-
   function removeProductVideo(videoId: string) {
     const video = productVideos.find((item) => item.id === videoId);
-
     if (video && !video.isExisting) {
       URL.revokeObjectURL(video.previewUrl);
     }
-
     setProductVideos((prev) =>
       prev.filter((videoItem) => videoItem.id !== videoId),
     );
   }
-
   function addProductMedia(files: FileList | File[] | null) {
     const { images, videos, unsupported } = splitProductMediaFiles(files);
-
     if (images.length > 0) {
       addProductImages(images);
     }
-
     if (videos.length > 0) {
       addProductVideos(videos);
     }
-
     unsupported.forEach((fileName) => {
       toast.error(
         `${fileName}: Only PNG, JPG, JPEG, WEBP, MP4, MOV, and WEBM files are allowed`,
       );
     });
   }
-
   function removeProductMedia(mediaKind: "image" | "video", itemId: string) {
     if (mediaKind === "image") {
       removeProductImage(itemId);
       return;
     }
-
     removeProductVideo(itemId);
   }
-
   function addProductInfoSection() {
     setProductInformation((prev) => [
       ...prev,
@@ -2179,14 +1874,12 @@ export default function CreateProductPage({
       },
     ]);
   }
-
   function removeProductInfoSection(index: number) {
     setProductInformation((prev) => {
       if (prev.length === 1) return [{ ...initialProductInfoSection }];
       return prev.filter((_, itemIndex) => itemIndex !== index);
     });
   }
-
   function updateProductInfoSectionTitle(index: number, value: string) {
     setProductInformation((prev) =>
       prev.map((item, itemIndex) =>
@@ -2194,7 +1887,6 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function addProductInfoField(sectionIndex: number) {
     setProductInformation((prev) =>
       prev.map((section, index) =>
@@ -2207,19 +1899,16 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function removeProductInfoField(sectionIndex: number, fieldIndex: number) {
     setProductInformation((prev) =>
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
-
         if (section.fields.length === 1) {
           return {
             ...section,
             fields: [{ label: "", value: "" }],
           };
         }
-
         return {
           ...section,
           fields: section.fields.filter((_, idx) => idx !== fieldIndex),
@@ -2227,7 +1916,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function updateProductInfoField(
     sectionIndex: number,
     fieldIndex: number,
@@ -2237,7 +1925,6 @@ export default function CreateProductPage({
     setProductInformation((prev) =>
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
-
         return {
           ...section,
           fields: section.fields.map((field, idx) =>
@@ -2247,7 +1934,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function addVariantProductInfoSection(variantId: string) {
     setVariant((prev) =>
       prev.map((item) =>
@@ -2263,7 +1949,6 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function removeVariantProductInfoSection(
     variantId: string,
     sectionIndex: number,
@@ -2271,14 +1956,12 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         if (item.productInformation.length === 1) {
           return {
             ...item,
             productInformation: [{ ...initialProductInfoSection }],
           };
         }
-
         return {
           ...item,
           productInformation: item.productInformation.filter(
@@ -2288,7 +1971,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function updateVariantProductInfoSectionTitle(
     variantId: string,
     sectionIndex: number,
@@ -2310,7 +1992,6 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function addVariantProductInfoField(variantId: string, sectionIndex: number) {
     setVariant((prev) =>
       prev.map((item) =>
@@ -2331,7 +2012,6 @@ export default function CreateProductPage({
       ),
     );
   }
-
   function removeVariantProductInfoField(
     variantId: string,
     sectionIndex: number,
@@ -2340,19 +2020,16 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         return {
           ...item,
           productInformation: item.productInformation.map((section, index) => {
             if (index !== sectionIndex) return section;
-
             if (section.fields.length === 1) {
               return {
                 ...section,
                 fields: [{ label: "", value: "" }],
               };
             }
-
             return {
               ...section,
               fields: section.fields.filter((_, idx) => idx !== fieldIndex),
@@ -2362,7 +2039,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function updateVariantProductInfoField(
     variantId: string,
     sectionIndex: number,
@@ -2373,12 +2049,10 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         return {
           ...item,
           productInformation: item.productInformation.map((section, index) => {
             if (index !== sectionIndex) return section;
-
             return {
               ...section,
               fields: section.fields.map((field, idx) =>
@@ -2390,7 +2064,6 @@ export default function CreateProductPage({
       }),
     );
   }
-
   function updateCompatibilityRow(
     rowId: string,
     patch: Partial<CompatibilityTableRow>,
@@ -2398,22 +2071,18 @@ export default function CreateProductPage({
     setCompatibilityRows((prev) =>
       prev.map((item) => {
         if (item.rowId !== rowId) return item;
-
         const next: CompatibilityTableRow = {
           ...item,
           ...patch,
         };
-
         if (patch.enabled === false) {
           next.modelId = [];
           next.notes = "";
         }
-
         return next;
       }),
     );
   }
-
   function updateVariantCompatibilityRow(
     variantId: string,
     rowId: string,
@@ -2422,29 +2091,24 @@ export default function CreateProductPage({
     setVariant((prev) =>
       prev.map((item) => {
         if (item.id !== variantId) return item;
-
         return {
           ...item,
           compatibility: item.compatibility.map((row) => {
             if (row.rowId !== rowId) return row;
-
             const next: CompatibilityTableRow = {
               ...row,
               ...patch,
             };
-
             if (patch.enabled === false) {
               next.modelId = [];
               next.notes = "";
             }
-
             return next;
           }),
         };
       }),
     );
   }
-
   function buildCompatibilityPayload(rows: CompatibilityTableRow[]) {
     return rows
       .filter((row) => row.enabled)
@@ -2455,7 +2119,6 @@ export default function CreateProductPage({
         isActive: row.isActive,
       }));
   }
-
   function buildMergedCompatibilityPayload(items: VariantItem[]) {
     const compatibilityMap = new Map<
       string,
@@ -2466,7 +2129,6 @@ export default function CreateProductPage({
         isActive: boolean;
       }
     >();
-
     items.forEach((item) => {
       buildCompatibilityPayload(item.compatibility).forEach((row) => {
         const existing = compatibilityMap.get(row.brandId) || {
@@ -2475,18 +2137,14 @@ export default function CreateProductPage({
           notes: new Set<string>(),
           isActive: false,
         };
-
         row.modelId.forEach((modelId) => existing.modelId.add(modelId));
-
         if (row.notes.trim()) {
           existing.notes.add(row.notes.trim());
         }
-
         existing.isActive = existing.isActive || row.isActive;
         compatibilityMap.set(row.brandId, existing);
       });
     });
-
     return Array.from(compatibilityMap.values()).map((row) => ({
       brandId: row.brandId,
       modelId: Array.from(row.modelId),
@@ -2494,7 +2152,6 @@ export default function CreateProductPage({
       isActive: row.isActive,
     }));
   }
-
   function validateProductInfoSections(
     sections: ProductInformationSection[],
     errorPrefix: string,
@@ -2506,23 +2163,18 @@ export default function CreateProductPage({
       const hasValueWithoutLabel = section.fields.some(
         (field) => field.value.trim() && !field.label.trim(),
       );
-
       if (hasValueWithoutLabel) return true;
       if (!hasCompletedField) return false;
-
       return !section.title.trim();
     });
-
     if (invalid) {
       toast.error(
         `${errorPrefix} section must have a title and complete fields`,
       );
       return false;
     }
-
     return true;
   }
-
   function buildFilledProductInformation(
     sections: ProductInformationSection[],
   ): ProductPayload["productInformation"] {
@@ -2538,79 +2190,64 @@ export default function CreateProductPage({
       }))
       .filter((section) => section.title && section.fields.length > 0);
   }
-
   function validateForm() {
     if (!itemName.trim()) {
       toast.error("Please enter product name");
       return false;
     }
-
     if (!masterCategoryId) {
       toast.error("Please select a master category");
       return false;
     }
-
     if (!categoryId) {
       toast.error("Please select a category");
       return false;
     }
-
     if (!subcategoryId) {
       toast.error("Please select a sub category");
       return false;
     }
-
     if (!brandId) {
       toast.error("Please select product brand");
       return false;
     }
-
     if (!usesCompatibilityMapping && !modelId) {
       toast.error("Please select model");
       return false;
     }
-
     if (usesVariantConfiguration) {
       const hasConfiguredVariant = variant.some((item) =>
         hasMeaningfulVariantData(item),
       );
-
       if (!hasConfiguredVariant) {
         toast.error("Add at least one variant");
         return false;
       }
-
       const invalidVariant = variant.some((item) => {
         if (!hasMeaningfulVariantData(item)) return false;
-
         return item.attributes.some((attribute) => {
           const hasPartial = attribute.label.trim() || attribute.value.trim();
           if (!hasPartial) return false;
           return !(attribute.label.trim() && attribute.value.trim());
         });
       });
-
       if (invalidVariant) {
         toast.error("Each variant attribute must have both label and value");
         return false;
       }
-
       const invalidVariantInfo = variant.some((item) => {
         if (!hasFilledProductInfoSections(item.productInformation)) {
           return false;
         }
-
         return !validateProductInfoSections(
           item.productInformation,
           "Each variant product information",
         );
       });
-
       if (invalidVariantInfo) {
         return false;
       }
     }
-
     if (usesProductMediaInformation) {
       if (
         !validateProductInfoSections(
@@ -2620,12 +2257,10 @@ export default function CreateProductPage({
       ) {
         return false;
       }
-
       const hasProductMediaOrInfo =
         productImages.length > 0 ||
         productVideos.length > 0 ||
         hasFilledProductInfoSections(productInformation);
-
       if (!hasProductMediaOrInfo) {
         toast.error(
           "Add product images, videos, or product information for this option",
@@ -2633,14 +2268,12 @@ export default function CreateProductPage({
         return false;
       }
     }
-
     if (usesVariantCompatibilityMapping) {
       const missingVariantCompatibilityIndex = variant.findIndex(
         (item) =>
           hasMeaningfulVariantData(item) &&
           !hasEnabledCompatibilityRows(item.compatibility),
       );
-
       if (missingVariantCompatibilityIndex >= 0) {
         toast.error(
           `Select at least one compatible brand for Variant ${missingVariantCompatibilityIndex + 1
@@ -2648,7 +2281,6 @@ export default function CreateProductPage({
         );
         return false;
       }
-
       const invalidVariantCompatibilityIndex = variant.findIndex(
         (item) =>
           hasMeaningfulVariantData(item) &&
@@ -2656,7 +2288,6 @@ export default function CreateProductPage({
             (row) => row.enabled && row.modelId.length === 0,
           ),
       );
-
       if (invalidVariantCompatibilityIndex >= 0) {
         toast.error(
           `Each selected compatible brand must have at least one model in Variant ${invalidVariantCompatibilityIndex + 1
@@ -2665,19 +2296,15 @@ export default function CreateProductPage({
         return false;
       }
     }
-
     if (usesProductCompatibilityMapping) {
       const hasCompatibleBrand = compatibilityRows.some((row) => row.enabled);
-
       if (!hasCompatibleBrand) {
         toast.error("Select at least one compatible brand");
         return false;
       }
-
       const invalidCompatibility = compatibilityRows.some(
         (row) => row.enabled && row.modelId.length === 0,
       );
-
       if (invalidCompatibility) {
         toast.error(
           "Each selected compatible brand must have at least one model",
@@ -2685,14 +2312,11 @@ export default function CreateProductPage({
         return false;
       }
     }
-
     return true;
   }
-
   function buildPayload(): ProductPayload {
     const filledProductInformation =
       buildFilledProductInformation(productInformation);
-
     return {
       configurationMode: categoryMappingMode,
       itemName: itemName.trim(),
@@ -2750,15 +2374,11 @@ export default function CreateProductPage({
       isActive,
     };
   }
-
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     try {
       setSubmitting(true);
-
       const activeVariantItems = usesVariantConfiguration
         ? variant.filter((item) => hasMeaningfulVariantData(item))
         : [];
@@ -2769,7 +2389,6 @@ export default function CreateProductPage({
         usesProductMediaInformation ? productImages : [],
         usesProductMediaInformation ? productVideos : [],
       );
-
       const response = isEditMode
         ? await apiClient.put<ApiResponse<unknown>>(
           SummaryApi.product_update.url(productId),
@@ -2779,24 +2398,20 @@ export default function CreateProductPage({
           SummaryApi.product_create.url,
           formData,
         );
-
       if (!response.data?.success) {
         throw new Error(
           response.data?.message ||
           `Failed to ${isEditMode ? "update" : "create"} product`,
         );
       }
-
       toast.success(
         response.data?.message ||
         `Product ${isEditMode ? "updated" : "created"} successfully`,
       );
-
       if (isModal && onSuccess) {
         await onSuccess();
         return;
       }
-
       router.push(`${basePath}/product/list`);
     } catch (error: unknown) {
       toast.error(
@@ -2809,7 +2424,6 @@ export default function CreateProductPage({
       setSubmitting(false);
     }
   }
-
   const dropdownConfigs: DropdownConfig[] = [
     {
       key: "masterCategoryId",
@@ -2871,7 +2485,6 @@ export default function CreateProductPage({
       disabled: !brandId,
     },
   ];
-
   const dropdownRefs = {
     masterCategoryId: masterCategoryDropdownRef,
     categoryId: categoryDropdownRef,
@@ -2879,7 +2492,6 @@ export default function CreateProductPage({
     brandId: brandDropdownRef,
     modelId: modelDropdownRef,
   };
-
   const searchInputRefs = {
     masterCategoryId: masterCategorySearchInputRef,
     categoryId: categorySearchInputRef,
@@ -2887,7 +2499,6 @@ export default function CreateProductPage({
     brandId: brandSearchInputRef,
     modelId: modelSearchInputRef,
   };
-
   const categoryMappingOptions: Array<{
     value: CategoryMappingMode;
     title: string;
@@ -2898,7 +2509,7 @@ export default function CreateProductPage({
         value: "variant",
         title: "Variant",
         description:
-          "Use Variant Title,   , Variant Images & Media, and Variant Product Information.",
+          "Use variant title, description, images, media, and product information.",
         icon: Boxes,
       },
       {
@@ -2911,39 +2522,37 @@ export default function CreateProductPage({
       {
         value: "productMediaInfoCompatibility",
         title:
-          "Product Description & Product Images & Product Information & Compatible Brands & Models",
+          "Media, Info & Compatibility",
         description:
           "Use Product Description, Product Images & Media, and Product Information with compatible brands and models.",
         icon: ShieldCheck,
       },
       {
         value: "productMediaInfo",
-        title: "Product Description & Product Images & Product Information",
+        title: "Media & Product Info",
         description:
           "Use Product Description, Product Images & Media, and Product Information without creating variants.",
         icon: Info,
       },
     ];
-
   if (isEditMode && loadingExistingProduct) {
     return (
       <div
         className={[
-          isModal ? "max-h-[82vh] overflow-y-auto bg-slate-50" : "min-h-screen bg-slate-50",
-          "px-3 py-3 sm:px-4 lg:px-5",
+          isModal ? "max-h-[82vh] overflow-y-auto bg-[#f6f8fb]" : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)]",
+          "px-3 py-4 sm:px-5 lg:px-8",
         ].join(" ")}
       >
-        <div className="mx-auto flex min-h-80 w-full max-w-7xl items-center justify-center">
-          <div className="flex w-full max-w-xl items-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mx-auto flex min-h-80 w-full max-w-375 items-center justify-center">
+          <div className="flex w-full max-w-xl items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.10)]">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-
             <div>
               <h2 className="text-lg font-bold text-slate-900">
                 Loading Product
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm font-semibold leading-6 text-slate-500">
                 Fetching product details so you can update the configuration.
               </p>
             </div>
@@ -2952,7 +2561,6 @@ export default function CreateProductPage({
       </div>
     );
   }
-
   return (
     <>
       <HsnLookupModal
@@ -2961,72 +2569,94 @@ export default function CreateProductPage({
       />
       <div
         className={[
-          isModal ? "max-h-[82vh] overflow-y-auto bg-slate-50" : "min-h-screen bg-slate-50",
-          "px-3 py-3 sm:px-4 lg:px-5",
+          isModal ? "max-h-[82vh] overflow-y-auto bg-[#f6f8fb]" : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)]",
+          "px-3 py-4 sm:px-5 lg:px-8",
         ].join(" ")}
       >
-        <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:px-5 md:py-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isModal && onClose) {
-                      onClose();
-                      return;
-                    }
-
-                    router.push(`${basePath}/product/list`);
-                  }}
-                  className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to List
-                </button>
-
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#00008b]">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Product Management
-                </span>
-
-                <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 md:text-4xl">
-                    {isEditMode ? "Edit Product" : "Create Product"}
-                  </h1>
-                  <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 md:text-sm">
-                    {isEditMode
-                      ? "Update product details, configuration mode, compatibility mapping, and shared media without losing existing data."
-                      : "Create one product with the right setup for variants, compatibility mapping, or shared product media and information."}
+        <div className="mx-auto w-full max-w-375 space-y-5">
+          <section className="relative overflow-hidden rounded-card border border-white/70 bg-white/95 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur md:p-5">
+            <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-[#00008b]/10 blur-3xl" />
+            <div className="absolute -bottom-20 left-12 h-48 w-48 rounded-full bg-[#ec0677]/10 blur-3xl" />
+            <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isModal && onClose) {
+                        onClose();
+                        return;
+                      }
+                      router.push(`${basePath}/product/list`);
+                    }}
+                    className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to List
+                  </button>
+                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#00008b]/15 bg-[#00008b]/5 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#00008b]">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Product Management
+                  </span>
+                </div>
+                <h1 className="mt-4 text-[28px] font-black tracking-tight text-slate-950 sm:text-[34px] lg:text-[40px]">
+                  {isEditMode ? "Edit Product" : "Create Product"}
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
+                  {isEditMode
+                    ? "Update product details, configuration mode, compatibility mapping, media, and product information without losing existing data."
+                    : "Create products with variants, compatibility mapping, shared media, and structured product information from one clean form."}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:min-w-115">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Mode
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-slate-900">
+                    {isEditMode ? "Edit" : "Create"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Status
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-slate-900">
+                    {isActive ? "Active" : "Inactive"}
+                  </p>
+                </div>
+                <div className="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:col-span-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    SKU
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-slate-900">
+                    {sku || autosku || "Auto"}
                   </p>
                 </div>
               </div>
             </div>
           </section>
-
           <form
             onSubmit={handleSubmit}
-            className="product-create-form-compact space-y-4"
+            className="product-create-form-compact space-y-5"
           >
-            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+            <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
                   <PackagePlus className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-lg font-black text-slate-950">
                     Product Basics
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm font-semibold leading-6 text-slate-500">
                     Enter the base product details here, then choose whether
                     this item uses variants, compatibility mapping, or shared
                     media and product information.
                   </p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <TopLabelInput
                   label="Product Name"
                   value={itemName}
@@ -3035,7 +2665,6 @@ export default function CreateProductPage({
                   disabled={submitting}
                   required
                 />
-
                 <TopLabelInput
                   label="SKU (Auto-generated if empty)"
                   value={sku}
@@ -3054,7 +2683,6 @@ export default function CreateProductPage({
                         : "Enter product name to generate SKU."
                   }
                 />
-
                 <TopLabelInput
                   label="HSN Code"
                   value={hsnCode}
@@ -3068,7 +2696,6 @@ export default function CreateProductPage({
                     onClick: () => setHsnLookupOpen(true),
                   }}
                 />
-
                 <div className="space-y-1">
                   <TopLabelInput
                     label="Search Keys"
@@ -3077,7 +2704,6 @@ export default function CreateProductPage({
                     placeholder="Custom search keys"
                     disabled={submitting}
                   />
-
                   {manualSearchKeys.length ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {manualSearchKeys.map((key) => (
@@ -3093,23 +2719,20 @@ export default function CreateProductPage({
                 </div>
               </div>
             </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+            <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                   <FolderTree className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-lg font-black text-slate-950">
                     Category Mapping
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm font-semibold leading-6 text-slate-500">
                     Select the product hierarchy and primary brand/model.
                   </p>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {dropdownConfigs.map((config) => (
                   <ProductDropdown
@@ -3124,26 +2747,23 @@ export default function CreateProductPage({
                 ))}
               </div>
             </section>
-
             {usesProductMediaInformation ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
                     <Info className="h-5 w-5" />
                   </div>
-
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-lg font-black text-slate-950">
                       Product Description
                     </h2>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm font-semibold leading-6 text-slate-500">
                       {usesCompatibilityMapping
                         ? "Add a shared product summary for product-level media, information, and compatibility details."
                         : "Add a shared product summary for product-level media and information."}
                     </p>
                   </div>
                 </div>
-
                 <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
                   <label className="mb-2 block text-sm font-semibold text-slate-800">
                     Description
@@ -3156,7 +2776,6 @@ export default function CreateProductPage({
                     disabled={submitting}
                     maxLength={1200}
                   />
-
                   <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
                     <p>
                       This description is stored with the product and can be
@@ -3169,13 +2788,11 @@ export default function CreateProductPage({
                 </div>
               </section>
             ) : null}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+            <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
               <div className="mb-3 flex items-start gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
                   <Layers3 className="h-4.5 w-4.5" />
                 </div>
-
                 <div>
                   <h2 className="text-lg font-extrabold text-slate-900">
                     Configuration Option
@@ -3185,12 +2802,10 @@ export default function CreateProductPage({
                   </p>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
                 {categoryMappingOptions.map((option) => {
                   const Icon = option.icon;
                   const selected = categoryMappingMode === option.value;
-
                   return (
                     <button
                       key={option.value}
@@ -3215,13 +2830,11 @@ export default function CreateProductPage({
                       >
                         <Icon className="h-5 w-5" />
                       </div>
-
                       <div className="min-w-0 flex-1">
                         <h4 className="line-clamp-2 text-sm font-extrabold leading-5 text-slate-900">
                           {option.title}
                         </h4>
                       </div>
-
                       <span
                         className={[
                           "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
@@ -3237,29 +2850,26 @@ export default function CreateProductPage({
                 })}
               </div>
             </section>
-
             {usesVariantConfiguration ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                       <Boxes className="h-5 w-5" />
                     </div>
-
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900">
+                      <h2 className="text-lg font-black text-slate-950">
                         {usesVariantCompatibilityMapping
                           ? "Variants & Compatible Brands & Models"
                           : "Variants"}
                       </h2>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm font-semibold leading-6 text-slate-500">
                         {usesVariantCompatibilityMapping
                           ? "Each variant can have its own title, description, attributes, media, product information, and compatible brands and models."
                           : "Each variant can have its own title, description, attributes, media, and product information."}
                       </p>
                     </div>
                   </div>
-
                   <button
                     type="button"
                     onClick={addVariantRow}
@@ -3270,7 +2880,6 @@ export default function CreateProductPage({
                     Add Variant
                   </button>
                 </div>
-
                 <div className="space-y-4">
                   {variant.map((item, index) => (
                     <div
@@ -3286,12 +2895,11 @@ export default function CreateProductPage({
                             {item.title.trim() || "New Variant"}
                           </h3>
                           {usesVariantCompatibilityMapping ? (
-                            <p className="mt-1 text-sm text-slate-500">
+                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
                               Variant {index + 1} compatible brands & models
                             </p>
                           ) : null}
                         </div>
-
                         <button
                           type="button"
                           onClick={() => removeVariantRow(item.id)}
@@ -3301,7 +2909,6 @@ export default function CreateProductPage({
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-
                       <div className="grid grid-cols-1 gap-4">
                         <div>
                           <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">Variant Title</label>
@@ -3315,7 +2922,6 @@ export default function CreateProductPage({
                             disabled={submitting}
                           />
                         </div>
-
                         <div className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm">
                           <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Product Description
@@ -3332,12 +2938,10 @@ export default function CreateProductPage({
                             disabled={submitting}
                             maxLength={1200}
                           />
-
                           <div className="mt-2 flex justify-end text-xs font-medium text-slate-400">
                             {item.description.trim().length}/1200
                           </div>
                         </div>
-
                         <div>
                           <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Attributes
@@ -3370,7 +2974,6 @@ export default function CreateProductPage({
                             }
                           />
                         </div>
-
                         <div>
                           <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Images & Media
@@ -3389,7 +2992,6 @@ export default function CreateProductPage({
                             }
                           />
                         </div>
-
                         <div>
                           <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
                             Variant Product Information
@@ -3444,7 +3046,6 @@ export default function CreateProductPage({
                             }
                           />
                         </div>
-
                         {usesVariantCompatibilityMapping ? (
                           <div>
                             <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
@@ -3471,25 +3072,22 @@ export default function CreateProductPage({
                 </div>
               </section>
             ) : null}
-
             {usesProductMediaInformation ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600">
                     <Info className="h-5 w-5" />
                   </div>
-
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-lg font-black text-slate-950">
                       Product Images & Media
                     </h2>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm font-semibold leading-6 text-slate-500">
                       Use shared product media and common details when this
                       product does not need separate variant cards.
                     </p>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
@@ -3508,7 +3106,6 @@ export default function CreateProductPage({
                       onRemove={removeProductMedia}
                     />
                   </div>
-
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">Product Information</label>
                     <VariantProductInformationEditor
@@ -3530,25 +3127,22 @@ export default function CreateProductPage({
                 </div>
               </section>
             ) : null}
-
             {usesProductCompatibilityMapping ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur md:p-5">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                     <ShieldCheck className="h-5 w-5" />
                   </div>
-
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-lg font-black text-slate-950">
                       Compatible Brands & Models
                     </h2>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm font-semibold leading-6 text-slate-500">
                       Select supported brands and models for
                       compatibility-driven products.
                     </p>
                   </div>
                 </div>
-
                 <div className="mb-4">
                   <TopLabelInput
                     label="Compatibility"
@@ -3560,7 +3154,6 @@ export default function CreateProductPage({
                     disabled={submitting}
                   />
                 </div>
-
                 <CompatibilityRowsEditor
                   rows={paginatedCompatibilityRows}
                   brandMap={brandMap}
@@ -3571,8 +3164,7 @@ export default function CreateProductPage({
                 />
               </section>
             ) : null}
-
-            <section className="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <section className="sticky bottom-3 z-20 flex flex-col justify-between gap-3 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-[0_20px_55px_rgba(15,23,42,0.14)] backdrop-blur sm:flex-row sm:items-center">
               <label className="inline-flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -3585,10 +3177,9 @@ export default function CreateProductPage({
                   Product active
                 </span>
               </label>
-
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#00008b] px-6 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={submitting}
               >
                 <Save className="h-4 w-4" />

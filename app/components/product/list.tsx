@@ -1,7 +1,6 @@
 ﻿/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -317,35 +316,47 @@ function buildSearchText(item: ProductItem) {
 function getApprovalBadgeClass(status?: string) {
   const normalized = String(status || "").trim().toUpperCase();
 
-  if (normalized === "APPROVED") return "bg-emerald-50 text-emerald-700";
-  if (normalized === "REJECTED") return "bg-rose-50 text-rose-700";
+  if (normalized === "APPROVED") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
 
-  return "bg-amber-50 text-amber-700";
+  if (normalized === "REJECTED") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-700";
 }
 
 function StatCard({
   title,
   value,
+  caption,
   icon,
   iconWrapClassName,
 }: {
   title: string;
   value: number;
+  caption: string;
   icon: ReactNode;
   iconWrapClassName: string;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
-      <div className="flex items-center justify-between gap-3">
+    <section className="group relative overflow-hidden rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_12px_35px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(15,23,42,0.1)]">
+      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-slate-100 blur-2xl transition group-hover:scale-125" />
+
+      <div className="relative z-10 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-slate-500">{title}</p>
-          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            {title}
+          </p>
+          <h3 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
             {value}
           </h3>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{caption}</p>
         </div>
 
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconWrapClassName}`}
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm ${iconWrapClassName}`}
         >
           {icon}
         </div>
@@ -356,35 +367,35 @@ function StatCard({
 
 function CardGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {Array.from({ length: 8 }).map((_, index) => (
         <div
           key={index}
-          className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="animate-pulse rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="h-7 w-12 rounded-full bg-slate-200" />
+            <div className="h-7 w-16 rounded-full bg-slate-200" />
             <div className="flex gap-2">
-              <div className="h-8 w-8 rounded-xl bg-slate-200" />
-              <div className="h-8 w-8 rounded-xl bg-slate-200" />
-              <div className="h-8 w-8 rounded-xl bg-slate-200" />
+              <div className="h-9 w-9 rounded-xl bg-slate-200" />
+              <div className="h-9 w-9 rounded-xl bg-slate-200" />
+              <div className="h-9 w-9 rounded-xl bg-slate-200" />
             </div>
           </div>
 
           <div className="mt-4 flex items-start gap-3">
-            <div className="h-14 w-14 rounded-xl bg-slate-200" />
+            <div className="h-16 w-16 rounded-2xl bg-slate-200" />
             <div className="flex-1">
-              <div className="h-4 w-32 rounded bg-slate-200" />
+              <div className="h-4 w-36 rounded bg-slate-200" />
+              <div className="mt-2 h-3 w-28 rounded bg-slate-100" />
               <div className="mt-2 h-3 w-24 rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-20 rounded bg-slate-100" />
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-2">
-            {Array.from({ length: 3 }).map((_, itemIndex) => (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {Array.from({ length: 4 }).map((_, itemIndex) => (
               <div
                 key={itemIndex}
-                className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                className="rounded-2xl border border-slate-100 bg-slate-50 p-3"
               >
                 <div className="h-3 w-14 rounded bg-slate-200" />
                 <div className="mt-2 h-4 w-24 rounded bg-slate-100" />
@@ -398,30 +409,18 @@ function CardGridSkeleton() {
 }
 
 function ActionIconButton({
-  href,
   onClick,
   disabled = false,
   label,
   className,
   children,
 }: {
-  href?: string;
   onClick?: () => void;
   disabled?: boolean;
   label: string;
   className: string;
   children: ReactNode;
 }) {
-  const sharedClassName = `inline-flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`;
-
-  if (href) {
-    return (
-      <Link href={href} aria-label={label} title={label} className={sharedClassName}>
-        {children}
-      </Link>
-    );
-  }
-
   return (
     <button
       type="button"
@@ -429,7 +428,7 @@ function ActionIconButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={sharedClassName}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     >
       {children}
     </button>
@@ -464,9 +463,11 @@ function ProductCard({
   const sharedMedia = hasSharedMedia(item);
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+    <article className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_35px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1 hover:border-[#00008b]/20 hover:shadow-[0_20px_55px_rgba(15,23,42,0.12)]">
+      <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-[#00008b]/5 blur-2xl transition duration-300 group-hover:scale-125" />
+
+      <div className="relative z-10 flex items-start justify-between gap-3">
+        <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">
           #{startIndex + index + 1}
         </div>
 
@@ -511,12 +512,16 @@ function ProductCard({
         </div>
       </div>
 
-      <div className="mt-4 flex items-start gap-3">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+      <div className="relative z-10 mt-4 flex items-start gap-3">
+        <div className="flex h-17 w-17 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner">
           {previewImage ? (
-            <img src={previewImage} alt={item.itemName} className="h-full w-full object-cover" />
+            <img
+              src={previewImage}
+              alt={item.itemName}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
           ) : (
-            <ImageIcon className="h-5 w-5 text-slate-400" />
+            <ImageIcon className="h-6 w-6 text-slate-400" />
           )}
         </div>
 
@@ -525,16 +530,20 @@ function ProductCard({
             <span
               className={
                 active
-                  ? "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
-                  : "inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
+                  ? "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700"
+                  : "inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-700"
               }
             >
-              {active ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+              {active ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <XCircle className="h-3 w-3" />
+              )}
               {active ? "Active" : "Inactive"}
             </span>
 
             <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getApprovalBadgeClass(
+              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black ${getApprovalBadgeClass(
                 item.approvalStatus
               )}`}
             >
@@ -542,70 +551,68 @@ function ProductCard({
             </span>
           </div>
 
-          <h3 className="mt-2 line-clamp-1 text-base font-bold tracking-tight text-slate-900">
+          <h3 className="mt-2 line-clamp-1 text-base font-black tracking-tight text-slate-950">
             {item.itemName}
           </h3>
 
-          <p className="mt-1 text-xs font-medium text-slate-500">
-            SKU No: {item.sku || "-"}
+          <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">
+            SKU No: <span className="text-slate-700">{item.sku || "-"}</span>
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-2">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Brand
-            </p>
-            <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-slate-800">
-              {getBrandName(item)}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Model
-            </p>
-            <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-              <Cpu className="h-3.5 w-3.5 text-slate-400" />
-              <span className="truncate">{getModelName(item)}</span>
-            </p>
-          </div>
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            Brand
+          </p>
+          <p className="mt-1.5 line-clamp-1 text-xs font-bold text-slate-800">
+            {getBrandName(item)}
+          </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            Model
+          </p>
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-800">
+            <Cpu className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <span className="truncate">{getModelName(item)}</span>
+          </p>
+        </div>
+
+        <div className="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             Configuration
           </p>
-          <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-800">
+          <p className="mt-1.5 line-clamp-2 text-xs font-bold leading-5 text-slate-800">
             {getConfigurationLabel(item)}
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        <div className="col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             Updated
           </p>
-          <p className="mt-1.5 text-xs font-semibold text-slate-800">
+          <p className="mt-1.5 text-xs font-bold text-slate-800">
             {formatDate(item.updatedAt || item.createdAt)}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-          <Layers3 className="h-3.5 w-3.5" />
+      <div className="relative z-10 mt-4 flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700">
+          <Layers3 className="h-3.5 w-3.5 text-indigo-600" />
           Variant {variantRows}
         </span>
 
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-          <ShieldCheck className="h-3.5 w-3.5" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           Compatible {compatibleRows}
         </span>
 
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-          <ImageIcon className="h-3.5 w-3.5" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700">
+          <ImageIcon className="h-3.5 w-3.5 text-sky-600" />
           Media {sharedMedia ? "Yes" : "No"}
         </span>
       </div>
@@ -635,11 +642,11 @@ function PaginationFooter({
     totalEntries === 0 ? 0 : Math.min(startIndex + itemsPerPage, totalEntries);
 
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm font-medium text-slate-600">
-        Showing <span className="font-bold text-slate-900">{showingFrom}</span>{" "}
-        to <span className="font-bold text-slate-900">{showingTo}</span> of{" "}
-        <span className="font-bold text-slate-900">{totalEntries}</span> entries
+    <div className="mt-5 flex flex-col gap-3 rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_12px_35px_rgba(15,23,42,0.06)] sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm font-semibold text-slate-600">
+        Showing <span className="font-black text-slate-950">{showingFrom}</span>{" "}
+        to <span className="font-black text-slate-950">{showingTo}</span> of{" "}
+        <span className="font-black text-slate-950">{totalEntries}</span> entries
       </p>
 
       <div className="flex items-center gap-2">
@@ -647,12 +654,12 @@ function PaginationFooter({
           type="button"
           onClick={onPrevious}
           disabled={currentPage === 1 || totalEntries === 0}
-          className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
 
-        <div className="inline-flex h-9 min-w-16 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">
+        <div className="inline-flex h-10 min-w-20 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700">
           {totalEntries === 0 ? 0 : currentPage} / {totalPages || 1}
         </div>
 
@@ -660,7 +667,7 @@ function PaginationFooter({
           type="button"
           onClick={onNext}
           disabled={currentPage === totalPages || totalEntries === 0}
-          className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>
@@ -685,14 +692,14 @@ function ProductFormModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm">
-      <div className="my-4 w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+    <div className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm">
+      <div className="my-4 w-full max-w-375 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-base font-black text-slate-950">
               {mode === "edit" ? "Edit Product" : "Create Product"}
             </h2>
-            <p className="text-xs font-medium text-slate-500">
+            <p className="text-xs font-semibold text-slate-500">
               Complete product details inside this popup.
             </p>
           </div>
@@ -700,7 +707,7 @@ function ProductFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
             aria-label="Close product form"
             title="Close"
           >
@@ -918,182 +925,209 @@ export default function ProductListPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm md:px-5 md:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#00008b]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Product Management
-              </span>
+      <div className="page-shell">
+        <div className="admin-list-frame">
+          <section className="admin-list-hero">
+            <div className="admin-list-hero-body">
+              <div className="admin-list-hero-row">
+                <div>
+                  <span className="admin-list-kicker">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Product Management
+                  </span>
 
-              <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
-                Products
-              </h1>
+                  <h1 className="admin-list-title mt-3">Products</h1>
 
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-                View, search, activate, deactivate, and delete product records.
-              </p>
-            </div>
+                  <p className="admin-list-description max-w-3xl font-semibold">
+                    View, search, create, edit, activate, deactivate, and
+                    delete global product records.
+                  </p>
+                </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => void fetchProducts(false)}
-                disabled={refreshing}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                Refresh
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setProductModal({ mode: "create", productId: "" })}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#000070] hover:shadow-md"
-              >
-                <Plus className="h-4 w-4" />
-                Create Product
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            title="Total Products"
-            value={stats.total}
-            icon={<Package2 className="h-5 w-5" />}
-            iconWrapClassName="bg-[#00008b]/10 text-[#00008b]"
-          />
-
-          <StatCard
-            title="Active"
-            value={stats.active}
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            iconWrapClassName="bg-emerald-100 text-emerald-700"
-          />
-
-          <StatCard
-            title="With Variants"
-            value={stats.variants}
-            icon={<Boxes className="h-5 w-5" />}
-            iconWrapClassName="bg-indigo-100 text-indigo-700"
-          />
-
-          <StatCard
-            title="With Media"
-            value={stats.media}
-            icon={<ImageIcon className="h-5 w-5" />}
-            iconWrapClassName="bg-sky-100 text-sky-700"
-          />
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b] text-white shadow-sm">
-                <Package2 className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-base font-bold tracking-tight text-slate-900">
-                  Product Directory
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Search by product, SKU, brand, model, configuration, variant, or product info.
-                </p>
-              </div>
-            </div>
-
-            <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search products..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section>
-          {loading ? (
-            <CardGridSkeleton />
-          ) : filteredItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <Search className="h-8 w-8" />
-              </div>
-
-              <h3 className="mt-4 text-lg font-bold text-slate-900">
-                No products found
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                {search.trim()
-                  ? "Try adjusting your search keyword."
-                  : "Start by creating your first product."}
-              </p>
-
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                {search.trim() ? (
+                <div className="admin-list-actions">
                   <button
                     type="button"
-                    onClick={() => setSearch("")}
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                    onClick={() => void fetchProducts(false)}
+                    disabled={refreshing}
+                    className="admin-list-refresh-btn"
                   >
-                    Clear Search
+                    <RefreshCw
+                      className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                    />
+                    Refresh
                   </button>
-                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => setProductModal({ mode: "create", productId: "" })}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white transition hover:bg-[#000070]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Product
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProductModal({ mode: "create", productId: "" })
+                    }
+                    className="admin-list-primary-btn"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Product
+                  </button>
+                </div>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {paginatedItems.map((item, index) => (
-                  <ProductCard
-                    key={item._id}
-                    item={item}
-                    index={index}
-                    startIndex={startIndex}
-                    deletingId={deletingId}
-                    togglingId={togglingId}
-                    onEdit={(product) =>
-                      setProductModal({ mode: "edit", productId: product._id })
-                    }
-                    onToggleStatus={handleToggleStatus}
-                    onDelete={handleDelete}
-                  />
-                ))}
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Total Products"
+              value={stats.total}
+              caption="All product records"
+              icon={<Package2 className="h-5 w-5" />}
+              iconWrapClassName="bg-[#00008b]/10 text-[#00008b]"
+            />
+
+            <StatCard
+              title="Active"
+              value={stats.active}
+              caption="Currently enabled"
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              iconWrapClassName="bg-emerald-100 text-emerald-700"
+            />
+
+            <StatCard
+              title="With Variants"
+              value={stats.variants}
+              caption="Variant configured"
+              icon={<Boxes className="h-5 w-5" />}
+              iconWrapClassName="bg-indigo-100 text-indigo-700"
+            />
+
+            <StatCard
+              title="With Media"
+              value={stats.media}
+              caption="Images or info added"
+              icon={<ImageIcon className="h-5 w-5" />}
+              iconWrapClassName="bg-sky-100 text-sky-700"
+            />
+          </section>
+
+          <section className="admin-list-card">
+            <div className="admin-list-card-header">
+              <div className="admin-list-card-row">
+                <div className="flex items-start gap-3">
+                  <div className="admin-list-dir-icon">
+                    <Package2 className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-black tracking-tight text-slate-950">
+                      Product Directory
+                    </h2>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-500">
+                      Search by product, SKU, brand, model, configuration,
+                      variant, or product info.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <PaginationFooter
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalEntries={totalEntries}
-                startIndex={startIndex}
-                itemsPerPage={ITEMS_PER_PAGE}
-                onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              />
-            </>
-          )}
-        </section>
-      </div>
+              <div className="admin-list-search-row">
+                <div className="admin-list-search-wrap lg:max-w-lg">
+                  <Search className="admin-list-search-icon" />
+
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search products..."
+                    className="admin-list-search-input"
+                  />
+                </div>
+
+                <div className="admin-list-total-pill">
+                  Total: {filteredItems.length}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 md:p-6">
+              {loading ? (
+                <CardGridSkeleton />
+              ) : filteredItems.length === 0 ? (
+                <div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <Search className="h-8 w-8" />
+                  </div>
+
+                  <h3 className="mt-4 text-lg font-black text-slate-950">
+                    No products found
+                  </h3>
+
+                  <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-500">
+                    {search.trim()
+                      ? "Try adjusting your search keyword."
+                      : "Start by creating your first product."}
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    {search.trim() ? (
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                      >
+                        Clear Search
+                      </button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProductModal({ mode: "create", productId: "" })
+                      }
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-black text-white transition hover:bg-[#000070]"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Product
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {paginatedItems.map((item, index) => (
+                      <ProductCard
+                        key={item._id}
+                        item={item}
+                        index={index}
+                        startIndex={startIndex}
+                        deletingId={deletingId}
+                        togglingId={togglingId}
+                        onEdit={(product) =>
+                          setProductModal({
+                            mode: "edit",
+                            productId: product._id,
+                          })
+                        }
+                        onToggleStatus={handleToggleStatus}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+
+                  <PaginationFooter
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalEntries={totalEntries}
+                    startIndex={startIndex}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPrevious={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    onNext={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                  />
+                </>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
 
       <ProductFormModal

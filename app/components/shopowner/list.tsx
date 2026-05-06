@@ -11,10 +11,11 @@ import {
   MailCheck,
   MailX,
   Pencil,
+  RefreshCw,
   Search,
   ShieldCheck,
-  Sparkles,
   Trash2,
+  UserPlus,
 } from "lucide-react";
 
 import SummaryApi, { baseURL } from "@/constants/SummaryApi";
@@ -89,9 +90,7 @@ function getPanelBasePath(role: AppRole) {
 function getAvatarSrc(item: ShopOwnerListItem) {
   const uploadedAvatar = String(item.avatarUrl || "").trim();
 
-  if (uploadedAvatar) {
-    return uploadedAvatar;
-  }
+  if (uploadedAvatar) return uploadedAvatar;
 
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
     item.name || "Shop Owner"
@@ -123,7 +122,7 @@ function getProfileMetrics(item: ShopOwnerListItem) {
 
   const trackedSections = [
     hasTextValue(item.name),
-    hasTextValue(item.mobile),
+    hasTextValue(item.mobile || item.additionalNumber),
     item.verifyEmail === true,
     addressComplete,
     documentsComplete,
@@ -341,118 +340,89 @@ export default function ShopOwnerListPage() {
     });
   }, [data, search]);
 
-  const totalCount = data.length;
-  const verifiedEmailCount = data.filter((item) => item.verifyEmail).length;
-  const activeCount = data.filter((item) => item.isActive).length;
-
-  const averageProfileCompletion = useMemo(() => {
-    if (data.length === 0) return 0;
-
-    const totalProgress = data.reduce(
-      (sum, item) => sum + getProfileMetrics(item).percent,
-      0
-    );
-
-    return Math.round(totalProgress / data.length);
-  }, [data]);
-
   return (
     <div className="page-shell">
-      <div className="mx-auto w-full max-w-9xl space-y-5">
-        <section className="premium-hero premium-glow relative overflow-hidden rounded-4xl px-5 py-5 md:px-7 md:py-7">
-          <div className="premium-grid-bg premium-bg-animate opacity-40" />
-          <div className="premium-bg-overlay" />
+      <div className="mx-auto w-full max-w-9xl">
+        <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5 md:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 space-y-3">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#00008b]/5 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#00008b]">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Shop Owner Management
+                </span>
 
-          <div className="relative z-10 grid gap-6 md:grid-cols-[1.4fr_1fr]">
-            <div className="space-y-3">
-              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/95">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Shop Owner Management
-              </span>
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 md:text-3xl">
+                    Shop Owner List
+                  </h1>
 
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-                  Shop Owner List
-                </h1>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    Review shop owners, email verification, profile completion,
+                    active status, and direct actions.
+                  </p>
+                </div>
+              </div>
 
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/80 md:text-base">
-                  Review all shop owners with quick visibility into email
-                  verification, active status, and direct actions.
-                </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => void fetchShopOwners()}
+                  disabled={loading}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-[#00008b] shadow-sm transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </button>
+
+                <Link
+                  href={`${panelBasePath}/create`}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white shadow-[0_12px_25px_rgba(0,0,139,0.22)] transition hover:bg-[#00006f]"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add Shop Owner
+                </Link>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
-                <p className="text-xs text-white/70">Total</p>
-                <p className="mt-2 text-2xl font-bold text-white">{totalCount}</p>
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="text"
+                  placeholder="Search by shop owner name, mobile, username, email, or address"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b]/40 focus:ring-4 focus:ring-[#00008b]/10"
+                />
               </div>
 
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
-                <p className="text-xs text-white/70">Email Verified</p>
-                <p className="mt-2 text-2xl font-bold text-white">
-                  {verifiedEmailCount}
-                </p>
+              <div className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-50 px-4 text-sm font-bold text-slate-700">
+                Total:
+                <span className="ml-1 text-[#00008b]">
+                  {filteredData.length}
+                </span>
               </div>
-
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
-                <p className="text-xs text-white/70">Active</p>
-                <p className="mt-2 text-2xl font-bold text-white">{activeCount}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
-                <p className="text-xs text-white/70">Avg Profile</p>
-                <p className="mt-2 text-2xl font-bold text-white">
-                  {averageProfileCompletion}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="premium-card-solid rounded-card p-4 md:p-5">
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                <Sparkles className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Directory</h2>
-
-                <p className="text-sm text-slate-500">
-                  Search by shop owner name, mobile, username, email, or address.
-                </p>
-              </div>
-            </div>
-
-            <div className="relative w-full lg:max-w-sm">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-              <input
-                type="text"
-                placeholder="Search shop owner..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="premium-input pl-11"
-              />
             </div>
           </div>
 
           {loading ? (
-            <div className="flex min-h-80 items-center justify-center">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-600">
+            <div className="flex min-h-70 items-center justify-center">
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading shop owner records...
               </div>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="flex min-h-80 flex-col items-center justify-center px-6 text-center">
+            <div className="flex min-h-70 flex-col items-center justify-center px-6 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                 <CircleOff className="h-8 w-8 text-slate-400" />
               </div>
 
-              <h3 className="text-lg font-semibold text-slate-900">
+              <h3 className="text-lg font-bold text-slate-900">
                 No shop owners found
               </h3>
 
@@ -461,214 +431,204 @@ export default function ShopOwnerListPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr className="border-b border-slate-200 text-left text-slate-600">
-                      <th className="px-5 py-4 font-semibold">S.No</th>
-                      <th className="px-5 py-4 font-semibold">Avatar</th>
-                      <th className="px-5 py-4 font-semibold">
-                        Shop Owner Name
-                      </th>
-                      <th className="px-5 py-4 font-semibold">Mobile Number</th>
-                      <th className="px-5 py-4 font-semibold">Username</th>
-                      <th className="px-5 py-4 font-semibold">Email ID</th>
-                      <th className="px-5 py-4 font-semibold">Email Status</th>
-                      <th className="px-5 py-4 font-semibold">
-                        Profile Progress
-                      </th>
-                      <th className="px-5 py-4 font-semibold">Status</th>
-                      <th className="px-5 py-4 text-right font-semibold">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
+            <div className="overflow-x-auto">
+              <table className="min-w-330 w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr className="border-b border-slate-200 text-left text-xs font-bold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">S.No</th>
+                    <th className="px-4 py-3">Avatar</th>
+                    <th className="px-4 py-3">Shop Owner Name</th>
+                    <th className="px-4 py-3">Mobile Number</th>
+                    <th className="px-4 py-3">Username</th>
+                    <th className="px-4 py-3">Email ID</th>
+                    <th className="px-4 py-3">Email Status</th>
+                    <th className="px-4 py-3">Profile Progress</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
 
-                  <tbody className="bg-white">
-                    {filteredData.map((item, index) => {
-                      const isBusy = actionLoading === item._id;
-                      const isActive = item.isActive ?? false;
-                      const isEmailVerified = item.verifyEmail ?? false;
-                      const profileMetrics = getProfileMetrics(item);
-                      const progressTone = getProfileProgressTone(
-                        profileMetrics.percent
-                      );
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredData.map((item, index) => {
+                    const isBusy = actionLoading === item._id;
+                    const isActive = item.isActive ?? false;
+                    const isEmailVerified = item.verifyEmail ?? false;
+                    const profileMetrics = getProfileMetrics(item);
+                    const progressTone = getProfileProgressTone(
+                      profileMetrics.percent
+                    );
 
-                      return (
-                        <tr
-                          key={item._id}
-                          className="border-b border-slate-100 last:border-b-0"
-                        >
-                          <td className="px-5 py-4 font-medium text-slate-700">
-                            {index + 1}
-                          </td>
+                    return (
+                      <tr
+                        key={item._id}
+                        className="transition hover:bg-slate-50/70"
+                      >
+                        <td className="px-4 py-4 font-semibold text-slate-700">
+                          {index + 1}
+                        </td>
 
-                          <td className="px-5 py-4">
-                            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                              <Image
-                                src={getAvatarSrc(item)}
-                                alt={item.name || "Shop Owner Avatar"}
-                                fill
-                                sizes="44px"
-                                className="object-cover"
-                                unoptimized
-                              />
-                            </div>
-                          </td>
+                        <td className="px-4 py-4">
+                          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                            <Image
+                              src={getAvatarSrc(item)}
+                              alt={item.name || "Shop Owner Avatar"}
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </td>
 
-                          <td className="px-5 py-4">
-                            <p className="min-w-[180px] wrap-break-word font-semibold text-slate-900">
-                              {item.name || "-"}
-                            </p>
-                          </td>
+                        <td className="px-4 py-4">
+                          <p className="min-w-40 font-bold text-slate-900">
+                            {item.name || "-"}
+                          </p>
+                        </td>
 
-                          <td className="px-5 py-4 text-slate-700">
-                            {getMobileNumber(item)}
-                          </td>
+                        <td className="px-4 py-4 font-medium text-slate-700">
+                          {getMobileNumber(item)}
+                        </td>
 
-                          <td className="px-5 py-4 text-slate-700">
-                            {item.username || "-"}
-                          </td>
+                        <td className="px-4 py-4 font-medium text-slate-700">
+                          {item.username || "-"}
+                        </td>
 
-                          <td className="px-5 py-4 text-slate-700">
-                            <span className="block min-w-[220px] break-all">
-                              {item.email || "-"}
-                            </span>
-                          </td>
+                        <td className="px-4 py-4 font-medium text-slate-700">
+                          <span className="block min-w-55 break-all">
+                            {item.email || "-"}
+                          </span>
+                        </td>
 
-                          <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-                                isEmailVerified
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                  : "border-amber-200 bg-amber-50 text-amber-700"
-                              }`}
-                            >
-                              {isEmailVerified ? (
-                                <MailCheck className="h-3.5 w-3.5" />
-                              ) : (
-                                <MailX className="h-3.5 w-3.5" />
-                              )}
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${
+                              isEmailVerified
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-amber-200 bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {isEmailVerified ? (
+                              <MailCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <MailX className="h-3.5 w-3.5" />
+                            )}
 
-                              {isEmailVerified ? "Verified" : "Pending"}
-                            </span>
-                          </td>
+                            {isEmailVerified ? "Verified" : "Pending"}
+                          </span>
+                        </td>
 
-                          <td className="px-5 py-4">
-                            <div className="min-w-[220px] space-y-2">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-semibold text-slate-900">
-                                  {profileMetrics.percent}%
-                                </span>
+                        <td className="px-4 py-4">
+                          <div className="min-w-52.5 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-extrabold text-slate-900">
+                                {profileMetrics.percent}%
+                              </span>
 
-                                <span className="text-xs text-slate-500">
-                                  {profileMetrics.filledCount}/
-                                  {profileMetrics.totalCount} sections complete
-                                </span>
-                              </div>
-
-                              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                  className={`h-full rounded-full transition-all ${progressTone}`}
-                                  style={{
-                                    width: `${profileMetrics.percent}%`,
-                                  }}
-                                />
-                              </div>
-
-                              <p className="text-xs text-slate-500">
-                                {profileMetrics.emptyCount === 0
-                                  ? "All tracked profile sections are complete."
-                                  : `${profileMetrics.emptyCount} section${
-                                      profileMetrics.emptyCount === 1 ? "" : "s"
-                                    } still incomplete.`}
-                              </p>
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="flex min-w-[165px] items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => handleToggleStatus(item)}
-                                disabled={isBusy}
-                                aria-label={
-                                  isActive
-                                    ? "Deactivate shop owner"
-                                    : "Activate shop owner"
-                                }
-                                title={
-                                  isActive
-                                    ? "Click to deactivate"
-                                    : "Click to activate"
-                                }
-                                className={`relative inline-flex h-8 w-16 shrink-0 items-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                  isActive
-                                    ? "border-emerald-300 bg-emerald-500 shadow-[0_8px_18px_rgba(16,185,129,0.25)]"
-                                    : "border-slate-300 bg-slate-300"
-                                }`}
-                              >
-                                <span
-                                  className={`inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-md transition-transform duration-300 ${
-                                    isActive
-                                      ? "translate-x-9"
-                                      : "translate-x-1"
-                                  }`}
-                                >
-                                  {isBusy ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
-                                  ) : null}
-                                </span>
-                              </button>
-
-                              <span
-                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
-                                  isActive
-                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                    : "border-slate-200 bg-slate-100 text-slate-600"
-                                }`}
-                              >
-                                {isActive ? "Active" : "Inactive"}
+                              <span className="text-xs font-semibold text-slate-500">
+                                {profileMetrics.filledCount}/
+                                {profileMetrics.totalCount} complete
                               </span>
                             </div>
-                          </td>
 
-                          <td className="px-5 py-4">
-                            <div className="flex items-center justify-end gap-2">
-                              <Link
-                                href={`${panelBasePath}/view?id=${item._id}`}
-                                title="View"
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-700 transition hover:bg-slate-50"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Link>
-
-                              <Link
-                                href={`${panelBasePath}/edit/${item._id}`}
-                                title="Edit"
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-700 transition hover:bg-slate-50"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Link>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(item)}
-                                disabled={isBusy}
-                                title="Delete"
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className={`h-full rounded-full transition-all ${progressTone}`}
+                                style={{
+                                  width: `${profileMetrics.percent}%`,
+                                }}
+                              />
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+
+                            <p className="text-xs font-medium text-slate-500">
+                              {profileMetrics.emptyCount === 0
+                                ? "All sections complete"
+                                : `${profileMetrics.emptyCount} section${
+                                    profileMetrics.emptyCount === 1 ? "" : "s"
+                                  } incomplete`}
+                            </p>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="flex min-w-36.25 items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(item)}
+                              disabled={isBusy}
+                              aria-label={
+                                isActive
+                                  ? "Deactivate shop owner"
+                                  : "Activate shop owner"
+                              }
+                              title={
+                                isActive
+                                  ? "Click to deactivate"
+                                  : "Click to activate"
+                              }
+                              className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                isActive
+                                  ? "border-emerald-300 bg-emerald-500 shadow-[0_8px_18px_rgba(16,185,129,0.22)]"
+                                  : "border-slate-300 bg-slate-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-md transition-transform duration-300 ${
+                                  isActive ? "translate-x-8" : "translate-x-1"
+                                }`}
+                              >
+                                {isBusy ? (
+                                  <Loader2 className="h-3 w-3 animate-spin text-slate-500" />
+                                ) : null}
+                              </span>
+                            </button>
+
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${
+                                isActive
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-slate-200 bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`${panelBasePath}/view?id=${item._id}`}
+                              title="View"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Link>
+
+                            <Link
+                              href={`${panelBasePath}/edit/${item._id}`}
+                              title="Edit"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 hover:text-[#00008b]"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              disabled={isBusy}
+                              title="Delete"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

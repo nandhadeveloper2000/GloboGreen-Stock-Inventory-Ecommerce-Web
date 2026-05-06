@@ -2,9 +2,6 @@
 
 /* =========================================================
    TAILWIND V4 COLOR TOKENS
-   Now these classes work:
-   bg-primary, bg-secondary, text-primary, border-primary,
-   bg-primary-soft, text-secondary-text, bg-page, etc.
 ========================================================= */
 @theme inline {
   --color-primary: var(--primary);
@@ -57,7 +54,6 @@
    ROOT VARIABLES
 ========================================================= */
 :root {
-  /* Brand */
   --primary: #00008b;
   --primary-dark: #000070;
   --primary-light: #e8edff;
@@ -69,7 +65,6 @@
   --accent-light: #dcfce7;
   --accent-soft: #f0fdf4;
 
-  /* Gradients */
   --gradient-primary: linear-gradient(135deg, #00008b 0%, #16a34a 100%);
   --gradient-hero: linear-gradient(
     135deg,
@@ -89,7 +84,6 @@
     rgba(22, 163, 74, 0.22)
   );
 
-  /* Base */
   --white: #ffffff;
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -103,14 +97,12 @@
   --divider: #e2e8f0;
   --input: #e2e8f0;
 
-  /* Text */
   --heading: #0f172a;
   --primary-text: var(--text);
   --secondary-text: #64748b;
   --muted-text: #64748b;
   --label-text: #64748b;
 
-  /* Status */
   --success: #16a34a;
   --success-light: #dcfce7;
   --success-dark: #15803d;
@@ -122,19 +114,16 @@
   --warning: #f59e0b;
   --warning-soft: #fff7ed;
 
-  /* Hero */
   --hero-dark: #000070;
   --hero-purple: #00008b;
   --hero-pink: #16a34a;
   --header-bg: #000070;
 
-  /* Badges */
   --active-bg: #f0fdf4;
   --active-text: #15803d;
   --inactive-bg: #fef2f2;
   --inactive-text: #991b1b;
 
-  /* Support */
   --teal: #14b8a6;
   --cyan: #06b6d4;
   --blue: #2563eb;
@@ -144,7 +133,6 @@
   --pink-dark: #db2777;
   --red-dark: #dc2626;
 
-  /* Shadcn compatible tokens */
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
@@ -161,14 +149,12 @@
 
   --ring: #00008b;
 
-  /* Chart */
   --chart-1: #00008b;
   --chart-2: #16a34a;
   --chart-3: #93c5fd;
   --chart-4: #86efac;
   --chart-5: #64748b;
 
-  /* Sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
   --sidebar-primary: #00008b;
@@ -244,6 +230,101 @@ textarea {
     background: var(--page-bg);
   }
 
+  .admin-list-frame {
+    @apply mx-auto w-full max-w-400 space-y-5;
+  }
+
+  .admin-list-hero {
+    @apply overflow-hidden border border-slate-200 bg-white;
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  }
+
+  .admin-list-hero-body {
+    @apply border-b border-slate-100 px-4 py-4 sm:px-5 md:px-6;
+  }
+
+  .admin-list-hero-row {
+    @apply flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between;
+  }
+
+  .admin-list-kicker {
+    @apply inline-flex w-fit items-center gap-2 rounded-full bg-[#00008b]/5 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#00008b];
+  }
+
+  .admin-list-title {
+    @apply text-2xl font-extrabold tracking-tight text-slate-950 md:text-3xl;
+  }
+
+  .admin-list-description {
+    @apply mt-1 text-sm leading-6 text-slate-500;
+  }
+
+  .admin-list-actions {
+    @apply flex flex-col gap-2 sm:flex-row sm:items-center;
+  }
+
+  .admin-list-refresh-btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-[#00008b] shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .admin-list-refresh-btn:hover {
+    border-color: rgba(0, 0, 139, 0.3);
+    background: rgba(0, 0, 139, 0.05);
+  }
+
+  .admin-list-primary-btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white transition;
+    box-shadow: 0 12px 25px rgba(0, 0, 139, 0.22);
+  }
+
+  .admin-list-primary-btn:hover {
+    background: #00006f;
+  }
+
+  .admin-list-card {
+    @apply overflow-hidden border border-slate-200 bg-white;
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  }
+
+  .admin-list-card-header {
+    @apply border-b border-slate-100 px-4 py-4 sm:px-5 md:px-6;
+  }
+
+  .admin-list-card-row {
+    @apply flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between;
+  }
+
+  .admin-list-dir-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b];
+  }
+
+  .admin-list-search-row {
+    @apply mt-4 flex flex-col gap-3 lg:flex-row lg:items-center;
+  }
+
+  .admin-list-search-wrap {
+    @apply relative flex-1 lg:max-w-md;
+  }
+
+  .admin-list-search-icon {
+    @apply pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400;
+  }
+
+  .admin-list-search-input {
+    @apply h-10 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400;
+  }
+
+  .admin-list-search-input:focus {
+    border-color: rgba(0, 0, 139, 0.4);
+    box-shadow: 0 0 0 4px rgba(0, 0, 139, 0.1);
+  }
+
+  .admin-list-total-pill {
+    @apply inline-flex h-10 items-center justify-center rounded-xl bg-slate-50 px-4 text-sm font-bold text-slate-700;
+  }
+
   .page-premium {
     @apply min-h-screen px-4 py-8;
     background:
@@ -289,6 +370,9 @@ textarea {
     border-radius: inherit;
     background: var(--gradient-border);
     -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -419,7 +503,6 @@ textarea {
       0 18px 60px rgba(22, 163, 74, 0.16);
   }
 
-  /* Compact form mode */
   .product-create-form-compact .premium-input,
   .product-create-form-compact .premium-select {
     @apply h-10 rounded-xl px-3.5 text-[13px];

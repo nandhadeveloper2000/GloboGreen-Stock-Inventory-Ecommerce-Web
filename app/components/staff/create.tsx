@@ -272,7 +272,7 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-4 flex items-start gap-2.5">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#00008b]/10 text-[#00008b]">
         {icon}
       </div>
       <div>
@@ -319,7 +319,7 @@ function FloatingInput({
             "peer h-11 w-full rounded-xl border bg-white px-3.5 pt-5 text-sm text-slate-900 outline-none transition shadow-sm placeholder-transparent",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary-soft",
+              : "border-slate-200 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         />
@@ -373,7 +373,7 @@ function FloatingSelect({
             "peer h-11 w-full appearance-none rounded-xl border bg-white px-3.5 pt-5 text-sm text-slate-900 outline-none transition shadow-sm",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary-soft",
+              : "border-slate-200 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         >
@@ -523,7 +523,7 @@ function SearchableSelect({
             "peer flex h-11 w-full items-center justify-between rounded-xl border bg-white px-3.5 pt-5 text-left text-sm text-slate-900 outline-none transition shadow-sm",
             error
               ? "border-rose-300 focus:border-rose-500"
-              : "border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary-soft",
+              : "border-slate-200 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10",
             disabled && "cursor-not-allowed bg-slate-50 text-slate-400"
           )}
         >
@@ -583,7 +583,7 @@ function SearchableSelect({
                       ? "Search or type a new value"
                       : "Search options")
                   }
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary-soft"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-[#00008b] focus:bg-white focus:ring-2 focus:ring-[#00008b]/10"
                 />
               </div>
 
@@ -597,7 +597,7 @@ function SearchableSelect({
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary transition hover:bg-primary-soft"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-[#00008b] transition hover:bg-[#00008b]/10"
                 >
                   <Plus className="h-4 w-4" />
                   Use &quot;{normalizedQuery}&quot;
@@ -616,7 +616,7 @@ function SearchableSelect({
                       className={classNames(
                         "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition",
                         selected
-                          ? "bg-primary-soft font-semibold text-primary"
+                          ? "bg-[#00008b]/10 font-semibold text-[#00008b]"
                           : "text-slate-700 hover:bg-slate-50"
                       )}
                     >
@@ -690,7 +690,7 @@ function UploadPreviewCard({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-3.5 text-sm font-semibold text-white transition hover:bg-primary-dark"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#00008b] px-3.5 text-sm font-semibold text-white transition hover:bg-[#000070]"
           >
             {buttonLabel}
           </button>
@@ -1398,8 +1398,8 @@ export default function CreateStaffPage({
     ? "Single page edit form with basic, address, avatar, and ID proof updates."
     : "Single page create form with basic, address, avatar, and ID proof.";
   const pageShellClass = asModal
-    ? "max-h-[85vh] overflow-y-auto bg-slate-50 px-2.5 py-2.5 sm:px-3"
-    : "page-shell";
+    ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-4 sm:px-4 lg:px-5"
+    : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6";
 
   if (loadingStaff) {
     return (
@@ -1416,24 +1416,28 @@ export default function CreateStaffPage({
 
   return (
     <div className={pageShellClass}>
-      <div className="mx-auto w-full max-w-5xl space-y-3">
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm md:px-5">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
+      <div className="mx-auto w-full max-w-5xl space-y-5">
+        <section className="relative overflow-hidden rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:p-5">
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#00008b]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-44 w-44 rounded-full bg-[#ec0677]/10 blur-3xl" />
+          <div className="relative z-10">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#00008b]/15 bg-[#00008b]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-[#00008b]">
             <Sparkles className="h-3.5 w-3.5" />
             Staff Management
           </span>
 
-          <h1 className="mt-2.5 text-xl font-bold tracking-tight text-slate-900 md:text-2xl">
+          <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
             {pageTitle}
           </h1>
 
-          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
+          <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
             {pageDescription}
           </p>
-        </section>
+                  </div>
+</section>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm md:p-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
             <SectionHeader
               icon={<User2 className="h-5 w-5" />}
               title="Basic Information"
@@ -1487,7 +1491,7 @@ export default function CreateStaffPage({
                   <button
                     type="button"
                     onClick={handleAutoUsername}
-                    className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-dark"
+                    className="inline-flex h-11 items-center justify-center rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white transition hover:bg-[#000070]"
                   >
                     Auto Generate
                   </button>
@@ -1547,7 +1551,7 @@ export default function CreateStaffPage({
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm md:p-4">
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
             <SectionHeader
               icon={<MapPin className="h-5 w-5" />}
               title="Address Details"
@@ -1712,7 +1716,7 @@ export default function CreateStaffPage({
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm md:p-4">
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
             <SectionHeader
               icon={<ImagePlus className="h-5 w-5" />}
               title="Profile & Documents"
@@ -1766,7 +1770,7 @@ export default function CreateStaffPage({
                 <button
                   type="submit"
                   disabled={submitting || isLocationLoading || allowedRoles.length === 0}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-semibold text-white transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (
                     <>

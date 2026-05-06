@@ -2,7 +2,7 @@ import { ROLES } from "@/constants/roles";
 import { normalizeRole } from "@/utils/permissions";
 
 export function getLoginRoute() {
-  return "/login";
+  return "/";
 }
 
 export function getAppBasePathByRole(role?: string | null) {

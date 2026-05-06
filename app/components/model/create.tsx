@@ -2,6 +2,7 @@
 
 import {
   type FormEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -18,6 +19,8 @@ import {
   Save,
   Search,
   Shapes,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -83,9 +86,7 @@ function getErrorMessage(error: unknown): string {
     if (message) return message;
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong";
 }
@@ -110,9 +111,7 @@ function getRoleBasePath(role?: string | null) {
 }
 
 function getApiUrl(apiUrl: string | ((id: string) => string), id: string) {
-  if (typeof apiUrl === "function") {
-    return apiUrl(id);
-  }
+  if (typeof apiUrl === "function") return apiUrl(id);
 
   return `${apiUrl}/${id}`;
 }
@@ -125,7 +124,7 @@ function getBrandIdFromField(
   return brandField._id?.trim() || "";
 }
 
-function CompactTextField({
+function TopLabelInput({
   label,
   value,
   placeholder,
@@ -141,35 +140,31 @@ function CompactTextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
-        {label}
-        {required ? <span className="text-rose-500"> *</span> : null}
-      </span>
-
+    <div className="relative">
       <input
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 pb-1.5 pt-5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
       />
-    </label>
+
+      <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+    </div>
   );
 }
 
-function CompactPreviewField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function PreviewField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5">
-      <p className="mb-1 text-[11px] font-semibold text-slate-500">{label}</p>
-      <p className="truncate text-sm font-semibold text-slate-700">{value}</p>
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-black text-slate-800">{value}</p>
     </div>
   );
 }
@@ -209,8 +204,10 @@ export default function CreateModelPage({
 
   const pageTitle = isEditMode ? "Edit Model" : "Create Model";
   const pageDescription = isEditMode
-    ? "Update model name and assigned brand."
-    : "Create a new model and map it to a brand.";
+    ? "Update model name, assigned brand, and catalog identity."
+    : "Create a new model and map it to an active brand.";
+
+  const submitLabel = isEditMode ? "Update Model" : "Save Model";
 
   const nameKeyPreview = useMemo(() => {
     return String(name || "")
@@ -229,9 +226,42 @@ export default function CreateModelPage({
     if (!query) return brands;
 
     return brands.filter((brand) =>
-      brand.name.toLowerCase().includes(query)
+      String(brand.name || "")
+        .toLowerCase()
+        .includes(query)
     );
   }, [brands, brandSearch]);
+
+  const fetchBrands = useCallback(async () => {
+    try {
+      setBrandsLoading(true);
+
+      const response = await apiClient.get<BrandListResponse>(
+        SummaryApi.brand_list.url,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const result = response.data;
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to load brands");
+      }
+
+      const list = result.data || result.brands || [];
+      const safeList = Array.isArray(list) ? list : [];
+
+      setBrands(safeList.filter((item) => item.isActive !== false));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Unable to load brands");
+      setBrands([]);
+    } finally {
+      setBrandsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -261,49 +291,8 @@ export default function CreateModelPage({
   }, [brandOpen]);
 
   useEffect(() => {
-    let active = true;
-
-    async function fetchBrands() {
-      try {
-        setBrandsLoading(true);
-
-        const response = await apiClient.get<BrandListResponse>(
-          SummaryApi.brand_list.url,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        const result = response.data;
-
-        if (!result?.success) {
-          throw new Error(result?.message || "Failed to load brands");
-        }
-
-        if (!active) return;
-
-        const list = result.data || result.brands || [];
-        setBrands(Array.isArray(list) ? list : []);
-      } catch (error: unknown) {
-        if (!active) return;
-
-        toast.error(getErrorMessage(error) || "Unable to load brands");
-        setBrands([]);
-      } finally {
-        if (active) {
-          setBrandsLoading(false);
-        }
-      }
-    }
-
     void fetchBrands();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [fetchBrands]);
 
   useEffect(() => {
     if (!isEditMode) {
@@ -415,6 +404,11 @@ export default function CreateModelPage({
   function validateForm() {
     const trimmedName = name.trim();
 
+    if (!brandId.trim()) {
+      toast.error("Please select a brand");
+      return false;
+    }
+
     if (!trimmedName) {
       toast.error("Model name is required");
       return false;
@@ -425,11 +419,6 @@ export default function CreateModelPage({
       return false;
     }
 
-    if (!brandId.trim()) {
-      toast.error("Please select a brand");
-      return false;
-    }
-
     return true;
   }
 
@@ -437,6 +426,11 @@ export default function CreateModelPage({
     setBrandId(selectedId);
     setBrandOpen(false);
     setBrandSearch("");
+  }
+
+  async function handleRefreshBrands() {
+    await fetchBrands();
+    toast.success("Brands refreshed");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -515,16 +509,14 @@ export default function CreateModelPage({
       <div
         className={
           isModal
-            ? "bg-slate-50 px-3 py-3"
-            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+            ? "bg-slate-50 px-3 py-4 sm:px-4"
+            : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
         }
       >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 shadow-sm">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-[26px] border border-slate-200 bg-white py-14 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
-            <span className="text-sm font-semibold">
-              Loading model details...
-            </span>
+            <span className="text-sm font-black">Loading model details...</span>
           </div>
         </div>
       </div>
@@ -535,79 +527,84 @@ export default function CreateModelPage({
     <div
       className={
         isModal
-          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4"
-          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-4 sm:px-4 lg:px-5"
+          : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
       }
     >
-      <div className="mx-auto w-full max-w-5xl space-y-3">
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={submitting}
-            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {isModal ? "Close" : "Back to List"}
-          </button>
+      <div className="mx-auto w-full max-w-5xl space-y-5">
+        <section className="relative overflow-hidden rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:p-5">
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#00008b]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-44 w-44 rounded-full bg-[#ec0677]/10 blur-3xl" />
 
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
-              {pageTitle}
-            </h1>
-            <p className="mt-0.5 text-sm text-slate-500">{pageDescription}</p>
+          <div className="relative z-10 flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={submitting}
+              className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isModal ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <ArrowLeft className="h-4 w-4" />
+              )}
+              {isModal ? "Close" : "Back to List"}
+            </button>
+
+            <div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#00008b]/15 bg-[#00008b]/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#00008b]">
+                <Sparkles className="h-3.5 w-3.5" />
+                Catalog Management
+              </span>
+
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+                {pageTitle}
+              </h1>
+
+              <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                {pageDescription}
+              </p>
+            </div>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
-                <BadgePlus className="h-4.5 w-4.5" />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                <BadgePlus className="h-5 w-5" />
               </div>
 
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-slate-950">
+                <h2 className="text-base font-black text-slate-950">
                   Basic Information
                 </h2>
-                <p className="text-xs leading-5 text-slate-500">
-                  Enter model name and select brand.
+                <p className="mt-0.5 text-sm font-semibold leading-6 text-slate-500">
+                  Select a brand and enter model name.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <CompactTextField
-                label="Model Name"
-                value={name}
-                onChange={setName}
-                placeholder="Enter model name"
-                disabled={submitting}
-                required
-              />
-
-              <CompactPreviewField
-                label="Name Key Preview"
-                value={nameKeyPreview || "auto-generated-from-name"}
-              />
-
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div ref={brandDropdownRef} className="relative md:col-span-2">
-                <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
-                  Brand <span className="text-rose-500">*</span>
-                </span>
-
                 <button
                   type="button"
-                  disabled={brandsLoading || brands.length === 0 || submitting}
+                  disabled={brandsLoading || submitting}
                   onClick={() => {
-                    if (brandsLoading || brands.length === 0 || submitting) {
-                      return;
-                    }
-
+                    if (brandsLoading || submitting) return;
                     setBrandOpen((prev) => !prev);
                   }}
-                  className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-800 outline-none transition hover:border-[#00008b] focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                  className={[
+                    "relative flex h-12 w-full items-center justify-between gap-3 rounded-2xl border bg-white px-4 pb-1.5 pt-5 text-left text-sm font-semibold outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
+                    brandOpen
+                      ? "border-[#00008b] ring-4 ring-[#00008b]/10"
+                      : "border-slate-200 hover:border-[#00008b]",
+                  ].join(" ")}
                 >
+                  <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    Brand <span className="text-rose-500">*</span>
+                  </label>
+
                   <span className="flex min-w-0 items-center gap-2">
                     <Shapes className="h-4 w-4 shrink-0 text-slate-400" />
                     <span
@@ -630,11 +627,11 @@ export default function CreateModelPage({
                   />
                 </button>
 
-                {brandOpen && !brandsLoading && brands.length > 0 ? (
-                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    <div className="border-b border-slate-200 p-3">
-                      <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3">
-                        <Search className="mr-2 h-4 w-4 text-slate-400" />
+                {brandOpen && !brandsLoading ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+                    <div className="border-b border-slate-100 p-3">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <input
                           ref={brandSearchInputRef}
                           type="text"
@@ -642,18 +639,14 @@ export default function CreateModelPage({
                           onChange={(event) =>
                             setBrandSearch(event.target.value)
                           }
-                          placeholder="Search brand"
-                          className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                          placeholder="Search brand..."
+                          className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:bg-white focus:ring-4 focus:ring-[#00008b]/10"
                         />
                       </div>
                     </div>
 
-                    <div className="max-h-56 overflow-y-auto p-2">
-                      {filteredBrands.length === 0 ? (
-                        <div className="px-3 py-3 text-sm text-slate-400">
-                          No brands found
-                        </div>
-                      ) : (
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {filteredBrands.length > 0 ? (
                         filteredBrands.map((brand) => {
                           const isSelected = brandId === brand._id;
 
@@ -662,73 +655,59 @@ export default function CreateModelPage({
                               key={brand._id}
                               type="button"
                               onClick={() => handleSelectBrand(brand._id)}
-                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                              className={[
+                                "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-bold transition",
                                 isSelected
                                   ? "bg-[#00008b]/5 text-[#00008b]"
-                                  : "text-slate-700 hover:bg-slate-50"
-                              }`}
+                                  : "text-slate-700 hover:bg-slate-50",
+                              ].join(" ")}
                             >
-                              <span className="truncate font-semibold">
-                                {brand.name}
-                              </span>
+                              <span className="truncate">{brand.name}</span>
 
                               {isSelected ? (
-                                <Check className="h-4 w-4 shrink-0" />
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00008b] text-white">
+                                  <Check className="h-3.5 w-3.5" />
+                                </span>
                               ) : null}
                             </button>
                           );
                         })
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-400">
+                          No brands found
+                        </div>
                       )}
                     </div>
                   </div>
                 ) : null}
               </div>
+
+              <TopLabelInput
+                label="Model Name"
+                value={name}
+                onChange={setName}
+                placeholder="Enter model name"
+                disabled={submitting}
+                required
+              />
+
+              <PreviewField
+                label="Name Key Preview"
+                value={nameKeyPreview || "auto-generated-from-name"}
+              />
             </div>
           </section>
 
-          <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur-xl">
+          <div className="sticky bottom-3 z-10 rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                onClick={() => {
-                  void (async () => {
-                    setBrandsLoading(true);
-
-                    try {
-                      const response = await apiClient.get<BrandListResponse>(
-                        SummaryApi.brand_list.url,
-                        {
-                          headers: {
-                            Accept: "application/json",
-                          },
-                        }
-                      );
-
-                      const result = response.data;
-
-                      if (!result?.success) {
-                        throw new Error(
-                          result?.message || "Failed to refresh brands"
-                        );
-                      }
-
-                      const list = result.data || result.brands || [];
-                      setBrands(Array.isArray(list) ? list : []);
-                      toast.success("Brands refreshed");
-                    } catch (error: unknown) {
-                      toast.error(getErrorMessage(error));
-                    } finally {
-                      setBrandsLoading(false);
-                    }
-                  })();
-                }}
+                onClick={() => void handleRefreshBrands()}
                 disabled={brandsLoading || submitting}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${
-                    brandsLoading ? "animate-spin" : ""
-                  }`}
+                  className={`h-4 w-4 ${brandsLoading ? "animate-spin" : ""}`}
                 />
                 Refresh Brands
               </button>
@@ -738,7 +717,7 @@ export default function CreateModelPage({
                   type="button"
                   onClick={resetForm}
                   disabled={submitting}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Reset
                 </button>
@@ -747,25 +726,25 @@ export default function CreateModelPage({
                   type="button"
                   onClick={handleClose}
                   disabled={submitting}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  disabled={submitting || brandsLoading || brands.length === 0}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-xs font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={submitting || brandsLoading}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       {isEditMode ? "Updating..." : "Saving..."}
                     </>
                   ) : (
                     <>
-                      <Save className="h-3.5 w-3.5" />
-                      {isEditMode ? "Update Model" : "Save Model"}
+                      <Save className="h-4 w-4" />
+                      {submitLabel}
                     </>
                   )}
                 </button>

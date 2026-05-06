@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -172,10 +171,7 @@ type ProductCompatibilityCreatePageProps = {
 
 const ROWS_PER_PAGE = 5;
 
-function getErrorMessage(
-  error: unknown,
-  fallback = "Something went wrong"
-): string {
+function getErrorMessage(error: unknown, fallback = "Something went wrong") {
   if (
     error &&
     typeof error === "object" &&
@@ -240,7 +236,7 @@ function normalizeCompatibility(
   return null;
 }
 
-function getBrandIdFromModel(item: ModelItem): string {
+function getBrandIdFromModel(item: ModelItem) {
   if (!item.brandId) return "";
   if (typeof item.brandId === "string") return String(item.brandId);
   return String(item.brandId?._id || "");
@@ -254,7 +250,7 @@ function getObjectId(
         name?: string;
       }
     | null
-): string {
+) {
   if (!value) return "";
   if (typeof value === "string") return value;
   return String(value._id || "");
@@ -268,7 +264,7 @@ function getModelIds(
         name?: string;
       }
   >
-): string[] {
+) {
   if (!Array.isArray(values)) return [];
 
   return values
@@ -316,9 +312,7 @@ function SearchableSingleSelect({
     if (!open) return;
 
     function handlePointerDown(event: MouseEvent | TouchEvent) {
-      const target = event.target as Node;
-
-      if (!wrapperRef.current?.contains(target)) {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
         setOpen(false);
         setSearch("");
       }
@@ -354,13 +348,6 @@ function SearchableSingleSelect({
 
   return (
     <div ref={wrapperRef} className="relative">
-      {label ? (
-        <span className="mb-1.5 block text-[11px] font-semibold text-slate-600">
-          {label}
-          {required ? <span className="text-rose-500"> *</span> : null}
-        </span>
-      ) : null}
-
       <button
         type="button"
         disabled={disabled}
@@ -374,8 +361,20 @@ function SearchableSingleSelect({
             return !prev;
           });
         }}
-        className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-800 outline-none transition hover:border-[#00008b] focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+        className={[
+          "relative flex h-12 w-full items-center justify-between gap-3 rounded-2xl border bg-white px-4 pb-1.5 pt-5 text-left text-sm font-semibold outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
+          open
+            ? "border-[#00008b] ring-4 ring-[#00008b]/10"
+            : "border-slate-200 hover:border-[#00008b]",
+        ].join(" ")}
       >
+        {label ? (
+          <span className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+            {label}
+            {required ? <span className="text-rose-500"> *</span> : null}
+          </span>
+        ) : null}
+
         <span
           className={
             selected ? "truncate text-slate-900" : "truncate text-slate-400"
@@ -392,10 +391,10 @@ function SearchableSingleSelect({
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-9999 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-          <div className="border-b border-slate-200 p-3">
-            <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3">
-              <Search className="mr-2 h-4 w-4 text-slate-400" />
+        <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-9999 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+          <div className="border-b border-slate-100 p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
                 ref={inputRef}
@@ -407,13 +406,13 @@ function SearchableSingleSelect({
                     setSearch("");
                   }
                 }}
-                placeholder={`Search ${label?.toLowerCase() || "option"}`}
-                className="h-full w-full border-none bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                placeholder={`Search ${label?.toLowerCase() || "option"}...`}
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:bg-white focus:ring-4 focus:ring-[#00008b]/10"
               />
             </div>
           </div>
 
-          <div className="max-h-56 overflow-y-auto p-2" role="listbox">
+          <div className="max-h-64 overflow-y-auto p-2" role="listbox">
             {filtered.length > 0 ? (
               filtered.map((item) => {
                 const active = item._id === value;
@@ -427,28 +426,33 @@ function SearchableSingleSelect({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                    className={[
+                      "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-bold transition",
                       active
                         ? "bg-[#00008b]/5 text-[#00008b]"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
+                        : "text-slate-700 hover:bg-slate-50",
+                    ].join(" ")}
                   >
                     <div className="min-w-0">
-                      <div className="truncate font-semibold">{item.name}</div>
+                      <div className="truncate">{item.name}</div>
 
                       {item.subtitle ? (
-                        <div className="truncate text-xs text-slate-400">
+                        <div className="truncate text-xs font-semibold text-slate-400">
                           {item.subtitle}
                         </div>
                       ) : null}
                     </div>
 
-                    {active ? <Check className="h-4 w-4 shrink-0" /> : null}
+                    {active ? (
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00008b] text-white">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    ) : null}
                   </button>
                 );
               })
             ) : (
-              <div className="px-4 py-6 text-center text-sm text-slate-400">
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-400">
                 No results found
               </div>
             )}
@@ -468,6 +472,7 @@ function ModelCheckboxSelector({
   allLabel,
 }: ModelCheckboxSelectorProps) {
   const optionIds = options.map((item) => item._id);
+
   const allSelected =
     optionIds.length > 0 && optionIds.every((id) => values.includes(id));
 
@@ -496,12 +501,12 @@ function ModelCheckboxSelector({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3">
       {disabled ? (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm font-semibold text-slate-400">
           {emptyText}
         </div>
       ) : options.length > 0 ? (
         <div className="space-y-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
             <input
               type="checkbox"
               checked={allSelected}
@@ -518,7 +523,7 @@ function ModelCheckboxSelector({
               return (
                 <label
                   key={item._id}
-                  className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition ${
                     checked
                       ? "border-[#00008b] bg-[#00008b] text-white"
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -537,7 +542,7 @@ function ModelCheckboxSelector({
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm font-semibold text-slate-400">
           No models found
         </div>
       )}
@@ -616,7 +621,7 @@ export default function ProductCompatibilityCreatePage({
             Accept: "application/json",
           };
 
-      const requests: Promise<any>[] = [
+      const baseResponses = await Promise.all([
         apiClient.get<SubCategoryListResponse>(SummaryApi.sub_category_list.url, {
           headers,
         }),
@@ -626,33 +631,17 @@ export default function ProductCompatibilityCreatePage({
         apiClient.get<ModelListResponse>(SummaryApi.model_list.url, {
           headers,
         }),
-      ];
+      ]);
 
-      if (isEditMode && compatibilityId) {
-        requests.push(
-          apiClient.get<ProductCompatibilityResponse>(
-            SummaryApi.product_compatibility_get.url(compatibilityId),
-            { headers }
-          )
-        );
-      }
+      const subCategoryList = normalizeSubCategories(
+        baseResponses[0].data
+      ).filter((item) => item.isActive !== false);
 
-      const responses = await Promise.all(requests);
-
-      const subCategoryRes = responses[0];
-      const brandRes = responses[1];
-      const modelRes = responses[2];
-      const compatibilityRes = responses[3];
-
-      const subCategoryList = normalizeSubCategories(subCategoryRes.data).filter(
+      const brandList = normalizeBrands(baseResponses[1].data).filter(
         (item) => item.isActive !== false
       );
 
-      const brandList = normalizeBrands(brandRes.data).filter(
-        (item) => item.isActive !== false
-      );
-
-      const modelList = normalizeModels(modelRes.data).filter(
+      const modelList = normalizeModels(baseResponses[2].data).filter(
         (item) => item.isActive !== false
       );
 
@@ -660,8 +649,16 @@ export default function ProductCompatibilityCreatePage({
       setBrands(brandList);
       setModels(modelList);
 
-      if (isEditMode && compatibilityRes?.data) {
-        const compatibility = normalizeCompatibility(compatibilityRes.data);
+      if (isEditMode && compatibilityId) {
+        const compatibilityResponse =
+          await apiClient.get<ProductCompatibilityResponse>(
+            SummaryApi.product_compatibility_get.url(compatibilityId),
+            { headers }
+          );
+
+        const compatibility = normalizeCompatibility(
+          compatibilityResponse.data
+        );
 
         if (!compatibility?._id) {
           throw new Error("Compatibility details not found");
@@ -676,7 +673,6 @@ export default function ProductCompatibilityCreatePage({
         const compatibleMap = new Map<
           string,
           {
-            brandId: string;
             modelId: string[];
             notes: string;
             isActive: boolean;
@@ -684,11 +680,10 @@ export default function ProductCompatibilityCreatePage({
         >();
 
         (compatibility.compatible || []).forEach((item) => {
-          const brandId = getObjectId(item.brandId);
-          if (!brandId) return;
+          const resolvedBrandId = getObjectId(item.brandId);
+          if (!resolvedBrandId) return;
 
-          compatibleMap.set(brandId, {
-            brandId,
+          compatibleMap.set(resolvedBrandId, {
             modelId: getModelIds(item.modelId),
             notes: item.notes || "",
             isActive: item.isActive !== false,
@@ -709,21 +704,23 @@ export default function ProductCompatibilityCreatePage({
             };
           })
         );
-      } else {
-        setSubCategoryId("");
-        setProductBrandId("");
 
-        setRows(
-          brandList.map((brand) => ({
-            rowId: brand._id,
-            brandId: brand._id,
-            enabled: false,
-            modelId: [],
-            notes: "",
-            isActive: true,
-          }))
-        );
+        return;
       }
+
+      setSubCategoryId("");
+      setProductBrandId("");
+
+      setRows(
+        brandList.map((brand) => ({
+          rowId: brand._id,
+          brandId: brand._id,
+          enabled: false,
+          modelId: [],
+          notes: "",
+          isActive: true,
+        }))
+      );
     } catch (error) {
       toast.error(
         getErrorMessage(
@@ -788,12 +785,12 @@ export default function ProductCompatibilityCreatePage({
     const map = new Map<string, ModelItem[]>();
 
     models.forEach((item) => {
-      const brandId = getBrandIdFromModel(item);
-      if (!brandId) return;
+      const resolvedBrandId = getBrandIdFromModel(item);
+      if (!resolvedBrandId) return;
 
-      const existing = map.get(brandId) || [];
+      const existing = map.get(resolvedBrandId) || [];
       existing.push(item);
-      map.set(brandId, existing);
+      map.set(resolvedBrandId, existing);
     });
 
     return map;
@@ -837,10 +834,12 @@ export default function ProductCompatibilityCreatePage({
   const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
+
   const paginatedRows = filteredRows.slice(
     startIndex,
     startIndex + ROWS_PER_PAGE
   );
+
   const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
   const showingTo = Math.min(startIndex + ROWS_PER_PAGE, totalRows);
 
@@ -973,14 +972,14 @@ export default function ProductCompatibilityCreatePage({
       <div
         className={
           isModal
-            ? "bg-slate-50 px-3 py-3"
-            : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4"
+            ? "bg-slate-50 px-3 py-4 sm:px-4"
+            : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
         }
       >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-center rounded-2xl border border-slate-200 bg-white py-10 shadow-sm">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-center rounded-[26px] border border-slate-200 bg-white py-14 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-black">
               {isEditMode
                 ? "Loading compatibility details..."
                 : "Loading compatibility form..."}
@@ -995,61 +994,70 @@ export default function ProductCompatibilityCreatePage({
     <div
       className={
         isModal
-          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4"
-          : "min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5"
+          ? "max-h-[90vh] overflow-y-auto bg-slate-50 px-3 py-4 sm:px-4 lg:px-5"
+          : "min-h-screen bg-[radial-gradient(circle_at_top_left,#e8ecff_0,#f7f8fc_34%,#f8fafc_100%)] px-3 py-4 sm:px-4 lg:px-6"
       }
     >
-      <div className="mx-auto w-full max-w-6xl space-y-3">
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={loading}
-            className="mb-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {isModal ? "Close" : "Back to List"}
-          </button>
+      <div className="mx-auto w-full max-w-6xl space-y-5">
+        <section className="relative overflow-hidden rounded-card border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:p-5">
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#00008b]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-44 w-44 rounded-full bg-[#ec0677]/10 blur-3xl" />
 
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#00008b]">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Compatibility Management
+          <div className="relative z-10 flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isModal ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <ArrowLeft className="h-4 w-4" />
+              )}
+              {isModal ? "Close" : "Back to List"}
+            </button>
+
+            <div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#00008b]/15 bg-[#00008b]/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#00008b]">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Compatibility Management
+              </span>
+
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+                {isEditMode
+                  ? "Edit Product Compatibility"
+                  : "Create Product Compatibility"}
+              </h1>
+
+              <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
+                Map one sub category and product brand with compatible brands
+                and selected models.
+              </p>
             </div>
-
-            <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
-              {isEditMode
-                ? "Edit Product Compatibility"
-                : "Create Product Compatibility"}
-            </h1>
-
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Map one sub category and product brand with compatible brands and
-              selected models.
-            </p>
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-12">
-          <div className="space-y-3 lg:col-span-8">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
-                  <Shapes className="h-4.5 w-4.5" />
+        <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-8">
+            <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                  <Shapes className="h-5 w-5" />
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold text-slate-950">
+                  <h2 className="text-base font-black text-slate-950">
                     Basic Details
                   </h2>
-                  <p className="text-xs leading-5 text-slate-500">
+                  <p className="text-sm font-semibold leading-6 text-slate-500">
                     Select sub category and product brand before mapping
                     compatibility.
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <SearchableSingleSelect
                   label="Sub Category"
                   required
@@ -1072,18 +1080,18 @@ export default function ProductCompatibilityCreatePage({
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00008b]/10 text-[#00008b]">
-                    <Sparkles className="h-4.5 w-4.5" />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                    <Sparkles className="h-5 w-5" />
                   </div>
 
                   <div>
-                    <h2 className="text-sm font-bold text-slate-950">
+                    <h2 className="text-base font-black text-slate-950">
                       Compatible Brands & Models
                     </h2>
-                    <p className="text-xs leading-5 text-slate-500">
+                    <p className="text-sm font-semibold leading-6 text-slate-500">
                       Enable compatible brands, select models, and add optional
                       notes.
                     </p>
@@ -1091,14 +1099,14 @@ export default function ProductCompatibilityCreatePage({
                 </div>
 
                 <div className="relative w-full lg:max-w-xs">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                   <input
                     type="text"
                     value={brandSearch}
                     onChange={(event) => setBrandSearch(event.target.value)}
-                    placeholder="Search compatible brand"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
+                    placeholder="Search compatible brand..."
+                    className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:bg-white focus:ring-4 focus:ring-[#00008b]/10"
                   />
                 </div>
               </div>
@@ -1120,31 +1128,31 @@ export default function ProductCompatibilityCreatePage({
                     return (
                       <div
                         key={row.rowId}
-                        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                        className="rounded-[22px] border border-slate-200 bg-slate-50 p-3"
                       >
                         <div className="space-y-3">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <label className="inline-flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={row.enabled}
-                                  onChange={(event) =>
-                                    updateRow(row.rowId, {
-                                      enabled: event.target.checked,
-                                    })
-                                  }
-                                  className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
-                                  disabled={loading}
-                                />
+                          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                            <label className="inline-flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={row.enabled}
+                                onChange={(event) =>
+                                  updateRow(row.rowId, {
+                                    enabled: event.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 rounded border-slate-300 text-[#00008b] focus:ring-[#00008b]"
+                                disabled={loading}
+                              />
 
-                                <span className="text-sm font-bold text-slate-900">
-                                  {brandName}
-                                </span>
-                              </label>
+                              <span className="text-sm font-black text-slate-900">
+                                {brandName}
+                              </span>
+                            </label>
 
+                            <div className="flex flex-wrap items-center gap-2">
                               <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${
                                   row.enabled
                                     ? "bg-emerald-100 text-emerald-700"
                                     : "bg-slate-100 text-slate-500"
@@ -1152,24 +1160,24 @@ export default function ProductCompatibilityCreatePage({
                               >
                                 {row.enabled ? "Enabled" : "Disabled"}
                               </span>
-                            </div>
 
-                            {row.enabled ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateRow(row.rowId, {
-                                    modelId: [],
-                                    notes: "",
-                                    enabled: false,
-                                  })
-                                }
-                                className="inline-flex h-8 items-center justify-center gap-2 self-start rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                                Clear
-                              </button>
-                            ) : null}
+                              {row.enabled ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateRow(row.rowId, {
+                                      modelId: [],
+                                      notes: "",
+                                      enabled: false,
+                                    })
+                                  }
+                                  className="inline-flex h-8 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-black text-rose-600 transition hover:bg-rose-100"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Clear
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
 
                           <ModelCheckboxSelector
@@ -1188,7 +1196,7 @@ export default function ProductCompatibilityCreatePage({
                           />
 
                           <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">
+                            <label className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
                               Notes
                             </label>
 
@@ -1202,7 +1210,7 @@ export default function ProductCompatibilityCreatePage({
                               }
                               disabled={!row.enabled || loading}
                               placeholder="Optional notes for this compatible brand"
-                              className="min-h-20 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                              className="min-h-20 w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-2 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                             />
                           </div>
                         </div>
@@ -1211,7 +1219,7 @@ export default function ProductCompatibilityCreatePage({
                   })
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
-                    <p className="text-sm font-medium text-slate-500">
+                    <p className="text-sm font-semibold text-slate-500">
                       No compatible brands found
                     </p>
                   </div>
@@ -1219,19 +1227,15 @@ export default function ProductCompatibilityCreatePage({
               </div>
 
               <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm font-semibold text-slate-600">
                   Showing{" "}
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-black text-slate-950">
                     {showingFrom}
                   </span>{" "}
                   to{" "}
-                  <span className="font-semibold text-slate-900">
-                    {showingTo}
-                  </span>{" "}
+                  <span className="font-black text-slate-950">{showingTo}</span>{" "}
                   of{" "}
-                  <span className="font-semibold text-slate-900">
-                    {totalRows}
-                  </span>{" "}
+                  <span className="font-black text-slate-950">{totalRows}</span>{" "}
                   brands
                 </p>
 
@@ -1242,13 +1246,13 @@ export default function ProductCompatibilityCreatePage({
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
                     disabled={safeCurrentPage === 1 || totalRows === 0}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Prev
                   </button>
 
-                  <span className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                  <span className="inline-flex h-10 min-w-20 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700">
                     {totalRows === 0 ? 0 : safeCurrentPage} / {totalPages}
                   </span>
 
@@ -1259,8 +1263,10 @@ export default function ProductCompatibilityCreatePage({
                         Math.min(totalPages, prev + 1)
                       )
                     }
-                    disabled={safeCurrentPage === totalPages || totalRows === 0}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={
+                      safeCurrentPage === totalPages || totalRows === 0
+                    }
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
@@ -1271,48 +1277,48 @@ export default function ProductCompatibilityCreatePage({
           </div>
 
           <div className="lg:col-span-4">
-            <section className="sticky top-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                  <ShieldCheck className="h-4.5 w-4.5" />
+            <section className="sticky top-4 rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold text-slate-950">
+                  <h2 className="text-base font-black text-slate-950">
                     Selected Summary
                   </h2>
-                  <p className="text-xs leading-5 text-slate-500">
+                  <p className="text-sm font-semibold leading-6 text-slate-500">
                     Review selected mapping before saving.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
                     Sub Category
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <p className="mt-1 text-sm font-black text-slate-900">
                     {subCategoryOptions.find(
                       (item) => item._id === subCategoryId
                     )?.name || "-"}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
                     Product Brand
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <p className="mt-1 text-sm font-black text-slate-900">
                     {brandOptions.find((item) => item._id === productBrandId)
                       ?.name || "-"}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
                     Compatible Brands
                   </p>
 
@@ -1321,13 +1327,13 @@ export default function ProductCompatibilityCreatePage({
                       {selectedSummary.map((item) => (
                         <div
                           key={item.brandId}
-                          className="rounded-xl border border-slate-200 bg-white p-3"
+                          className="rounded-2xl border border-slate-200 bg-white p-3"
                         >
-                          <p className="text-sm font-bold text-slate-900">
+                          <p className="text-sm font-black text-slate-900">
                             {item.brandName}
                           </p>
 
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
                             Models:{" "}
                             {item.models.length
                               ? item.models.join(", ")
@@ -1335,7 +1341,7 @@ export default function ProductCompatibilityCreatePage({
                           </p>
 
                           {item.notes ? (
-                            <p className="mt-1 text-xs text-slate-600">
+                            <p className="mt-1 text-xs font-semibold text-slate-600">
                               Notes: {item.notes}
                             </p>
                           ) : null}
@@ -1343,7 +1349,7 @@ export default function ProductCompatibilityCreatePage({
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm font-semibold text-slate-500">
                       No compatible brands selected yet.
                     </p>
                   )}
@@ -1354,7 +1360,7 @@ export default function ProductCompatibilityCreatePage({
                     <button
                       type="submit"
                       disabled={loading}
-                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {loading ? (
                         <>

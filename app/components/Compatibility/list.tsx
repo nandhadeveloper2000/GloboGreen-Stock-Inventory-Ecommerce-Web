@@ -1,22 +1,18 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   BadgePlus,
-  ChevronLeft,
-  ChevronRight,
+  CheckCircle2,
   Loader2,
   Pencil,
+  Power,
   RefreshCcw,
   Search,
   ShieldCheck,
-  Sparkles,
   Trash2,
   X,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,7 +59,8 @@ type ModalState = {
   id: string;
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_ROWS_PER_PAGE = 10;
 
 function getErrorMessage(error: unknown, fallback = "Something went wrong") {
   if (
@@ -93,21 +90,22 @@ function normalizeCompatibilityList(
   if (Array.isArray(response?.productCompatibilities)) {
     return response.productCompatibilities;
   }
+
   return [];
 }
 
-function getNameFromRef(item?: RefItem | null): string {
+function getNameFromRef(item?: RefItem | null) {
   if (!item) return "";
   if (typeof item === "string") return item.trim();
   return String(item.name || "").trim();
 }
 
-function getDisplayNameFromRef(item?: RefItem | null): string {
+function getDisplayNameFromRef(item?: RefItem | null) {
   const value = getNameFromRef(item);
   return value || "-";
 }
 
-function getSubCategoryDisplayName(item: ProductCompatibilityItem): string {
+function getSubCategoryDisplayName(item: ProductCompatibilityItem) {
   return (
     getDisplayNameFromRef(item.subCategoryId) ||
     getDisplayNameFromRef(item.productTypeId) ||
@@ -115,7 +113,7 @@ function getSubCategoryDisplayName(item: ProductCompatibilityItem): string {
   );
 }
 
-function buildSearchText(item: ProductCompatibilityItem): string {
+function buildSearchText(item: ProductCompatibilityItem) {
   const subCategoryName =
     getNameFromRef(item.subCategoryId) || getNameFromRef(item.productTypeId);
 
@@ -130,6 +128,7 @@ function buildSearchText(item: ProductCompatibilityItem): string {
         .join(" ");
 
       const notes = String(row.notes || "").trim();
+
       return `${brandName} ${models} ${notes}`.trim();
     })
     .join(" ");
@@ -144,6 +143,56 @@ function isValidMongoId(id?: string): id is string {
   return typeof id === "string" && /^[a-f\d]{24}$/i.test(id.trim());
 }
 
+function StatusBadge({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
+      <CheckCircle2 className="h-3.5 w-3.5" />
+      Active
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-black text-rose-700">
+      <XCircle className="h-3.5 w-3.5" />
+      Inactive
+    </span>
+  );
+}
+
+function ActionButton({
+  label,
+  onClick,
+  disabled,
+  variant,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant: "edit" | "delete" | "toggleActive" | "toggleInactive";
+  children: ReactNode;
+}) {
+  const className =
+    variant === "edit"
+      ? "border-[#00008b]/15 bg-[#00008b]/5 text-[#00008b] hover:border-[#00008b]/25 hover:bg-[#00008b]/10"
+      : variant === "delete"
+        ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+        : variant === "toggleActive"
+          ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function ProductCompatibilityListPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -151,6 +200,9 @@ export default function ProductCompatibilityListPage() {
   const [items, setItems] = useState<ProductCompatibilityItem[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(
+    DEFAULT_ROWS_PER_PAGE
+  );
 
   const [modalState, setModalState] = useState<ModalState>({
     open: false,
@@ -203,16 +255,18 @@ export default function ProductCompatibilityListPage() {
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     if (!q) return items;
+
     return items.filter((item) => buildSearchText(item).includes(q));
   }, [items, search]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, rowsPerPage]);
 
   const totalEntries = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalEntries / rowsPerPage));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -221,19 +275,10 @@ export default function ProductCompatibilityListPage() {
   }, [currentPage, totalPages]);
 
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
-  const paginatedItems = filteredItems.slice(startIndex, startIndex + PAGE_SIZE);
+  const startIndex = (safeCurrentPage - 1) * rowsPerPage;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + rowsPerPage);
   const showingFrom = totalEntries === 0 ? 0 : startIndex + 1;
-  const showingTo = Math.min(startIndex + PAGE_SIZE, totalEntries);
-
-  const stats = useMemo(
-    () => ({
-      total: items.length,
-      active: items.filter((item) => item.isActive !== false).length,
-      inactive: items.filter((item) => item.isActive === false).length,
-    }),
-    [items]
-  );
+  const showingTo = Math.min(startIndex + rowsPerPage, totalEntries);
 
   function openCreateModal() {
     setModalState({
@@ -342,7 +387,7 @@ export default function ProductCompatibilityListPage() {
           item._id === id
             ? {
                 ...item,
-                isActive: !item.isActive,
+                isActive: item.isActive === false,
               }
             : item
         )
@@ -355,374 +400,543 @@ export default function ProductCompatibilityListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-3 py-3 sm:px-4 lg:px-5">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm md:px-5 md:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#00008b]/20 bg-[#00008b]/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#00008b]">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Compatibility Management
+    <div className="page-shell">
+      <div className="mx-auto w-full max-w-9xl">
+        <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5 md:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 space-y-3">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#00008b]/5 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#00008b]">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Compatibility Management
+                </span>
+
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 md:text-3xl">
+                    Product Compatibility
+                  </h1>
+
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    All Product Compatibility records in your system are listed here. You can search, filter, edit, or delete any compatibility record.
+                  </p>
+                </div>
               </div>
 
-              <h1 className="text-xl font-bold tracking-tight text-slate-950 md:text-2xl">
-                Product Compatibility
-              </h1>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => void fetchCompatibilities(true)}
+                  disabled={refreshing}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-[#00008b] shadow-sm transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {refreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
+                  Refresh
+                </button>
 
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-                View sub category, product brand, compatible brands, and selected
-                model summary.
-              </p>
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white shadow-[0_12px_25px_rgba(0,0,139,0.22)] transition hover:bg-[#00006f]"
+                >
+                  <BadgePlus className="h-4 w-4" />
+                  Add Compatibility
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => void fetchCompatibilities(true)}
-                disabled={refreshing}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {refreshing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCcw className="h-4 w-4" />
-                )}
-                Refresh
-              </button>
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#000070] hover:shadow-md"
-              >
-                <BadgePlus className="h-4 w-4" />
-                Add Compatibility
-              </button>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by sub category, product brand, compatible brand, or model"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b]/40 focus:ring-4 focus:ring-[#00008b]/10"
+                />
+              </div>
+
+              <div className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-50 px-4 text-sm font-bold text-slate-700">
+                Total:
+                <span className="ml-1 text-[#00008b]">
+                  {filteredItems.length}
+                </span>
+              </div>
             </div>
           </div>
-        </section>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500">Total</p>
-            <h3 className="mt-1 text-2xl font-bold text-slate-900">
-              {stats.total}
-            </h3>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500">Active</p>
-            <h3 className="mt-1 text-2xl font-bold text-emerald-700">
-              {stats.active}
-            </h3>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500">Inactive</p>
-            <h3 className="mt-1 text-2xl font-bold text-rose-700">
-              {stats.inactive}
-            </h3>
-          </section>
-        </div>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00008b] text-white shadow-sm">
-                <Sparkles className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  Compatibility Records
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Search by sub category, product brand, compatible brand, or
-                  model.
-                </p>
-              </div>
-            </div>
-
-            <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search compatibility..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-280 w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    S.No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Sub Category
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Product Brand
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Compatible Summary
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {loading ? (
+          <div className="hidden lg:block">
+            <div className="overflow-x-auto">
+              <table className="min-w-280 w-full border-collapse">
+                <thead className="bg-slate-50/80">
                   <tr>
-                    <td colSpan={6} className="px-4 py-14 text-center">
-                      <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading compatibility list...
-                      </div>
-                    </td>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      S.No
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Sub Category
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Product Brand
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Compatible Summary
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Status
+                    </th>
+                    <th className="px-4 py-4 text-right text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Actions
+                    </th>
                   </tr>
-                ) : paginatedItems.length > 0 ? (
-                  paginatedItems.map((item, index) => {
-                    const serialNo = startIndex + index + 1;
-                    const subCategoryName = getSubCategoryDisplayName(item);
-                    const productBrandName = getDisplayNameFromRef(
-                      item.productBrandId
-                    );
-                    const compatibleRows = item.compatible || [];
-                    const isBusy = actionLoadingId === item._id;
+                </thead>
 
-                    return (
-                      <tr key={item._id} className="align-top hover:bg-slate-50">
-                        <td className="px-4 py-4 text-sm font-semibold text-slate-600">
-                          {serialNo}
-                        </td>
+                <tbody className="bg-white">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-14 text-center">
+                        <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-600">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading compatibility list...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedItems.length > 0 ? (
+                    paginatedItems.map((item, index) => {
+                      const serialNo = startIndex + index + 1;
+                      const subCategoryName = getSubCategoryDisplayName(item);
 
-                        <td className="px-4 py-4">
-                          <div className="min-w-40 text-sm font-semibold text-slate-900">
-                            {subCategoryName}
-                          </div>
-                        </td>
+                      const productBrandName = getDisplayNameFromRef(
+                        item.productBrandId
+                      );
 
-                        <td className="px-4 py-4">
-                          <div className="min-w-40 text-sm font-medium text-slate-600">
-                            {productBrandName}
-                          </div>
-                        </td>
+                      const compatibleRows = item.compatible || [];
+                      const isBusy = actionLoadingId === item._id;
+                      const active = item.isActive !== false;
 
-                        <td className="min-w-107.5 px-4 py-4">
-                          {compatibleRows.length > 0 ? (
-                            <div className="space-y-2">
-                              {compatibleRows.map((row, rowIndex) => {
-                                const brandName = getDisplayNameFromRef(
-                                  row.brandId
-                                );
+                      return (
+                        <tr
+                          key={item._id}
+                          className="border-t border-slate-100 align-top transition hover:bg-slate-50/80"
+                        >
+                          <td className="px-4 py-4 text-sm font-black text-slate-700">
+                            {serialNo}
+                          </td>
 
-                                const modelNames = (row.modelId || [])
-                                  .map((model) => getNameFromRef(model))
-                                  .filter(
-                                    (name) =>
-                                      Boolean(name) && name.trim().length > 0
+                          <td className="px-4 py-4">
+                            <div className="min-w-40 text-sm font-black text-slate-950">
+                              {subCategoryName}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <div className="inline-flex max-w-47.5 rounded-full border border-[#00008b]/10 bg-[#00008b]/5 px-2.5 py-1 text-xs font-black text-[#00008b]">
+                              <span className="truncate">
+                                {productBrandName}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="min-w-107.5 px-4 py-4">
+                            {compatibleRows.length > 0 ? (
+                              <div className="space-y-2">
+                                {compatibleRows.map((row, rowIndex) => {
+                                  const brandName = getDisplayNameFromRef(
+                                    row.brandId
                                   );
 
-                                return (
-                                  <div
-                                    key={`${item._id}-${rowIndex}`}
-                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                                  >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-sm font-semibold text-slate-900">
-                                        {brandName}
-                                      </span>
+                                  const modelNames = (row.modelId || [])
+                                    .map((model) => getNameFromRef(model))
+                                    .filter(
+                                      (name) =>
+                                        Boolean(name) && name.trim().length > 0
+                                    );
 
-                                      <span
-                                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                          row.isActive === false
-                                            ? "bg-rose-100 text-rose-700"
-                                            : "bg-emerald-100 text-emerald-700"
-                                        }`}
-                                      >
-                                        {row.isActive === false
-                                          ? "Inactive"
-                                          : "Active"}
-                                      </span>
-                                    </div>
+                                  return (
+                                    <div
+                                      key={`${item._id}-${rowIndex}`}
+                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                                    >
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-sm font-black text-slate-900">
+                                          {brandName}
+                                        </span>
 
-                                    <p className="mt-2 text-xs text-slate-600">
-                                      <span className="font-semibold text-slate-700">
-                                        Models:
-                                      </span>{" "}
-                                      {modelNames.length
-                                        ? modelNames.join(", ")
-                                        : "No specific models selected"}
-                                    </p>
+                                        <span
+                                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                            row.isActive === false
+                                              ? "bg-rose-100 text-rose-700"
+                                              : "bg-emerald-100 text-emerald-700"
+                                          }`}
+                                        >
+                                          {row.isActive === false
+                                            ? "Inactive"
+                                            : "Active"}
+                                        </span>
+                                      </div>
 
-                                    {row.notes ? (
-                                      <p className="mt-1 text-xs text-slate-500">
-                                        <span className="font-semibold text-slate-700">
-                                          Notes:
+                                      <p className="mt-2 text-xs font-semibold text-slate-600">
+                                        <span className="font-black text-slate-700">
+                                          Models:
                                         </span>{" "}
-                                        {row.notes}
+                                        {modelNames.length
+                                          ? modelNames.join(", ")
+                                          : "No specific models selected"}
                                       </p>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-400">
-                              No compatibility rows
-                            </span>
-                          )}
-                        </td>
 
-                        <td className="px-4 py-4">
-                          <button
-                            type="button"
-                            onClick={() => void handleToggleActive(item._id)}
-                            disabled={isBusy}
-                            className={`inline-flex min-w-20 items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                              item.isActive === false
-                                ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                            } disabled:cursor-not-allowed disabled:opacity-60`}
-                          >
-                            {isBusy ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : item.isActive === false ? (
-                              "Inactive"
+                                      {row.notes ? (
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                          <span className="font-black text-slate-700">
+                                            Notes:
+                                          </span>{" "}
+                                          {row.notes}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             ) : (
-                              "Active"
+                              <span className="text-sm font-semibold text-slate-400">
+                                No compatibility rows
+                              </span>
                             )}
-                          </button>
-                        </td>
+                          </td>
 
-                        <td className="px-4 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                          <td className="px-4 py-4">
                             <button
                               type="button"
-                              onClick={() => openEditModal(item._id)}
+                              onClick={() => void handleToggleActive(item._id)}
                               disabled={isBusy}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-[#00008b]/30 hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item._id)}
-                              disabled={isBusy}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                              title="Delete"
+                              className="disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {isBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="inline-flex h-8 min-w-20 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-black text-slate-500">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                </span>
                               ) : (
-                                <Trash2 className="h-4 w-4" />
+                                <StatusBadge active={active} />
                               )}
                             </button>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <ActionButton
+                                label={active ? "Deactivate" : "Activate"}
+                                variant={
+                                  active ? "toggleActive" : "toggleInactive"
+                                }
+                                disabled={isBusy}
+                                onClick={() => void handleToggleActive(item._id)}
+                              >
+                                {isBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
+                              </ActionButton>
+
+                              <ActionButton
+                                label="Edit"
+                                variant="edit"
+                                disabled={isBusy}
+                                onClick={() => openEditModal(item._id)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </ActionButton>
+
+                              <ActionButton
+                                label="Delete"
+                                variant="delete"
+                                disabled={isBusy}
+                                onClick={() => handleDelete(item._id)}
+                              >
+                                {isBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </ActionButton>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-14 text-center">
+                        <div className="mx-auto max-w-md">
+                          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                            <Search className="h-6 w-6" />
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-14 text-center">
-                      <div className="mx-auto max-w-md">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                          <Search className="h-6 w-6" />
+
+                          <h3 className="mt-4 text-base font-black text-slate-950">
+                            No compatibility records found
+                          </h3>
+
+                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                            Try changing your search or create a new
+                            compatibility record.
+                          </p>
                         </div>
-                        <h3 className="mt-4 text-base font-semibold text-slate-900">
-                          No compatibility records found
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Try changing your search or create a new compatibility
-                          record.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500">
-              Showing{" "}
-              <span className="font-semibold text-slate-900">
-                {showingFrom}
-              </span>{" "}
-              to{" "}
-              <span className="font-semibold text-slate-900">{showingTo}</span>{" "}
-              of{" "}
-              <span className="font-semibold text-slate-900">
-                {totalEntries}
-              </span>{" "}
-              entries
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={safeCurrentPage === 1 || totalEntries === 0}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </button>
-
-              <span className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-                {totalEntries === 0 ? 0 : safeCurrentPage} / {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-                disabled={safeCurrentPage === totalPages || totalEntries === 0}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-3 p-4 lg:hidden">
+            {loading ? (
+              <div className="rounded-[22px] border border-slate-200 bg-white p-6 text-center">
+                <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#00008b]" />
+                <p className="mt-2 text-sm font-black text-slate-600">
+                  Loading compatibility list...
+                </p>
+              </div>
+            ) : paginatedItems.length > 0 ? (
+              paginatedItems.map((item, index) => {
+                const serialNo = startIndex + index + 1;
+                const subCategoryName = getSubCategoryDisplayName(item);
+                const productBrandName = getDisplayNameFromRef(
+                  item.productBrandId
+                );
+                const compatibleRows = item.compatible || [];
+                const isBusy = actionLoadingId === item._id;
+                const active = item.isActive !== false;
+
+                return (
+                  <div
+                    key={item._id}
+                    className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_12px_35px_rgba(15,23,42,0.06)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                          #{serialNo}
+                        </p>
+
+                        <h4 className="mt-1 text-sm font-black text-slate-950">
+                          {subCategoryName}
+                        </h4>
+
+                        <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                          Product Brand: {productBrandName}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleActive(item._id)}
+                        disabled={isBusy}
+                        className="disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isBusy ? (
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-black text-slate-500">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          </span>
+                        ) : (
+                          <StatusBadge active={active} />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {compatibleRows.length > 0 ? (
+                        compatibleRows.map((row, rowIndex) => {
+                          const brandName = getDisplayNameFromRef(row.brandId);
+
+                          const modelNames = (row.modelId || [])
+                            .map((model) => getNameFromRef(model))
+                            .filter(Boolean);
+
+                          return (
+                            <div
+                              key={`${item._id}-${rowIndex}`}
+                              className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                            >
+                              <p className="text-sm font-black text-slate-900">
+                                {brandName}
+                              </p>
+
+                              <p className="mt-1 text-xs font-semibold text-slate-600">
+                                Models:{" "}
+                                {modelNames.length
+                                  ? modelNames.join(", ")
+                                  : "No specific models selected"}
+                              </p>
+
+                              {row.notes ? (
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  Notes: {row.notes}
+                                </p>
+                              ) : null}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm font-semibold text-slate-400">
+                          No compatibility rows
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleActive(item._id)}
+                        disabled={isBusy}
+                        className={`inline-flex h-9 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                          active
+                            ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        {isBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Power className="h-4 w-4" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item._id)}
+                        disabled={isBusy}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-[#00008b]/15 bg-[#00008b]/5 px-2 text-xs font-bold text-[#00008b] transition hover:bg-[#00008b]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item._id)}
+                        disabled={isBusy}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-slate-400">
+                  <Search className="h-7 w-7" />
+                </div>
+
+                <h3 className="mt-4 text-base font-black text-slate-950">
+                  No compatibility records found
+                </h3>
+
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  Try changing your search or create a new compatibility record.
+                </p>
+              </div>
+            )}
+          </div>
+
+
+          {!loading ? (
+            <div className="border-t border-slate-100 px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <label className="inline-flex items-center justify-end gap-2 text-sm font-semibold text-slate-700">
+                  Rows per page:
+                  <select
+                    value={rowsPerPage}
+                    onChange={(event) => {
+                      setRowsPerPage(Number(event.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-[#00008b]/40 focus:ring-4 focus:ring-[#00008b]/10"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="flex items-center justify-end gap-3">
+                  <p className="min-w-21.5 text-right text-sm font-bold text-slate-800">
+                    {showingFrom}-{showingTo} of {totalEntries}
+                  </p>
+
+                  <button
+                    type="button"
+                    aria-label="Previous page"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1 || totalEntries === 0}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-lg font-black text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    &lt;
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-label="Next page"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages || totalEntries === 0}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-lg font-black text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
 
       {modalState.open ? (
         <div
-          className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-3 py-4 backdrop-blur-sm sm:px-4"
+          className="fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-slate-950/60 px-3 py-4 backdrop-blur-sm sm:px-4"
           onMouseDown={closeCompatibilityModal}
         >
           <div
-            className="relative w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="relative my-2 w-full max-w-6xl overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={closeCompatibilityModal}
-              className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
-              title="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+              <div>
+                <h2 className="text-base font-black text-slate-950">
+                  {modalState.mode === "edit"
+                    ? "Edit Compatibility"
+                    : "Create Compatibility"}
+                </h2>
+                <p className="text-xs font-semibold text-slate-500">
+                  Complete compatibility details inside this popup.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCompatibilityModal}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
             <ProductCompatibilityCreatePage
               key={`${modalState.mode}-${modalState.id || "new"}`}

@@ -1,17 +1,16 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
+  Check,
   Eye,
   EyeOff,
   KeyRound,
   ShieldCheck,
-  Sparkles,
   UserCircle2,
 } from "lucide-react";
 
@@ -32,16 +31,16 @@ import {
   getRoleAccountType,
   getRoleLabel,
 } from "@/utils/getLoginConfig";
+import { normalizeRole } from "@/utils/permissions";
 import { getDashboardRouteByRole } from "@/utils/redirect";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+const REMEMBER_STORAGE_KEY = "globogreen_master_login_remember";
+
+type RememberLoginData = {
+  rememberMe: boolean;
+  loginId: string;
+  selectedRole: LoginRole;
+};
 
 function getErrorMessage(error: unknown): string {
   if (
@@ -73,9 +72,50 @@ function getBlockedAccountMessage(isActive: boolean | null) {
   return "";
 }
 
+function readRememberedLogin(): RememberLoginData | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(REMEMBER_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<RememberLoginData>;
+
+    if (!parsed.rememberMe || !parsed.loginId || !parsed.selectedRole) {
+      return null;
+    }
+
+    return {
+      rememberMe: true,
+      loginId: String(parsed.loginId),
+      selectedRole: parsed.selectedRole,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveRememberedLogin(data: RememberLoginData) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    REMEMBER_STORAGE_KEY,
+    JSON.stringify({
+      rememberMe: data.rememberMe,
+      loginId: data.loginId,
+      selectedRole: data.selectedRole,
+    })
+  );
+}
+
+function clearRememberedLogin() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(REMEMBER_STORAGE_KEY);
+}
+
 export default function MasterLoginForm() {
   const router = useRouter();
-  const { setAuth } = useAuth();
+  const { setAuth, isReady, isAuthenticated, role } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<LoginRole>(
     getDefaultLoginRole("MASTER")
@@ -83,9 +123,29 @@ export default function MasterLoginForm() {
   const [loginId, setLoginId] = useState("");
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const availableRoles = getLoginRoles("MASTER");
+  const authenticatedRole = normalizeRole(role);
+
+  useEffect(() => {
+    const remembered = readRememberedLogin();
+
+    if (!remembered) return;
+
+    setRememberMe(true);
+    setLoginId(remembered.loginId);
+    setSelectedRole(remembered.selectedRole);
+  }, []);
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated || !authenticatedRole) {
+      return;
+    }
+
+    router.replace(getDashboardRouteByRole(authenticatedRole));
+  }, [authenticatedRole, isAuthenticated, isReady, router]);
 
   const validateForm = (): boolean => {
     if (!loginId.trim() && !pin.trim()) {
@@ -166,6 +226,16 @@ export default function MasterLoginForm() {
         throw new Error(blockedMessage);
       }
 
+      if (rememberMe) {
+        saveRememberedLogin({
+          rememberMe: true,
+          loginId: loginId.trim(),
+          selectedRole,
+        });
+      } else {
+        clearRememberedLogin();
+      }
+
       await setAuth(user, accessToken, refreshToken, resolvedRole);
 
       appToast.success(
@@ -173,7 +243,7 @@ export default function MasterLoginForm() {
         `Welcome back, ${user.name || getRoleLabel(resolvedRole)}.`
       );
 
-      router.push(getDashboardRouteByRole(resolvedRole));
+      router.replace(getDashboardRouteByRole(resolvedRole));
     } catch (error: unknown) {
       appToast.error("Login failed", getErrorMessage(error));
     } finally {
@@ -186,86 +256,86 @@ export default function MasterLoginForm() {
     await handleLogin();
   };
 
-  return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-hero px-4 py-8">
-      <div className="premium-grid-bg absolute inset-0 opacity-50" />
-      <div className="absolute inset-0 bg-black/10" />
-
-      <div
-        className="absolute -left-28 -top-28 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(0, 0, 139, 0.30)" }}
-      />
-      <div
-        className="absolute -right-28 top-[8%] h-96 w-[24rem] rounded-full blur-3xl"
-        style={{ background: "rgba(22, 163, 74, 0.25)" }}
-      />
-      <div
-        className="absolute -bottom-28 left-[8%] h-72 w-72 rounded-full blur-3xl"
-        style={{ background: "rgba(255, 255, 255, 0.10)" }}
-      />
-      <div
-        className="absolute -bottom-28 right-[10%] h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(22, 163, 74, 0.20)" }}
-      />
-
-      <div className="relative z-10 w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="relative mx-auto flex items-center justify-center rounded-[30px] border border-white/20 bg-white p-6 shadow-xl backdrop-blur-xl">
-            <div className="absolute inset-0 rounded-[30px] bg-white/5" />
-
-            <Image
-              src="/logo.png"
-              alt="GloboGreen logo"
-              width={500}
-              height={50}
-              priority
-              className="relative object-contain"
-            />
-          </div>
-
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white sm:text-[2rem]">
-            Welcome back
-          </h1>
-
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/75">
-            Secure sign in for master dashboard access.
+  if (!isReady || (isAuthenticated && authenticatedRole)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f7fb] px-4">
+        <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-center shadow-sm">
+          <p className="text-sm font-semibold text-slate-800">
+            {!isReady ? "Loading session..." : "Opening your dashboard..."}
           </p>
         </div>
+      </main>
+    );
+  }
 
-        <Card className="premium-card premium-border overflow-hidden border-0 bg-white/85 backdrop-blur-2xl">
-          <div className="h-1.5 w-full bg-gradient-primary" />
+  return (
+    <main
+      className="relative min-h-screen overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8"
+      style={{ backgroundImage: "url('/image.png')" }}
+    >
+      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_36%)]" />
+      <div className="absolute left-8 top-8 h-28 w-28 rounded-full bg-white/10 blur-3xl" />
+      <div className="absolute bottom-10 right-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
-          <CardHeader className="space-y-3 px-6 pb-2 pt-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="text-2xl font-semibold tracking-tight text-heading">
-                  Master login
-                </CardTitle>
-                <CardDescription className="mt-1 text-sm text-secondary-text">
-                  Admin, manager, supervisor, and staff panel access.
-                </CardDescription>
-              </div>
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_14px_34px_rgba(22,163,74,0.24)]">
-                <Sparkles className="h-5 w-5" />
-              </div>
+      <section className="relative z-10 flex min-h-[calc(100vh-64px)] items-center justify-center">
+        <div className="w-full max-w-md">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/25 bg-white shadow-2xl">
+              <Image
+                src="/favicon.png"
+                alt="Logo"
+                width={52}
+                height={52}
+                priority
+                className="h-auto w-auto object-contain"
+                style={{ width: "auto", height: "auto" }}
+              />
             </div>
-          </CardHeader>
 
-          <CardContent className="px-6 pb-6 pt-4">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Master Access
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-white/80">
+              Login for master admin, inventory setup, staff management and shop
+              controls.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-card border border-white/25 bg-white/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-6"
+          >
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+                Welcome Back
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Please login to your master account.
+              </p>
+            </div>
+
+            <div className="space-y-4">
               <div>
-                <label htmlFor="role" className="premium-label">
-                  Login Role
+                <label
+                  htmlFor="role"
+                  className="mb-1.5 block text-xs font-semibold text-slate-700"
+                >
+                  Login Role <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
                   <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                   <select
                     id="role"
                     value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as LoginRole)}
-                    className="premium-select pl-10"
+                    onChange={(e) =>
+                      setSelectedRole(e.target.value as LoginRole)
+                    }
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                     disabled={loading}
                   >
                     {availableRoles.map((role) => (
@@ -278,12 +348,16 @@ export default function MasterLoginForm() {
               </div>
 
               <div>
-                <label htmlFor="loginId" className="premium-label">
-                  Login ID
+                <label
+                  htmlFor="loginId"
+                  className="mb-1.5 block text-xs font-semibold text-slate-700"
+                >
+                  Login ID <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
                   <UserCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                   <input
                     id="loginId"
                     type="text"
@@ -292,14 +366,17 @@ export default function MasterLoginForm() {
                     placeholder="Enter your login ID"
                     autoComplete="username"
                     disabled={loading}
-                    className="premium-input pl-10"
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="pin" className="premium-label">
-                  Security PIN
+                <label
+                  htmlFor="pin"
+                  className="mb-1.5 block text-xs font-semibold text-slate-700"
+                >
+                  Security PIN <span className="text-red-500">*</span>
                 </label>
 
                 <div className="relative">
@@ -315,7 +392,7 @@ export default function MasterLoginForm() {
                     inputMode="numeric"
                     maxLength={6}
                     disabled={loading}
-                    className="premium-input pl-10 pr-12 tracking-[0.24em] placeholder:tracking-normal"
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-12 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                   <button
@@ -323,7 +400,7 @@ export default function MasterLoginForm() {
                     aria-label={showPin ? "Hide PIN" : "Show PIN"}
                     onClick={() => setShowPin((prev) => !prev)}
                     disabled={loading}
-                    className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-black/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {showPin ? (
                       <EyeOff className="h-4 w-4" />
@@ -334,45 +411,57 @@ export default function MasterLoginForm() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-primary transition hover:text-secondary"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Link>
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <label className="group inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={loading}
+                    className="sr-only"
+                  />
+
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-md border transition ${
+                      rememberMe
+                        ? "border-[#00008b] bg-[#00008b] text-white"
+                        : "border-slate-300 bg-white text-transparent group-hover:border-[#00008b]"
+                    }`}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+
+                  <span className="select-none transition group-hover:text-[#00008b]">
+                    Remember me
+                  </span>
+                </label>
 
                 <Link
                   href={`/forgot-pin?role=${encodeURIComponent(selectedRole)}`}
-                  className="text-sm font-medium text-primary transition hover:text-secondary"
+                  className="text-sm font-semibold text-[#00008b] transition hover:text-[#00006f]"
                 >
                   Forgot PIN?
                 </Link>
               </div>
 
-              <Button
+              <button
                 type="submit"
                 disabled={loading}
-                className="group h-12 w-full rounded-2xl border-0 bg-gradient-primary text-sm font-semibold text-white shadow-[0_16px_40px_rgba(22,163,74,0.24)] transition-all duration-300 hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00008b] px-4 text-sm font-bold text-white shadow-[0_14px_35px_rgba(0,0,139,0.22)] transition hover:bg-[#00006f] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <span className="flex items-center justify-center gap-2">
-                  {loading ? "Signing in..." : "Continue"}
-                  {!loading && (
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                  )}
-                </span>
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                {loading ? "Signing in..." : "Login"}
+                {!loading && (
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                )}
+              </button>
+            </div>
+          </form>
 
-        <div className="mt-5 text-center">
-          <p className="text-xs text-white/65">
-            (c) 2026 GloboGreen. Secure enterprise access.
+          <p className="mt-6 text-center text-xs text-white/70">
+            © 2026 GloboGreen. All rights reserved.
           </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
