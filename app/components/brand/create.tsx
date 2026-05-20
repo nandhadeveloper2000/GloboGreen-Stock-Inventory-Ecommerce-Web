@@ -1,0 +1,795 @@
+﻿"use client";
+
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  BadgePlus,
+  ImagePlus,
+  Loader2,
+  Save,
+  Trash2,
+  UploadCloud,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import SummaryApi from "@/constants/SummaryApi";
+import apiClient from "@/lib/api-client";
+import { useAuth } from "@/context/auth/AuthProvider";
+
+type PageMode = "create" | "edit";
+
+type BrandItem = {
+  _id?: string;
+  name?: string;
+  nameKey?: string;
+  isActive?: boolean;
+  image?: {
+    url?: string;
+    publicId?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type BrandResponse = {
+  success?: boolean;
+  message?: string;
+  data?: BrandItem;
+};
+
+type ImagePreview = {
+  file: File | null;
+  url: string;
+};
+
+type CreateBrandsPageProps = {
+  mode?: PageMode;
+  brandId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void | Promise<void>;
+};
+
+const initialPreview: ImagePreview = {
+  file: null,
+  url: "",
+};
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+];
+
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
+
+function getErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const message = (error as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+
+    if (message) return message;
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+
+  return "Something went wrong";
+}
+
+function isValidMongoId(id: unknown): id is string {
+  return typeof id === "string" && /^[a-f\d]{24}$/i.test(id.trim());
+}
+
+function normalizeRole(role?: string | null) {
+  return String(role ?? "").trim().toUpperCase();
+}
+
+function getRoleBasePath(role?: string | null) {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === "MASTER_ADMIN") return "/master";
+  if (normalizedRole === "MANAGER") return "/manager";
+  if (normalizedRole === "SUPERVISOR") return "/supervisor";
+  if (normalizedRole === "STAFF") return "/staff";
+
+  return "/master";
+}
+
+function getApiUrl(
+  apiUrl: string | ((id: string) => string),
+  id: string,
+  fallbackSuffix = ""
+) {
+  if (typeof apiUrl === "function") return apiUrl(id);
+
+  return `${apiUrl}/${id}${fallbackSuffix}`;
+}
+
+function TopLabelInput({
+  label,
+  value,
+  placeholder,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 pb-1.5 pt-5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#00008b] focus:ring-4 focus:ring-[#00008b]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+      />
+
+      <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+    </div>
+  );
+}
+
+export default function CreateBrandsPage({
+  mode = "create",
+  brandId = "",
+  isModal = false,
+  onClose,
+  onSuccess,
+}: CreateBrandsPageProps) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { role } = useAuth();
+
+  const isEditMode = mode === "edit";
+  const basePath = getRoleBasePath(role);
+  const listPath = `${basePath}/brand/list`;
+
+  const [name, setName] = useState("");
+  const [initialName, setInitialName] = useState("");
+  const [existingImageUrl, setExistingImageUrl] = useState("");
+  const [initialImageUrl, setInitialImageUrl] = useState("");
+  const [imagePreview, setImagePreview] =
+    useState<ImagePreview>(initialPreview);
+
+  const [loading, setLoading] = useState(isEditMode);
+  const [submitting, setSubmitting] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+
+  const pageTitle = isEditMode ? "Edit Brand" : "Create Brand";
+  const pageDescription = isEditMode
+    ? "Update brand name and brand image."
+    : "Complete brand details inside this popup.";
+
+  const buttonText = isEditMode ? "Update Brand" : "Save Brand";
+  const submittingText = isEditMode ? "Updating..." : "Creating...";
+  const previewImageUrl = imagePreview.url || existingImageUrl;
+  const disabled = submitting;
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview.url) {
+        URL.revokeObjectURL(imagePreview.url);
+      }
+    };
+  }, [imagePreview.url]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    async function fetchBrand() {
+      try {
+        if (!isValidMongoId(brandId)) {
+          toast.error("Invalid brand id");
+
+          if (isModal) onClose?.();
+          else router.push(listPath);
+
+          return;
+        }
+
+        setLoading(true);
+
+        const getUrl = getApiUrl(SummaryApi.brand_get.url, brandId);
+
+        const response = await apiClient.get<BrandResponse>(getUrl, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        const result = response.data;
+
+        if (!result?.success || !result?.data) {
+          throw new Error(result?.message || "Failed to fetch brand");
+        }
+
+        if (!active) return;
+
+        const resolvedName = result.data.name || "";
+        const resolvedImageUrl = result.data.image?.url?.trim() || "";
+
+        setName(resolvedName);
+        setInitialName(resolvedName);
+        setExistingImageUrl(resolvedImageUrl);
+        setInitialImageUrl(resolvedImageUrl);
+      } catch (error: unknown) {
+        if (!active) return;
+
+        toast.error(getErrorMessage(error));
+
+        if (isModal) onClose?.();
+        else router.push(listPath);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchBrand();
+
+    return () => {
+      active = false;
+    };
+  }, [isEditMode, brandId, isModal, listPath, onClose, router]);
+
+  function handleClose() {
+    if (isModal && onClose) {
+      onClose();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  async function handleSuccess() {
+    if (isModal && onSuccess) {
+      await onSuccess();
+      return;
+    }
+
+    router.push(listPath);
+  }
+
+  function clearFileInput() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function validateAndSetImage(file: File | null) {
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Please upload PNG, JPG, JPEG, or WEBP image");
+      clearFileInput();
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("Image size must be less than 3MB");
+      clearFileInput();
+      return;
+    }
+
+    setImagePreview((prev) => {
+      if (prev.url) URL.revokeObjectURL(prev.url);
+
+      return {
+        file,
+        url: URL.createObjectURL(file),
+      };
+    });
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    validateAndSetImage(file);
+  }
+
+  function handleImageDragEnter(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingImage(true);
+  }
+
+  function handleImageDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingImage(true);
+  }
+
+  function handleImageDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingImage(false);
+  }
+
+  function handleImageDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingImage(false);
+
+    if (disabled) return;
+
+    const file = event.dataTransfer.files?.[0] || null;
+    validateAndSetImage(file);
+  }
+
+  function removeSelectedImage() {
+    setImagePreview((prev) => {
+      if (prev.url) URL.revokeObjectURL(prev.url);
+      return initialPreview;
+    });
+
+    clearFileInput();
+    toast.success("Selected image removed");
+  }
+
+  async function removeExistingImage() {
+    if (!isEditMode) return;
+
+    if (!isValidMongoId(brandId)) {
+      toast.error("Invalid brand id");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const removeUrl = getApiUrl(
+        SummaryApi.brand_image_remove.url,
+        brandId,
+        "/image"
+      );
+
+      const response = await apiClient.delete<BrandResponse>(removeUrl, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const result = response.data;
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to remove brand image");
+      }
+
+      setExistingImageUrl("");
+      setInitialImageUrl("");
+      toast.success(result?.message || "Brand image removed successfully");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function resetForm() {
+    setName(isEditMode ? initialName : "");
+    setExistingImageUrl(isEditMode ? initialImageUrl : "");
+    setIsDraggingImage(false);
+
+    setImagePreview((prev) => {
+      if (prev.url) URL.revokeObjectURL(prev.url);
+      return initialPreview;
+    });
+
+    clearFileInput();
+  }
+
+  function validateForm() {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      toast.error("Brand name is required");
+      return false;
+    }
+
+    if (trimmedName.length < 2) {
+      toast.error("Brand name must be at least 2 characters");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!validateForm()) return;
+
+    if (isEditMode && !isValidMongoId(brandId)) {
+      toast.error("Invalid brand id");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      if (isEditMode) {
+        const updateUrl = getApiUrl(SummaryApi.brand_update.url, brandId);
+
+        const response = await apiClient.put<BrandResponse>(
+          updateUrl,
+          {
+            name: name.trim(),
+          },
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = response.data;
+
+        if (!result?.success) {
+          throw new Error(result?.message || "Failed to update brand");
+        }
+
+        if (imagePreview.file) {
+          const imageUrl = getApiUrl(
+            SummaryApi.brand_image_upload.url,
+            brandId,
+            "/image"
+          );
+
+          const formData = new FormData();
+          formData.append("image", imagePreview.file);
+
+          const imageResponse = await apiClient.post<BrandResponse>(
+            imageUrl,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          const imageResult = imageResponse.data;
+
+          if (!imageResult?.success) {
+            throw new Error(
+              imageResult?.message || "Brand updated but image upload failed"
+            );
+          }
+
+          const updatedImageUrl = imageResult.data?.image?.url?.trim() || "";
+          setExistingImageUrl(updatedImageUrl);
+          setInitialImageUrl(updatedImageUrl);
+        }
+
+        toast.success(result?.message || "Brand updated successfully");
+        await handleSuccess();
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("name", name.trim());
+
+      if (imagePreview.file) {
+        formData.append("image", imagePreview.file);
+      }
+
+      const response = await apiClient.post<BrandResponse>(
+        SummaryApi.brand_create.url,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const result = response.data;
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to create brand");
+      }
+
+      toast.success(result?.message || "Brand created successfully");
+      resetForm();
+      await handleSuccess();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div
+        className={
+          isModal
+            ? "flex w-full items-center justify-center bg-white px-4 py-8"
+            : "min-h-screen bg-slate-50 px-3 py-4 sm:px-4 lg:px-6"
+        }
+      >
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-[26px] border border-slate-200 bg-white py-14 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Loader2 className="h-5 w-5 animate-spin text-[#00008b]" />
+            <span className="text-sm font-black">
+              Loading brand details...
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={
+        isModal
+          ? "w-full bg-white"
+          : "min-h-screen bg-slate-50 px-3 py-4 sm:px-4 lg:px-6"
+      }
+    >
+      <div className={isModal ? "w-full" : "mx-auto w-full max-w-5xl"}>
+        <form
+          onSubmit={handleSubmit}
+          className={
+            isModal
+              ? "flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden bg-white"
+              : "flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.08)]"
+          }
+        >
+          {isModal ? (
+            <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-black text-slate-950">
+                  {pageTitle}
+                </h2>
+
+                <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                  Complete brand details inside this popup.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={disabled}
+                title="Close"
+                aria-label="Close"
+                className="ml-3 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={disabled}
+                className="mb-4 inline-flex h-10 w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to List
+              </button>
+
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+                  {pageTitle}
+                </h1>
+
+                <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                  {pageDescription}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto bg-slate-50">
+            <div className="p-4 sm:p-5">
+              <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] md:p-5">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="space-y-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#00008b]/10 text-[#00008b]">
+                        <BadgePlus className="h-5 w-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h2 className="text-base font-black text-slate-950">
+                          Brand Details
+                        </h2>
+
+                        <p className="mt-0.5 text-sm font-semibold leading-6 text-slate-500">
+                          Enter brand name and upload an optional brand image.
+                        </p>
+                      </div>
+                    </div>
+
+                    <TopLabelInput
+                      label="Brand Name"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Enter brand name"
+                      disabled={disabled}
+                      required
+                    />
+
+                    <div>
+                      <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                        Brand Image
+                      </label>
+
+                      <label
+                        htmlFor="brand-image"
+                        onDragEnter={handleImageDragEnter}
+                        onDragOver={handleImageDragOver}
+                        onDragLeave={handleImageDragLeave}
+                        onDrop={handleImageDrop}
+                        className={[
+                          "group flex min-h-47.5 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed px-4 py-5 text-center transition",
+                          isDraggingImage
+                            ? "border-[#00008b] bg-[#00008b]/5"
+                            : "border-slate-300 bg-slate-50 hover:border-[#00008b] hover:bg-[#00008b]/5",
+                          disabled ? "pointer-events-none opacity-70" : "",
+                        ].join(" ")}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          id="brand-image"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          className="hidden"
+                          onChange={handleImageChange}
+                          disabled={disabled}
+                        />
+
+                        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#00008b] shadow-sm ring-1 ring-slate-100 transition group-hover:scale-105">
+                          {isDraggingImage ? (
+                            <UploadCloud className="h-7 w-7" />
+                          ) : (
+                            <ImagePlus className="h-7 w-7" />
+                          )}
+                        </div>
+
+                        <p className="text-base font-black text-slate-900">
+                          {isDraggingImage
+                            ? "Drop image here"
+                            : isEditMode
+                              ? "Click to replace image"
+                              : "Click to upload image"}
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                          PNG, JPG, JPEG, WEBP up to 3MB
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+
+                  <aside className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="mb-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      Preview
+                    </p>
+
+                    <div className="relative flex h-65 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                      {previewImageUrl ? (
+                        <Image
+                          src={previewImageUrl}
+                          alt="Brand preview"
+                          fill
+                          sizes="320px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="px-3 text-center text-sm font-semibold text-slate-400">
+                          No image selected
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {imagePreview.url ? (
+                        <button
+                          type="button"
+                          onClick={removeSelectedImage}
+                          disabled={disabled}
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove Selected
+                        </button>
+                      ) : null}
+
+                      {isEditMode && existingImageUrl && !imagePreview.url ? (
+                        <button
+                          type="button"
+                          onClick={() => void removeExistingImage()}
+                          disabled={disabled}
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-sm font-black text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove Existing
+                        </button>
+                      ) : null}
+                    </div>
+                  </aside>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={disabled}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Reset
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={disabled}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-[#00008b] hover:bg-[#00008b]/5 hover:text-[#00008b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={disabled}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00008b] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,139,0.22)] transition hover:bg-[#000070] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {submittingText}
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    {buttonText}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
